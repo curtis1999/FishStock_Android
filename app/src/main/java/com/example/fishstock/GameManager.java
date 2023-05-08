@@ -56,13 +56,10 @@ public class GameManager extends AppCompatActivity {
       message.setText("It is " + agent.getName() + "'s Turn");
     }
     Board board = new Board();
-    // Create a bundle to pass the board object
-    Bundle bundle = new Bundle();
-    bundle.putSerializable("board", (Serializable) board);
 
     // Create the board fragment and set the bundle as its arguments
-    BoardFragment boardFragment = new BoardFragment();
-    boardFragment.setArguments(bundle);
+    BoardFragment boardFragment = (BoardFragment) getSupportFragmentManager().findFragmentById(R.id.board);
+    boardFragment.updateBoard(board);
   }
 
   public static Agent initilizeAgent(String agentName) {
