@@ -6,18 +6,13 @@ import java.util.*;
 public class Game {
   Board ChessBoard = new Board();
   int moveNum;
-
   boolean isWhite;
   boolean isGameOver=false;
   AgentType whitePlayer;
   AgentType blackPlayer;
-
   ArrayList<Move> whitesMovesLog = new ArrayList<>();
   ArrayList<Move> blacksMovesLog = new ArrayList<>();
-  ArrayList<Piece> pinPiecesWhite = new ArrayList<>();
-  ArrayList<Piece> pinPiecesBlack = new ArrayList<>();
-  ArrayList<Piece> revealPiecesWhite = new ArrayList<>();
-  ArrayList<Piece> revealPiecesBlack = new ArrayList<>();
+  ArrayList<Board> boardStates = new ArrayList<>();
 
   public Game (Board ChessBoard, AgentType whitePlayer, AgentType blackPlayer) {
     this.ChessBoard = ChessBoard;
@@ -27,5 +22,20 @@ public class Game {
     this.whitePlayer = whitePlayer;
     this.blackPlayer = blackPlayer;
   }
-
+  public void addWhiteMove(Move move) {
+    this.whitesMovesLog.add(move);
+  }
+  public void addBlackMove(Move move) {
+    this.blacksMovesLog.add(move);
+  }
+  public void addBoardState(Board board) {
+    this.boardStates.add(board);
+  }
+  public Board getPreviousBoard() {
+    if(boardStates.size()>1) {
+      return boardStates.get(boardStates.size()-2);
+    } else {
+      return boardStates.get(0);
+    }
+  }
 }
