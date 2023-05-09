@@ -108,7 +108,9 @@ public class BoardFragment extends Fragment {
             if (isWhite && cell.PieceStatus == Status.EMPTY) {
               if (isLegalMove(coord, board.board)){
                 Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), false, true); //TODO: MAKE AN ISWHITE VARIABLE
-
+                GameController.makeMove(board, move, true);
+                GameController.updateBoardMeta(board);
+                updateBoard(board);
               }
             } else if (isWhite && cell.PieceStatus == Status.BLACK){
               Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), true, true); //TODO: MAKE AN ISWHITE VARIABLE
