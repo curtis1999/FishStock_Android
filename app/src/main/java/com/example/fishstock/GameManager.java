@@ -27,6 +27,8 @@ public class GameManager extends AppCompatActivity {
   boolean isWhite = true;
   ArrayList<Piece> capturedPiecesWhite = new ArrayList<>();
   ArrayList<Piece> capturedPiecesBlack = new ArrayList<>();
+  ArrayList<Move> blacksPotentialMoves = new ArrayList<>();
+  ArrayList<Move> whitePotentialMoves = new ArrayList<>();
   /**
    * The Game Loop.  Initializes the board and the buttons.
    * @param savedInstanceState
@@ -50,6 +52,7 @@ public class GameManager extends AppCompatActivity {
     Button draw = findViewById(R.id.draw);
     TextView capturedWhite = findViewById(R.id.CapturedPiecesWhite);
     TextView capturedBlack = findViewById(R.id.CapturedPiecesBlack);
+    TextView checkstatus = findViewById(R.id.checkStatus);
     resign.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View v) {
@@ -83,13 +86,58 @@ public class GameManager extends AppCompatActivity {
               if (isLegalMove(coord, board.board)){
                 Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), false, true); //TODO: MAKE AN ISWHITE VARIABLE
                 GameService.makeMove(board, move, true);
+                game.whitesMovesLog.add(move);
                 GameService.updateBoardMeta(board);
+                game.boardStates.add(GameService.copyBoard(board));
+                if (GameService.isDeadPosition(board.whitePieces, board.blackPieces)) {
+                  message.setText("DRAW BY INSUFFICIENT MATERIAL");
+                  Intent intent = new Intent(GameManager.this, MainActivity.class);
+                  intent.putExtra("gameResult", "0.5"); //TODO: store the result of the game.
+                  startActivity(intent);
+                }
+                if (GameService.isRepetition(game.boardStates, board)){
+                  message.setText("DRAW BY REPETITION");
+                  Intent intent = new Intent(GameManager.this, MainActivity.class);
+                  intent.putExtra("gameResult", "0.5"); //TODO: store the result of the game.
+                  startActivity(intent);
+                }
+                try {
+                  blacksPotentialMoves = GameService.generateMoves(board, false);
+                } catch (CloneNotSupportedException e) {
+                  e.printStackTrace();
+                }
+
+                if (((King)board.blackPieces.get(0)).isDoubleChecked) {
+                  checkstatus.setText("DOUBLE CHECK!!");
+                  blacksPotentialMoves = GameService.generateMovesDoubleCheck(board, blacksPotentialMoves, false);
+                  if (blacksPotentialMoves.size() == 0) {
+                    message.setText("CHECKMATE!! PLAYER 1 WINS");
+                    Intent intent = new Intent(GameManager.this, MainActivity.class);
+                    intent.putExtra("gameResult", "1"); //TODO: store the result of the game.
+                    startActivity(intent);
+                  }
+                } else if (((King)board.blackPieces.get(0)).isChecked) {
+                  checkstatus.setText("CHECK!");
+                  blacksPotentialMoves = GameService.generateMovesCheck(board, blacksPotentialMoves, false);
+                  if (blacksPotentialMoves.size() == 0) {
+                    message.setText("CHECKMATE!! PLAYER 1 WINS");
+                    Intent intent = new Intent(GameManager.this, MainActivity.class);
+                    intent.putExtra("gameResult", "1"); //TODO: store the result of the game.
+                    startActivity(intent);
+                  }
+                }
+                if (blacksPotentialMoves.size() == 0) {
+                  message.setText("STALEMATE. THE GAME ENDS IN A DRAW");
+                  Intent intent = new Intent(GameManager.this, MainActivity.class);
+                  intent.putExtra("gameResult", "0.5"); //TODO: store the result of the game.
+                  startActivity(intent);
+                }
+
                 updateBoard(board);
                 selectedPiece = null;
                 try {
-                  ArrayList<Move> adversaryMoves = GameService.generateMoves(board, false);
                   ArrayList<Move> playersMoves = GameService.generateMoves(board, true);
-                  Move adversaryMove = blackPlayer.getMove(board, adversaryMoves, playersMoves);
+                  Move adversaryMove = blackPlayer.getMove(board, blacksPotentialMoves, playersMoves);
                   if (adversaryMove.isCapture) {
                     capturedPiecesWhite.add(adversaryMove.capturablePiece);
                     capturedWhite.append(": " + adversaryMove.capturablePiece.getName());

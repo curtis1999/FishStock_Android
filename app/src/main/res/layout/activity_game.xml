@@ -935,5 +935,17 @@
             tools:src="@drawable/empty_light" />
     </GridLayout>
 
+    <TextView
+        android:id="@+id/checkStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        app:layout_constraintBottom_toTopOf="@+id/gridlayout"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.781"
+        app:layout_constraintStart_toEndOf="@+id/CapturedPiecesBlack"
+        app:layout_constraintTop_toBottomOf="@+id/welcomeMessage"
+        app:layout_constraintVertical_bias="0.044" />
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>
