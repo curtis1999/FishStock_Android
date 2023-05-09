@@ -79,12 +79,13 @@ public class GameManager extends AppCompatActivity {
           public void onClick(View v) {
             Coordinate coord = getCoordFromButton(button);
             Cell cell = board.board[coord.rank][coord.file];
-            if (cell.PieceStatus == Status.EMPTY) {
+            if (selectedPiece != null && cell.PieceStatus == Status.EMPTY) {
               if (isLegalMove(coord, board.board)){
                 Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), false, true); //TODO: MAKE AN ISWHITE VARIABLE
                 GameService.makeMove(board, move, true);
                 GameService.updateBoardMeta(board);
                 updateBoard(board);
+                selectedPiece = null;
                 try {
                   ArrayList<Move> adversaryMoves = GameService.generateMoves(board, false);
                   ArrayList<Move> playersMoves = GameService.generateMoves(board, true);
@@ -110,6 +111,7 @@ public class GameManager extends AppCompatActivity {
                 GameService.makeMove(board, move, true);
                 GameService.updateBoardMeta(board);
                 updateBoard(board);
+                selectedPiece = null;
                 if (isGameOver(board, true)) {
 
                 }
@@ -154,6 +156,8 @@ public class GameManager extends AppCompatActivity {
                     button.setImageResource(R.drawable.black_empty_selected);
                   }
                 }
+              } else {
+                selectedPiece = null;
               }
             }
           }
