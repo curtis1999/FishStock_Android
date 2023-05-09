@@ -2,6 +2,7 @@ package com.example.fishstock;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -38,12 +39,19 @@ public class GameManager extends AppCompatActivity {
 
     TextView adversaryName = findViewById(R.id.player2);
     adversaryName.setText(agent.getName());
-    Button white = findViewById(R.id.white);
-    Button black = findViewById(R.id.black);
+    //Button white = findViewById(R.id.white);
+    //Button black = findViewById(R.id.black);
     Button resign = findViewById(R.id.resign);
     Button undo = findViewById(R.id.undo);
     Button draw = findViewById(R.id.draw);
 
+    resign.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View v) {
+        Intent intent = new Intent(GameManager.this, MainActivity.class);
+        startActivity(intent);
+      }
+    });
     TextView message = findViewById(R.id.welcomeMessage);
     if (isWhite && hasStarted) {
       message.setText("PLEASE MAKE YOUR FIRST MOVE");

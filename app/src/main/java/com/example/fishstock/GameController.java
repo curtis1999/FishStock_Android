@@ -149,6 +149,7 @@ public class GameController {
     System.out.println("GG");
   }
 
+
   public static boolean isRepetition(List<Board> boardStates, Board board) {
     int numRepetitions = 0;
     for (Board curBoard : boardStates) {

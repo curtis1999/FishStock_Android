@@ -16,6 +16,7 @@ import android.widget.ImageView;
 import com.example.fishstock.Agents.Agent;
 import com.example.fishstock.Agents.AgentType;
 import com.example.fishstock.Agents.Randy;
+import com.example.fishstock.Pieces.King;
 import com.example.fishstock.Pieces.Piece;
 
 import java.io.Serializable;
@@ -140,12 +141,22 @@ public class BoardFragment extends Fragment {
                 GameController.updateBoardMeta(board);
                 updateBoard(board);
                 try {
+                  if (isGameOver(board, true)) {
+
+                  }
+                } catch (CloneNotSupportedException e) {
+                  e.printStackTrace();
+                }
+                try {
                   ArrayList<Move> adversaryMoves = GameController.generateMoves(board, false);
                   ArrayList<Move> playersMoves = GameController.generateMoves(board, true);
                   Move adversaryMove = adversary.getMove(board, adversaryMoves, playersMoves);
                   GameController.makeMove(board, adversaryMove, false);
                   GameController.updateBoardMeta(board);
                   updateBoard(board);
+                  if (isGameOver(board, false)){
+
+                  }
                 } catch (CloneNotSupportedException e) {
                   e.printStackTrace();
                 }
@@ -180,6 +191,24 @@ public class BoardFragment extends Fragment {
       }
     }
     return rootView;
+  }
+
+  /**
+   *
+   * @param board
+   * @param isWhite whether white or black just moved.
+   * @return
+   * @throws CloneNotSupportedException
+   */
+  public boolean isGameOver(Board board, boolean isWhite) throws CloneNotSupportedException {
+    ArrayList<Move> moves = GameController.generateMoves(board, !isWhite);
+    if (!isWhite) {
+      if (((King)board.whitePieces.get(0)).isDoubleChecked) {
+        moves = GameController.generateMovesDoubleCheck(board, moves, true);
+
+      }
+    }
+      return false;
   }
   public boolean isLegalMove(Coordinate coord, Cell[][] board) {
     if (selectedPiece == null){
