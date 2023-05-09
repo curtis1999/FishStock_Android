@@ -113,7 +113,8 @@ public class BoardFragment extends Fragment {
           public void onClick(View v) {
             Coordinate coord = getCoordFromButton(button);
             Cell cell = board.board[coord.rank][coord.file];
-            if (isWhite && cell.PieceStatus == Status.EMPTY) {
+
+            if (cell.PieceStatus == Status.EMPTY) {
               if (isLegalMove(coord, board.board)){
                 Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), false, true); //TODO: MAKE AN ISWHITE VARIABLE
                 GameController.makeMove(board, move, true);
@@ -131,18 +132,32 @@ public class BoardFragment extends Fragment {
                 }
 
               }
-            } else if (isWhite && cell.PieceStatus == Status.BLACK){
-              Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), true, true); //TODO: MAKE AN ISWHITE VARIABLE
-              move.setCapture(selectedPiece);
-              GameController.makeMove(board, move, true);
-            } else if (isWhite){
+            } else if (cell.PieceStatus == Status.BLACK){
+              if (selectedPiece != null) {
+                Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), true, true); //TODO: MAKE AN ISWHITE VARIABLE
+                move.setCapture(board.board[coord.rank][coord.file].piece);
+                GameController.makeMove(board, move, true);
+                GameController.updateBoardMeta(board);
+                updateBoard(board);
+                try {
+                  ArrayList<Move> adversaryMoves = GameController.generateMoves(board, false);
+                  ArrayList<Move> playersMoves = GameController.generateMoves(board, true);
+                  Move adversaryMove = adversary.getMove(board, adversaryMoves, playersMoves);
+                  GameController.makeMove(board, adversaryMove, false);
+                  GameController.updateBoardMeta(board);
+                  updateBoard(board);
+                } catch (CloneNotSupportedException e) {
+                  e.printStackTrace();
+                }
+              }
+            } else {
               if (selectedPiece != null) {
                 for (Move move : GameController.filterMoves(selectedPiece.generateMoves(selectedPiece.getPos(), board.board))) {
                   ImageButton button = (ImageButton) getButonFromCoord(move.toCoord);
                   if (board.board[move.toCoord.rank][move.toCoord.file].isLight
                       && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus==Status.EMPTY) {
                     button.setImageResource(R.drawable.empty_light);
-                  } else {
+                  } else if (board.board[move.toCoord.rank][move.toCoord.file].PieceStatus==Status.EMPTY){
                     button.setImageResource(R.drawable.empty_dark);
                   }
                 }
@@ -151,9 +166,10 @@ public class BoardFragment extends Fragment {
                 ArrayList<Move> legalMoves = selectedPiece.generateMoves(coord, board.board);
                 for (Move move : GameController.filterMoves(legalMoves)) {
                   ImageButton button = (ImageButton) getButonFromCoord(move.toCoord);
-                  if (board.board[move.toCoord.rank][move.toCoord.file].isLight) {
+                  if (board.board[move.toCoord.rank][move.toCoord.file].isLight
+                      && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus==Status.EMPTY) {
                     button.setImageResource(R.drawable.white_empty_selected);
-                  } else {
+                  } else if (board.board[move.toCoord.rank][move.toCoord.file].PieceStatus==Status.EMPTY){
                     button.setImageResource(R.drawable.black_empty_selected);
                   }
                 }
