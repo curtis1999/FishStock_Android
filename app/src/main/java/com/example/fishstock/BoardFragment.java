@@ -13,6 +13,9 @@ import android.widget.GridLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 
+import com.example.fishstock.Agents.Agent;
+import com.example.fishstock.Agents.AgentType;
+import com.example.fishstock.Agents.Randy;
 import com.example.fishstock.Pieces.Piece;
 
 import java.io.Serializable;
@@ -29,6 +32,7 @@ public class BoardFragment extends Fragment {
   // TODO: Rename parameter arguments, choose names that match
   // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
   private Board board;
+  Agent adversary;
   Piece selectedPiece;
   boolean isWhite = true;
   boolean isGameOver = false;
@@ -66,12 +70,13 @@ public class BoardFragment extends Fragment {
    * @return A new instance of fragment BoardFragment.
    */
   // newInstance method with a Board argument
-  public static BoardFragment newInstance(Board board) {
+  public static BoardFragment newInstance(Board board, Agent adversary) {
     BoardFragment fragment = new BoardFragment();
     Bundle args = new Bundle();
     args.putSerializable("board", (Serializable) board);
     fragment.setArguments(args);
     fragment.board = board;
+    fragment.adversary = adversary;
     return fragment;
   }
 
@@ -90,6 +95,9 @@ public class BoardFragment extends Fragment {
                            Bundle savedInstanceState) {
     // Inflate the layout for this fragment
     rootView = inflater.inflate(R.layout.fragment_board, container, false);
+    if (adversary == null) {
+      adversary = new Randy(AgentType.RANDY, false);
+    }
     if (board == null) {
       Board board = new Board();
       this.board = board;
@@ -111,6 +119,17 @@ public class BoardFragment extends Fragment {
                 GameController.makeMove(board, move, true);
                 GameController.updateBoardMeta(board);
                 updateBoard(board);
+                try {
+                  ArrayList<Move> adversaryMoves = GameController.generateMoves(board, false);
+                  ArrayList<Move> playersMoves = GameController.generateMoves(board, true);
+                  Move adversaryMove = adversary.getMove(board, adversaryMoves, playersMoves);
+                  GameController.makeMove(board, adversaryMove, false);
+                  GameController.updateBoardMeta(board);
+                  updateBoard(board);
+                } catch (CloneNotSupportedException e) {
+                  e.printStackTrace();
+                }
+
               }
             } else if (isWhite && cell.PieceStatus == Status.BLACK){
               Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), true, true); //TODO: MAKE AN ISWHITE VARIABLE
@@ -120,7 +139,8 @@ public class BoardFragment extends Fragment {
               if (selectedPiece != null) {
                 for (Move move : GameController.filterMoves(selectedPiece.generateMoves(selectedPiece.getPos(), board.board))) {
                   ImageButton button = (ImageButton) getButonFromCoord(move.toCoord);
-                  if (board.board[move.toCoord.rank][move.toCoord.file].isLight) {
+                  if (board.board[move.toCoord.rank][move.toCoord.file].isLight
+                      && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus==Status.EMPTY) {
                     button.setImageResource(R.drawable.empty_light);
                   } else {
                     button.setImageResource(R.drawable.empty_dark);

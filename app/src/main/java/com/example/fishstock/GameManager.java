@@ -23,9 +23,10 @@ public class GameManager extends AppCompatActivity {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_game);
     this.board = new Board();
+    this.agent = initializeAgent(getIntent().getStringExtra("agentType"));
     // Create the board fragment and set the bundle as its arguments
     // Create a new instance of the BoardFragment
-    mBoardFragment = BoardFragment.newInstance(this.board);
+    mBoardFragment = BoardFragment.newInstance(this.board, this.agent);
 
 
     // Set the bundle as its arguments
@@ -34,7 +35,7 @@ public class GameManager extends AppCompatActivity {
     }
     mBoardFragment.getArguments().putSerializable("board", new Board());
 
-    this.agent = initializeAgent(getIntent().getStringExtra("agentType"));
+
     TextView adversaryName = findViewById(R.id.player2);
     adversaryName.setText(agent.getName());
     Button white = findViewById(R.id.white);
