@@ -10,9 +10,10 @@ import android.widget.GridLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
-
 import com.example.fishstock.Agents.*;
 import com.example.fishstock.Pieces.*;
+
+import org.w3c.dom.Text;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,9 +29,11 @@ public class GameManager extends AppCompatActivity {
   ArrayList<Piece> capturedPiecesWhite = new ArrayList<>();
   ArrayList<Piece> capturedPiecesBlack = new ArrayList<>();
   ArrayList<Move> blacksPotentialMoves = new ArrayList<>();
-  ArrayList<Move> whitePotentialMoves = new ArrayList<>();
+  ArrayList<Move> whitesPotentialMoves = new ArrayList<>();
+
   /**
    * The Game Loop.  Initializes the board and the buttons.
+   *
    * @param savedInstanceState
    */
   @Override
@@ -52,7 +55,8 @@ public class GameManager extends AppCompatActivity {
     Button draw = findViewById(R.id.draw);
     TextView capturedWhite = findViewById(R.id.CapturedPiecesWhite);
     TextView capturedBlack = findViewById(R.id.CapturedPiecesBlack);
-    TextView checkstatus = findViewById(R.id.checkStatus);
+    TextView checkStatusBlack = findViewById(R.id.checkStatusBlack);
+    TextView checkStatusWhite = findViewById(R.id.checkStatusWhite);
     resign.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View v) {
@@ -67,11 +71,7 @@ public class GameManager extends AppCompatActivity {
       }
     });
     TextView message = findViewById(R.id.welcomeMessage);
-    if (isWhite && hasStarted) {
-      message.setText("PLEASE MAKE YOUR FIRST MOVE");
-    } else if (!isWhite && hasStarted) {
-      message.setText("It is " + blackPlayer.getName() + "'s Turn");
-    }
+
     //3. Set the buttons.
     for (int row = 0; row < 8; row++) {
       for (int col = 0; col < 8; col++) {
@@ -82,59 +82,45 @@ public class GameManager extends AppCompatActivity {
           public void onClick(View v) {
             Coordinate coord = getCoordFromButton(button);
             Cell cell = board.board[coord.rank][coord.file];
-            if (selectedPiece != null && cell.PieceStatus == Status.EMPTY) {
-              if (isLegalMove(coord, board.board)){
+            //CASE 1: Making a non-capturing move. (They clicked on an empty square with a selected piece.
+            if (cell.PieceStatus == Status.EMPTY) {
+              if (selectedPiece != null && isLegalMove(coord, board.board)) {
                 Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), false, true); //TODO: MAKE AN ISWHITE VARIABLE
+                move = updateMove(move);
                 GameService.makeMove(board, move, true);
                 game.whitesMovesLog.add(move);
                 GameService.updateBoardMeta(board);
                 game.boardStates.add(GameService.copyBoard(board));
-                if (GameService.isDeadPosition(board.whitePieces, board.blackPieces)) {
-                  message.setText("DRAW BY INSUFFICIENT MATERIAL");
-                  Intent intent = new Intent(GameManager.this, MainActivity.class);
-                  intent.putExtra("gameResult", "0.5"); //TODO: store the result of the game.
-                  startActivity(intent);
-                }
-                if (GameService.isRepetition(game.boardStates, board)){
-                  message.setText("DRAW BY REPETITION");
-                  Intent intent = new Intent(GameManager.this, MainActivity.class);
-                  intent.putExtra("gameResult", "0.5"); //TODO: store the result of the game.
-                  startActivity(intent);
-                }
+                postMoveChecks(board, true, checkStatusBlack, checkStatusWhite, message);
+                message.setText("BLACK TO MOVE");
                 try {
-                  blacksPotentialMoves = GameService.generateMoves(board, false);
+                  ArrayList<Move> playersMoves = GameService.generateMoves(board, true); //TODO: Should be unnecessary
+                  Move adversaryMove = blackPlayer.getMove(board, blacksPotentialMoves, playersMoves);
+                  if (adversaryMove.isCapture) {
+                    capturedPiecesWhite.add(adversaryMove.capturablePiece);
+                    capturedWhite.append(": " + adversaryMove.capturablePiece.getName());
+                  }
+                  GameService.makeMove(board, adversaryMove, false);
+                  GameService.updateBoardMeta(board);
+                  updateBoard(board);
+                  postMoveChecks(board, false, checkStatusBlack, checkStatusWhite, message);
+                  message.setText("WHITE TO MOVE");
                 } catch (CloneNotSupportedException e) {
                   e.printStackTrace();
                 }
-
-                if (((King)board.blackPieces.get(0)).isDoubleChecked) {
-                  checkstatus.setText("DOUBLE CHECK!!");
-                  blacksPotentialMoves = GameService.generateMovesDoubleCheck(board, blacksPotentialMoves, false);
-                  if (blacksPotentialMoves.size() == 0) {
-                    message.setText("CHECKMATE!! PLAYER 1 WINS");
-                    Intent intent = new Intent(GameManager.this, MainActivity.class);
-                    intent.putExtra("gameResult", "1"); //TODO: store the result of the game.
-                    startActivity(intent);
-                  }
-                } else if (((King)board.blackPieces.get(0)).isChecked) {
-                  checkstatus.setText("CHECK!");
-                  blacksPotentialMoves = GameService.generateMovesCheck(board, blacksPotentialMoves, false);
-                  if (blacksPotentialMoves.size() == 0) {
-                    message.setText("CHECKMATE!! PLAYER 1 WINS");
-                    Intent intent = new Intent(GameManager.this, MainActivity.class);
-                    intent.putExtra("gameResult", "1"); //TODO: store the result of the game.
-                    startActivity(intent);
-                  }
-                }
-                if (blacksPotentialMoves.size() == 0) {
-                  message.setText("STALEMATE. THE GAME ENDS IN A DRAW");
-                  Intent intent = new Intent(GameManager.this, MainActivity.class);
-                  intent.putExtra("gameResult", "0.5"); //TODO: store the result of the game.
-                  startActivity(intent);
-                }
-
-                updateBoard(board);
-                selectedPiece = null;
+              }
+              // CASE 2: Making a capturing move. (Clicked on an adversary piece with a piece selected.
+            } else if (cell.PieceStatus == Status.BLACK) {
+              if (selectedPiece != null && isLegalMove(coord, board.board)) {
+                Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), true, true); //TODO: MAKE AN ISWHITE VARIABLE
+                move = updateMove(move);
+                move.setCapture(board.board[coord.rank][coord.file].piece);
+                capturedPiecesBlack.add(board.board[coord.rank][coord.file].piece);
+                capturedBlack.append(": " + board.board[coord.rank][coord.file].piece.getName());
+                GameService.makeMove(board, move, true);
+                GameService.updateBoardMeta(board);
+                postMoveChecks(board, true, checkStatusBlack, checkStatusWhite, message);
+                message.setText("BLACK TO MOVE");
                 try {
                   ArrayList<Move> playersMoves = GameService.generateMoves(board, true);
                   Move adversaryMove = blackPlayer.getMove(board, blacksPotentialMoves, playersMoves);
@@ -145,62 +131,34 @@ public class GameManager extends AppCompatActivity {
                   GameService.makeMove(board, adversaryMove, false);
                   GameService.updateBoardMeta(board);
                   updateBoard(board);
-                } catch (CloneNotSupportedException e) {
-                  e.printStackTrace();
-                }
-
-              }
-            } else if (cell.PieceStatus == Status.BLACK){
-              if (selectedPiece != null) {
-                Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), true, true); //TODO: MAKE AN ISWHITE VARIABLE
-                move.setCapture(board.board[coord.rank][coord.file].piece);
-                capturedPiecesBlack.add(board.board[coord.rank][coord.file].piece);
-                capturedBlack.append(": " + board.board[coord.rank][coord.file].piece.getName());
-                GameService.makeMove(board, move, true);
-                GameService.updateBoardMeta(board);
-                updateBoard(board);
-                selectedPiece = null;
-                if (isGameOver(board, true)) {
-
-                }
-                try {
-                  ArrayList<Move> adversaryMoves = GameService.generateMoves(board, false);
-                  ArrayList<Move> playersMoves = GameService.generateMoves(board, true);
-                  Move adversaryMove = blackPlayer.getMove(board, adversaryMoves, playersMoves);
-                  if (adversaryMove.isCapture) {
-                    capturedPiecesWhite.add(adversaryMove.capturablePiece);
-                    capturedWhite.append(": " + adversaryMove.capturablePiece.getName());
-                  }
-                  GameService.makeMove(board, adversaryMove, false);
-                  GameService.updateBoardMeta(board);
-                  updateBoard(board);
-                  if (isGameOver(board, false)){
-
-                  }
+                  postMoveChecks(board, false, checkStatusBlack, checkStatusWhite, message);
+                  message.setText("WHITE TO MOVE");
                 } catch (CloneNotSupportedException e) {
                   e.printStackTrace();
                 }
               }
+              //CASE 3: The player clicked a white piece.
             } else {
               if (selectedPiece != null) {
                 for (Move move : GameService.filterMoves(selectedPiece.generateMoves(selectedPiece.getPos(), board.board))) {
                   ImageButton button = (ImageButton) getButonFromCoord(move.toCoord);
                   if (board.board[move.toCoord.rank][move.toCoord.file].isLight
-                      && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus==Status.EMPTY) {
+                      && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.EMPTY) {
                     button.setImageResource(R.drawable.empty_light);
-                  } else if (board.board[move.toCoord.rank][move.toCoord.file].PieceStatus==Status.EMPTY){
+                  } else if (board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.EMPTY) {
                     button.setImageResource(R.drawable.empty_dark);
                   }
                 }
-              } if (!cell.piece.equals(selectedPiece)) {
+              }
+              if (!cell.piece.equals(selectedPiece)) {
                 selectedPiece = board.board[coord.rank][coord.file].piece;
                 ArrayList<Move> legalMoves = selectedPiece.generateMoves(coord, board.board);
                 for (Move move : GameService.filterMoves(legalMoves)) {
                   ImageButton button = (ImageButton) getButonFromCoord(move.toCoord);
                   if (board.board[move.toCoord.rank][move.toCoord.file].isLight
-                      && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus==Status.EMPTY) {
+                      && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.EMPTY) {
                     button.setImageResource(R.drawable.white_empty_selected);
-                  } else if (board.board[move.toCoord.rank][move.toCoord.file].PieceStatus==Status.EMPTY){
+                  } else if (board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.EMPTY) {
                     button.setImageResource(R.drawable.black_empty_selected);
                   }
                 }
@@ -211,6 +169,149 @@ public class GameManager extends AppCompatActivity {
           }
         });
       }
+    }
+  }
+
+  /**
+   * Updates the move if it is is a castle, enPassant or Promotion.
+   * @param move
+   * @return
+   */
+  public Move updateMove(Move move) {
+    if (move.piece.getName().equals("King") && Math.abs(move.toCoord.file - move.fromCoord.file) == 2) {
+      move.setCastle();
+    } else if (move.piece.getName().equals("Pawn") && move.toCoord.rank == 7 || move.toCoord.rank == 0) {
+      move.setPromotion(new Queen (move.toCoord, move.piece.getColor())); //TODO: ASK THE USER FOR THE PROMOTION CHOICE!!
+    } else if (move.piece.getName().equals("Pawn") && Math.abs(move.toCoord.file - move.fromCoord.file) == 1 &&
+    board.board[move.toCoord.rank][move.toCoord.file].PieceStatus.equals(Status.EMPTY)) {
+      move.setEnPassant();
+    }
+    return move;
+  }
+
+  public void postMoveChecks(Board board, boolean whiteMoved, TextView checkStatusBlack, TextView checkStatusWhite, TextView message) {
+    //CHECK 1: Dead position.
+    if (GameService.isDeadPosition(board.whitePieces, board.blackPieces)) {
+      message.setText("DRAW BY INSUFFICIENT MATERIAL");
+      try {
+        Thread.sleep(2000); // sleep for 2 second
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+      Intent intent = new Intent(GameManager.this, MainActivity.class);
+      intent.putExtra("gameResult", "0.5"); //TODO: store the result of the game.
+      startActivity(intent);
+    }
+    //CHeck 2: Repetition.
+    if (GameService.isRepetition(game.boardStates, board)) {
+      message.setText("DRAW BY REPETITION");
+      try {
+        Thread.sleep(2000); // sleep for 2 second
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+      Intent intent = new Intent(GameManager.this, MainActivity.class);
+      intent.putExtra("gameResult", "0.5"); //TODO: store the result of the game.
+      startActivity(intent);
+    }
+    //Check 3: Checks, mates and stalemates.
+    if (whiteMoved) {
+      try {
+        blacksPotentialMoves = GameService.generateMoves(board, false);
+      } catch (CloneNotSupportedException e) {
+        e.printStackTrace();
+      }
+      if (((King) board.blackPieces.get(0)).isDoubleChecked) {
+        checkStatusBlack.setText("DOUBLE CHECK!!");
+        blacksPotentialMoves = GameService.generateMovesDoubleCheck(board, blacksPotentialMoves, false);
+        if (blacksPotentialMoves.size() == 0) {
+          message.setText("CHECKMATE!! PLAYER 1 WINS");
+          try {
+            Thread.sleep(2000); // sleep for 1 second
+          } catch (InterruptedException e) {
+            e.printStackTrace();
+          }
+          Intent intent = new Intent(GameManager.this, MainActivity.class);
+          intent.putExtra("gameResult", "1"); //TODO: store the result of the game.
+          startActivity(intent);
+        }
+      } else if (((King) board.blackPieces.get(0)).isChecked) {
+        checkStatusBlack.setText("CHECK!");
+        blacksPotentialMoves = GameService.generateMovesCheck(board, blacksPotentialMoves, false);
+        if (blacksPotentialMoves.size() == 0) {
+          message.setText("CHECKMATE!! PLAYER 1 WINS");
+          try {
+            Thread.sleep(2000); // sleep for 1 second
+          } catch (InterruptedException e) {
+            e.printStackTrace();
+          }
+          Intent intent = new Intent(GameManager.this, MainActivity.class);
+          intent.putExtra("gameResult", "1"); //TODO: store the result of the game.
+          startActivity(intent);
+        }
+      }
+      if (blacksPotentialMoves.size() == 0) {
+        message.setText("STALEMATE. THE GAME ENDS IN A DRAW");
+        try {
+          Thread.sleep(2000); // sleep for 2 seconds
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+        Intent intent = new Intent(GameManager.this, MainActivity.class);
+        intent.putExtra("gameResult", "0.5"); //TODO: store the result of the game.
+        startActivity(intent);
+      }
+      updateBoard(board);
+      selectedPiece = null;
+      checkStatusWhite.setText("");
+    }else {
+      try {
+        whitesPotentialMoves = GameService.generateMoves(board, true);
+      } catch (CloneNotSupportedException e) {
+        e.printStackTrace();
+      }
+      if (((King) board.whitePieces.get(0)).isDoubleChecked) {
+        checkStatusWhite.setText("DOUBLE CHECK!!");
+        whitesPotentialMoves = GameService.generateMovesDoubleCheck(board,whitesPotentialMoves, true);
+        if (blacksPotentialMoves.size() == 0) {
+          message.setText("CHECKMATE!! PLAYER 1 LOSES");
+          try {
+            Thread.sleep(2000); // sleep for 1 second
+          } catch (InterruptedException e) {
+            e.printStackTrace();
+          }
+          Intent intent = new Intent(GameManager.this, MainActivity.class);
+          intent.putExtra("gameResult", "0"); //TODO: store the result of the game.
+          startActivity(intent);
+        }
+      } else if (((King) board.whitePieces.get(0)).isChecked) {
+        checkStatusWhite.setText("CHECK!");
+        whitesPotentialMoves = GameService.generateMovesCheck(board, whitesPotentialMoves, true);
+        if (whitesPotentialMoves.size() == 0) {
+          message.setText("CHECKMATE!! PLAYER 1 LOSES");
+          try {
+            Thread.sleep(2000); // sleep for 1 second
+          } catch (InterruptedException e) {
+            e.printStackTrace();
+          }
+          Intent intent = new Intent(GameManager.this, MainActivity.class);
+          intent.putExtra("gameResult", "0"); //TODO: store the result of the game.
+          startActivity(intent);
+        }
+      }
+      if (whitesPotentialMoves.size() == 0) {
+        message.setText("STALEMATE. THE GAME ENDS IN A DRAW");
+        try {
+          Thread.sleep(2000); // sleep for 2 seconds
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+        Intent intent = new Intent(GameManager.this, MainActivity.class);
+        intent.putExtra("gameResult", "0.5"); //TODO: store the result of the game.
+        startActivity(intent);
+      }
+      checkStatusBlack.setText("");
+      updateBoard(board);
     }
   }
 
@@ -230,8 +331,9 @@ public class GameManager extends AppCompatActivity {
   public boolean isGameOver(Board board, boolean isWhite) {
     return false; //TODO:
   }
+
   public boolean isLegalMove(Coordinate coord, Cell[][] board) {
-    if (selectedPiece == null){
+    if (selectedPiece == null) {
       return false;
     }
     List<Move> moves = selectedPiece.generateMoves(selectedPiece.getPos(), board);
@@ -249,18 +351,20 @@ public class GameManager extends AppCompatActivity {
     int file = 7 - (buttonId.charAt(7) - '0');
     return new Coordinate(file, rank);
   }
+
   public ImageView getButonFromCoord(Coordinate coord) {
-    int resId = getResources().getIdentifier("button" + (7-coord.rank) + (7-coord.file), "id", this.getPackageName());
+    int resId = getResources().getIdentifier("button" + (7 - coord.rank) + (7 - coord.file), "id", this.getPackageName());
     return findViewById(resId);
   }
 
   public static void defaultView(ArrayList<ImageButton> squares) {
   }
+
   public void updateBoard(Board board) {
     GridLayout grid = findViewById(R.id.gridlayout);
 
-    for (int row=0; row<8; row++) {
-      for (int col=0; col<8; col++) {
+    for (int row = 0; row < 8; row++) {
+      for (int col = 0; col < 8; col++) {
         Cell cell = board.board[row][col];
         updateCellImage(cell, row, col);
       }
@@ -278,37 +382,37 @@ public class GameManager extends AppCompatActivity {
       }
     } else if (cell.isWhite) {
       if (cell.isKing) {
-        if (cell.isLight){
+        if (cell.isLight) {
           cellImageView.setImageResource(R.drawable.white_king_on_light);
         } else {
           cellImageView.setImageResource(R.drawable.white_king_on_dark);
         }
-      } else if(cell.isQueen){
-        if (cell.isLight){
+      } else if (cell.isQueen) {
+        if (cell.isLight) {
           cellImageView.setImageResource(R.drawable.white_queen_on_light);
         } else {
           cellImageView.setImageResource(R.drawable.white_queen_on_dark);
         }
-      }else if (cell.isBishop) {
-        if (cell.isLight){
+      } else if (cell.isBishop) {
+        if (cell.isLight) {
           cellImageView.setImageResource(R.drawable.white_bishop_on_light);
         } else {
           cellImageView.setImageResource(R.drawable.white_bishop_on_dark);
         }
-      } else if (cell.isKnight){
-        if (cell.isLight){
+      } else if (cell.isKnight) {
+        if (cell.isLight) {
           cellImageView.setImageResource(R.drawable.white_knight_on_light);
         } else {
           cellImageView.setImageResource(R.drawable.white_knight_on_dark);
         }
       } else if (cell.isRook) {
-        if (cell.isLight){
+        if (cell.isLight) {
           cellImageView.setImageResource(R.drawable.white_rook_on_light);
         } else {
           cellImageView.setImageResource(R.drawable.white_rook_on_dark);
         }
       } else if (cell.isPawn) {
-        if (cell.isLight){
+        if (cell.isLight) {
           cellImageView.setImageResource(R.drawable.white_pawn_on_light);
         } else {
           cellImageView.setImageResource(R.drawable.white_pawn_on_dark);
@@ -316,37 +420,37 @@ public class GameManager extends AppCompatActivity {
       }
     } else {
       if (cell.isKing) {
-        if (cell.isLight){
+        if (cell.isLight) {
           cellImageView.setImageResource(R.drawable.black_king_on_light);
         } else {
           cellImageView.setImageResource(R.drawable.black_king_on_dark);
         }
-      } else if(cell.isQueen){
-        if (cell.isLight){
+      } else if (cell.isQueen) {
+        if (cell.isLight) {
           cellImageView.setImageResource(R.drawable.black_queen_on_light);
         } else {
           cellImageView.setImageResource(R.drawable.black_queen_on_dark);
         }
-      }else if (cell.isBishop) {
-        if (cell.isLight){
+      } else if (cell.isBishop) {
+        if (cell.isLight) {
           cellImageView.setImageResource(R.drawable.black_bishop_on_light);
         } else {
           cellImageView.setImageResource(R.drawable.black_bishop_on_dark);
         }
-      } else if (cell.isKnight){
-        if (cell.isLight){
+      } else if (cell.isKnight) {
+        if (cell.isLight) {
           cellImageView.setImageResource(R.drawable.black_knight_on_light);
         } else {
           cellImageView.setImageResource(R.drawable.black_knight_on_dark);
         }
       } else if (cell.isRook) {
-        if (cell.isLight){
+        if (cell.isLight) {
           cellImageView.setImageResource(R.drawable.black_rook_on_light);
         } else {
           cellImageView.setImageResource(R.drawable.black_rook_on_dark);
         }
       } else if (cell.isPawn) {
-        if (cell.isLight){
+        if (cell.isLight) {
           cellImageView.setImageResource(R.drawable.black_pawn_on_light);
         } else {
           cellImageView.setImageResource(R.drawable.black_pawn_on_dark);
