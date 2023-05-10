@@ -21,8 +21,6 @@ public class Randy extends Agent{
         randomMove = possibleMoves.get(randy);
         continue;
       }else {
-        if (randomMove.isPromotion) {
-        }
         break;
       }
     }

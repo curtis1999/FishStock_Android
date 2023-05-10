@@ -96,27 +96,28 @@ public class GameManager extends AppCompatActivity {
                 if (move.isPromotion) {
                   PromotionDialog promotionDialog = new PromotionDialog(GameManager.this, move);
                   promotionDialog.show();
-                }
-                GameService.makeMove(board, move, true);
-                game.whitesMovesLog.add(move);
-                GameService.updateBoardMeta(board);
-                game.boardStates.add(GameService.copyBoard(board));
-                postMoveChecks(board, true, checkStatusBlack, checkStatusWhite, message);
-                message.setText("BLACK TO MOVE");
-                try {
-                  ArrayList<Move> playersMoves = GameService.generateMoves(board, true); //TODO: Should be unnecessary
-                  Move adversaryMove = blackPlayer.getMove(board, blacksPotentialMoves, playersMoves);
-                  if (adversaryMove.isCapture) {
-                    capturedPiecesWhite.add(adversaryMove.capturablePiece);
-                    capturedWhite.append(": " + adversaryMove.capturablePiece.getName());
-                  }
-                  GameService.makeMove(board, adversaryMove, false);
+                } else {
+                  GameService.makeMove(board, move, true);
+                  game.whitesMovesLog.add(move);
                   GameService.updateBoardMeta(board);
-                  updateBoard(board);
-                  postMoveChecks(board, false, checkStatusBlack, checkStatusWhite, message);
-                  message.setText("WHITE TO MOVE");
-                } catch (CloneNotSupportedException e) {
-                  e.printStackTrace();
+                  game.boardStates.add(GameService.copyBoard(board));
+                  postMoveChecks(board, true, checkStatusBlack, checkStatusWhite, message);
+                  message.setText("BLACK TO MOVE");
+                  try {
+                    ArrayList<Move> playersMoves = GameService.generateMoves(board, true); //TODO: Should be unnecessary
+                    Move adversaryMove = blackPlayer.getMove(board, blacksPotentialMoves, playersMoves);
+                    if (adversaryMove.isCapture) {
+                      capturedPiecesWhite.add(adversaryMove.capturablePiece);
+                      capturedWhite.append(": " + adversaryMove.capturablePiece.getName());
+                    }
+                    GameService.makeMove(board, adversaryMove, false);
+                    GameService.updateBoardMeta(board);
+                    updateBoard(board);
+                    postMoveChecks(board, false, checkStatusBlack, checkStatusWhite, message);
+                    message.setText("WHITE TO MOVE");
+                  } catch (CloneNotSupportedException e) {
+                    e.printStackTrace();
+                  }
                 }
               }
               // CASE 2: Making a capturing move. (Clicked on an adversary piece with a piece selected.
@@ -126,29 +127,30 @@ public class GameManager extends AppCompatActivity {
                 move = updateMove(move);
                 if (move.isPromotion) {
                   PromotionDialog promotionDialog = new PromotionDialog(GameManager.this, move);
-                  promotionDialog.show();
-                }
-                move.setCapture(board.board[coord.rank][coord.file].piece);
-                capturedPiecesBlack.add(board.board[coord.rank][coord.file].piece);
-                capturedBlack.append(": " + board.board[coord.rank][coord.file].piece.getName());
-                GameService.makeMove(board, move, true);
-                GameService.updateBoardMeta(board);
-                postMoveChecks(board, true, checkStatusBlack, checkStatusWhite, message);
-                message.setText("BLACK TO MOVE");
-                try {
-                  ArrayList<Move> playersMoves = GameService.generateMoves(board, true);
-                  Move adversaryMove = blackPlayer.getMove(board, blacksPotentialMoves, playersMoves);
-                  if (adversaryMove.isCapture) {
-                    capturedPiecesWhite.add(adversaryMove.capturablePiece);
-                    capturedWhite.append(": " + adversaryMove.capturablePiece.getName());
-                  }
-                  GameService.makeMove(board, adversaryMove, false);
+                  promotionDialog.show(); //TODO: MAKE THE MOVE WITHIN HERE!!
+                } else {
+                  move.setCapture(board.board[coord.rank][coord.file].piece);
+                  capturedPiecesBlack.add(board.board[coord.rank][coord.file].piece);
+                  capturedBlack.append(": " + board.board[coord.rank][coord.file].piece.getName());
+                  GameService.makeMove(board, move, true);
                   GameService.updateBoardMeta(board);
-                  updateBoard(board);
-                  postMoveChecks(board, false, checkStatusBlack, checkStatusWhite, message);
-                  message.setText("WHITE TO MOVE");
-                } catch (CloneNotSupportedException e) {
-                  e.printStackTrace();
+                  postMoveChecks(board, true, checkStatusBlack, checkStatusWhite, message);
+                  message.setText("BLACK TO MOVE");
+                  try {
+                    ArrayList<Move> playersMoves = GameService.generateMoves(board, true);
+                    Move adversaryMove = blackPlayer.getMove(board, blacksPotentialMoves, playersMoves);
+                    if (adversaryMove.isCapture) {
+                      capturedPiecesWhite.add(adversaryMove.capturablePiece);
+                      capturedWhite.append(": " + adversaryMove.capturablePiece.getName());
+                    }
+                    GameService.makeMove(board, adversaryMove, false);
+                    GameService.updateBoardMeta(board);
+                    updateBoard(board);
+                    postMoveChecks(board, false, checkStatusBlack, checkStatusWhite, message);
+                    message.setText("WHITE TO MOVE");
+                  } catch (CloneNotSupportedException e) {
+                    e.printStackTrace();
+                  }
                 }
               }
               //CASE 3: The player clicked a white piece.

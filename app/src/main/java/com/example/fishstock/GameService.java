@@ -41,6 +41,7 @@ public class GameService {
     }
 
     //1. Updates the board position of the moved piece.
+    ChessBoard.board[curMove.toCoord.rank][curMove.toCoord.file].empty();
     ChessBoard.board[curMove.toCoord.rank][curMove.toCoord.file].putPiece(curMove.piece);
     ChessBoard.board[curMove.fromCoord.rank][curMove.fromCoord.file].empty();
     if (isWhite) {
@@ -54,9 +55,6 @@ public class GameService {
     if (curMove.isCapture) {
       if (isWhite) {
         int indexOfBlacksCapturedPiece = Board.getIndex(ChessBoard.blackPieces, curMove.capturablePiece.getPos());
-        if (indexOfBlacksCapturedPiece < 0) {
-          int a=0;
-        }
         ChessBoard.blackPieces.remove(indexOfBlacksCapturedPiece);
         //If the move is EnPassant, then the piece must be manually removed from the board.
         if (curMove.isEnPassant) {
@@ -64,9 +62,6 @@ public class GameService {
         }
       } else {
         int indexOfWhitesCapturedPiece = Board.getIndex(ChessBoard.whitePieces, curMove.capturablePiece.getPos());
-        if (indexOfWhitesCapturedPiece < 0) {
-          int a=0;
-        }
         ChessBoard.whitePieces.remove(indexOfWhitesCapturedPiece);
         if (curMove.isEnPassant) {
           ChessBoard.board[curMove.capturablePiece.getPos().rank][curMove.capturablePiece.getPos().file].empty();
