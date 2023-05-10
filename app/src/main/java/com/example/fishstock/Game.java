@@ -31,9 +31,10 @@ public class Game {
   public void addBoardState(Board board) {
     this.boardStates.add(board);
   }
+
   public Board getPreviousBoard() {
     if(boardStates.size()>1) {
-      return boardStates.get(boardStates.size()-2);
+      return boardStates.get(boardStates.size()-3);
     } else {
       return boardStates.get(0);
     }

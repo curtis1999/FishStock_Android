@@ -42,9 +42,11 @@ public class GameManager extends AppCompatActivity {
     setContentView(R.layout.activity_game);
     //1. Initialize the board, agent and game
     this.board = new Board();
+    GameService.updateBoardMeta(board);
     this.blackPlayer = initializeAgent(getIntent().getStringExtra("agentType"));
     this.whitePlayer = new Human(AgentType.HUMAN, true);
     this.game = new Game(board, whitePlayer.type, blackPlayer.type);
+    this.game.boardStates.add(GameService.copyBoard(this.board));
     updateBoard(board);
 
     //2. Initialize the texts and buttons.
@@ -112,6 +114,8 @@ public class GameManager extends AppCompatActivity {
                     }
                     GameService.makeMove(board, adversaryMove, false);
                     GameService.updateBoardMeta(board);
+                    game.blacksMovesLog.add(adversaryMove);
+                    game.boardStates.add(GameService.copyBoard(board));
                     updateBoard(board);
                     postMoveChecks(board, false, checkStatusBlack, checkStatusWhite, message);
                     message.setText("WHITE TO MOVE");
@@ -134,6 +138,8 @@ public class GameManager extends AppCompatActivity {
                   capturedBlack.append(": " + board.board[coord.rank][coord.file].piece.getName());
                   GameService.makeMove(board, move, true);
                   GameService.updateBoardMeta(board);
+                  game.whitesMovesLog.add(move);
+                  game.boardStates.add(GameService.copyBoard(board));
                   postMoveChecks(board, true, checkStatusBlack, checkStatusWhite, message);
                   message.setText("BLACK TO MOVE");
                   try {
@@ -145,6 +151,8 @@ public class GameManager extends AppCompatActivity {
                     }
                     GameService.makeMove(board, adversaryMove, false);
                     GameService.updateBoardMeta(board);
+                    game.blacksMovesLog.add(adversaryMove);
+                    game.boardStates.add(GameService.copyBoard(board));
                     updateBoard(board);
                     postMoveChecks(board, false, checkStatusBlack, checkStatusWhite, message);
                     message.setText("WHITE TO MOVE");
