@@ -2,6 +2,7 @@ package com.example.fishstock;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.app.Dialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
@@ -24,8 +25,7 @@ public class GameManager extends AppCompatActivity {
   Agent whitePlayer;
   Agent blackPlayer;
   Piece selectedPiece;
-  boolean hasStarted = false;
-  boolean isWhite = true;
+  boolean isWhite = true; //TODO;
   ArrayList<Piece> capturedPiecesWhite = new ArrayList<>();
   ArrayList<Piece> capturedPiecesBlack = new ArrayList<>();
   ArrayList<Move> blacksPotentialMoves = new ArrayList<>();
@@ -53,6 +53,10 @@ public class GameManager extends AppCompatActivity {
     Button resign = findViewById(R.id.resign);
     Button undo = findViewById(R.id.undo);
     Button draw = findViewById(R.id.draw);
+    ImageButton promotionQueen = findViewById(R.id.promotionQueen);
+    ImageButton promotionRook = findViewById(R.id.promotionRook);
+    ImageButton promotionBishop = findViewById(R.id.promotionBishop);
+    ImageButton promotionKnight= findViewById(R.id.promotionKnight);
     TextView capturedWhite = findViewById(R.id.CapturedPiecesWhite);
     TextView capturedBlack = findViewById(R.id.CapturedPiecesBlack);
     TextView checkStatusBlack = findViewById(R.id.checkStatusBlack);
@@ -67,7 +71,9 @@ public class GameManager extends AppCompatActivity {
     undo.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View v) {
-        board = game.getPreviousBoard();
+        board = game.getPreviousBoard(); //TODO: FIX THIS.
+        GameService.updateBoardMeta(board);
+        updateBoard(board);
       }
     });
     TextView message = findViewById(R.id.welcomeMessage);
@@ -87,6 +93,10 @@ public class GameManager extends AppCompatActivity {
               if (selectedPiece != null && isLegalMove(coord, board.board)) {
                 Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), false, true); //TODO: MAKE AN ISWHITE VARIABLE
                 move = updateMove(move);
+                if (move.isPromotion) {
+                  PromotionDialog promotionDialog = new PromotionDialog(GameManager.this, move);
+                  promotionDialog.show();
+                }
                 GameService.makeMove(board, move, true);
                 game.whitesMovesLog.add(move);
                 GameService.updateBoardMeta(board);
@@ -114,6 +124,10 @@ public class GameManager extends AppCompatActivity {
               if (selectedPiece != null && isLegalMove(coord, board.board)) {
                 Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), true, true); //TODO: MAKE AN ISWHITE VARIABLE
                 move = updateMove(move);
+                if (move.isPromotion) {
+                  PromotionDialog promotionDialog = new PromotionDialog(GameManager.this, move);
+                  promotionDialog.show();
+                }
                 move.setCapture(board.board[coord.rank][coord.file].piece);
                 capturedPiecesBlack.add(board.board[coord.rank][coord.file].piece);
                 capturedBlack.append(": " + board.board[coord.rank][coord.file].piece.getName());
@@ -313,6 +327,49 @@ public class GameManager extends AppCompatActivity {
       checkStatusBlack.setText("");
       updateBoard(board);
     }
+  }
+
+  private Move showPromotionDialog(Move move) {
+    Dialog dialog = new Dialog(GameManager.this);
+    dialog.setContentView(R.layout.dialog_promotion);
+    ImageButton promotionQueen = findViewById(R.id.promotionQueen);
+    ImageButton promotionRook = findViewById(R.id.promotionRook);
+    ImageButton promotionBishop = findViewById(R.id.promotionBishop);
+    ImageButton promotionKnight = findViewById(R.id.promotionKnight);
+
+    promotionQueen.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View v) {
+        move.setPromotion(new Queen(move.toCoord, true));
+        updateMove(move);
+        dialog.dismiss();
+      }
+    });
+    promotionRook.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View v) {
+        move.setPromotion(new Rook(move.toCoord, true));
+        updateMove(move);
+        dialog.dismiss();
+      }
+    });
+    promotionBishop.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View v) {
+        move.setPromotion(new Bishop(move.toCoord, true));
+        updateMove(move);
+        dialog.dismiss();
+      }
+    });
+    promotionKnight.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View v) {
+        move.setPromotion(new Knight(move.toCoord, true));
+        updateMove(move);
+        dialog.dismiss();
+      }
+    });
+    return move;
   }
 
 

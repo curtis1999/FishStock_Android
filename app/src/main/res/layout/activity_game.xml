@@ -30,10 +30,11 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="top|center"
+        android:layout_marginTop="4dp"
         android:text="WHITE TO MOVE"
         android:textSize="25dp"
-        android:layout_marginTop="50dp"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.493"
         app:layout_constraintStart_toStartOf="@+id/player1"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -71,17 +72,6 @@
         app:layout_constraintStart_toStartOf="parent" />
 
     <TextView
-        android:id="@+id/CapturedPiecesBlack"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="CapturedPieces"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.051"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/welcomeMessage"
-        app:layout_constraintVertical_bias="0.475" />
-
-    <TextView
         android:id="@+id/CapturedPiecesWhite"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -92,6 +82,50 @@
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent" />
 
+    <TextView
+        android:id="@+id/checkStatusWhite"
+        android:layout_width="61dp"
+        android:layout_height="19dp"
+        app:layout_constraintBottom_toTopOf="@+id/resign"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.843"
+        app:layout_constraintStart_toEndOf="@+id/CapturedPiecesWhite"
+        app:layout_constraintTop_toBottomOf="@+id/gridlayout"
+        app:layout_constraintVertical_bias="0.797" />
+
+    <TextView
+        android:id="@+id/CapturedPiecesBlack"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="CapturedPieces"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.051"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/welcomeMessage" />
+
+    <TextView
+        android:id="@+id/checkStatusBlack"
+        android:layout_width="0dp"
+        android:layout_height="11dp"
+        android:text=""
+        app:layout_constraintBottom_toTopOf="@+id/gridlayout"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toEndOf="@+id/CapturedPiecesBlack"
+        app:layout_constraintTop_toBottomOf="@+id/welcomeMessage"
+        app:layout_constraintVertical_bias="0.169" />
+
+    <include
+        android:id="@+id/promotion_layout"
+        layout="@layout/dialog_promotion"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@+id/gridlayout"
+        app:layout_constraintEnd_toEndOf="@+id/checkStatusBlack"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/welcomeMessage" />
     <GridLayout
         android:id="@+id/gridlayout"
         android:layout_width="match_parent"
@@ -933,29 +967,5 @@
             android:tag="7,7"
             tools:src="@drawable/empty_light" />
     </GridLayout>
-
-    <TextView
-        android:id="@+id/checkStatusBlack"
-        android:layout_width="0dp"
-        android:layout_height="11dp"
-        android:text=""
-        app:layout_constraintBottom_toTopOf="@+id/gridlayout"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.781"
-        app:layout_constraintStart_toEndOf="@+id/CapturedPiecesBlack"
-        app:layout_constraintTop_toBottomOf="@+id/welcomeMessage"
-        app:layout_constraintVertical_bias="0.044" />
-
-    <TextView
-        android:id="@+id/checkStatusWhite"
-        android:layout_width="61dp"
-        android:layout_height="19dp"
-        app:layout_constraintBottom_toTopOf="@+id/resign"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.843"
-        app:layout_constraintStart_toEndOf="@+id/CapturedPiecesWhite"
-        app:layout_constraintTop_toBottomOf="@+id/gridlayout"
-        app:layout_constraintVertical_bias="0.797" />
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>
