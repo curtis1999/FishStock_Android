@@ -10,13 +10,27 @@ import androidx.annotation.NonNull;
 
 import com.example.fishstock.Pieces.*;
 
-public class PromotionDialog extends Dialog {
-  private final Move move;
-  private ImageButton promotionQueen, promotionRook, promotionBishop, promotionKnight;
 
-  public PromotionDialog(Context context, Move move) {
+
+public class PromotionDialog extends Dialog {
+
+  public interface OnPromotionMoveListener {
+    void onPromotionMove() throws CloneNotSupportedException;
+  }
+  private Board board;
+  private final Move move;
+  boolean isWhite;
+  private ImageButton promotionQueen, promotionRook, promotionBishop, promotionKnight;
+  private OnPromotionMoveListener listener;
+
+  public void setOnPromotionMoveListener(OnPromotionMoveListener listener) {
+    this.listener = listener;
+  }
+  public PromotionDialog(Context context, Board board, Move move, boolean isWhite) {
     super(context);
+    this.board = board;
     this.move = move;
+    this.isWhite = isWhite;
     setContentView(R.layout.dialog_promotion);
     promotionQueen = findViewById(R.id.promotionQueen);
     promotionRook = findViewById(R.id.promotionRook);
@@ -26,7 +40,16 @@ public class PromotionDialog extends Dialog {
     promotionQueen.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View v) {
-        move.setPromotion(new Queen(move.toCoord, true));
+        move.setPromotion(new Queen(move.toCoord, isWhite));
+        GameService.makeMove(board, move, isWhite);
+        GameService.updateBoardMeta(board);
+        if (listener != null) {
+          try {
+            listener.onPromotionMove();
+          } catch (CloneNotSupportedException e) {
+            e.printStackTrace();
+          }
+        }
         dismiss();
       }
     });
@@ -34,7 +57,16 @@ public class PromotionDialog extends Dialog {
     promotionRook.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View v) {
-        move.setPromotion(new Rook(move.toCoord, true));
+        move.setPromotion(new Rook(move.toCoord, isWhite));
+        GameService.makeMove(board, move, isWhite);
+        GameService.updateBoardMeta(board);
+        if (listener != null) {
+          try {
+            listener.onPromotionMove();
+          } catch (CloneNotSupportedException e) {
+            e.printStackTrace();
+          }
+        }
         dismiss();
       }
     });
@@ -42,7 +74,16 @@ public class PromotionDialog extends Dialog {
     promotionBishop.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View v) {
-        move.setPromotion(new Bishop(move.toCoord, true));
+        move.setPromotion(new Bishop(move.toCoord, isWhite));
+        GameService.makeMove(board, move, isWhite);
+        GameService.updateBoardMeta(board);
+        if (listener != null) {
+          try {
+            listener.onPromotionMove();
+          } catch (CloneNotSupportedException e) {
+            e.printStackTrace();
+          }
+        }
         dismiss();
       }
     });
@@ -50,7 +91,16 @@ public class PromotionDialog extends Dialog {
     promotionKnight.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View v) {
-        move.setPromotion(new Knight(move.toCoord, true));
+        move.setPromotion(new Knight(move.toCoord, isWhite));
+        GameService.makeMove(board, move, isWhite);
+        GameService.updateBoardMeta(board);
+        if (listener != null) {
+          try {
+            listener.onPromotionMove();
+          } catch (CloneNotSupportedException e) {
+            e.printStackTrace();
+          }
+        }
         dismiss();
       }
     });

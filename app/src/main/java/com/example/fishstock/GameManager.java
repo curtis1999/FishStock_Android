@@ -19,7 +19,7 @@ import org.w3c.dom.Text;
 import java.util.ArrayList;
 import java.util.List;
 
-public class GameManager extends AppCompatActivity {
+public class GameManager extends AppCompatActivity implements PromotionDialog.OnPromotionMoveListener{
   Game game;
   Board board;
   Agent whitePlayer;
@@ -63,6 +63,7 @@ public class GameManager extends AppCompatActivity {
     TextView capturedBlack = findViewById(R.id.CapturedPiecesBlack);
     TextView checkStatusBlack = findViewById(R.id.checkStatusBlack);
     TextView checkStatusWhite = findViewById(R.id.checkStatusWhite);
+    TextView message = findViewById(R.id.welcomeMessage);
     resign.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View v) {
@@ -78,7 +79,7 @@ public class GameManager extends AppCompatActivity {
         updateBoard(board);
       }
     });
-    TextView message = findViewById(R.id.welcomeMessage);
+
 
     //3. Set the buttons.
     for (int row = 0; row < 8; row++) {
@@ -96,7 +97,8 @@ public class GameManager extends AppCompatActivity {
                 Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), false, true); //TODO: MAKE AN ISWHITE VARIABLE
                 move = updateMove(move);
                 if (move.isPromotion) {
-                  PromotionDialog promotionDialog = new PromotionDialog(GameManager.this, move);
+                  PromotionDialog promotionDialog = new PromotionDialog(GameManager.this, board, move, isWhite);
+                  promotionDialog.setOnPromotionMoveListener(GameManager.this);
                   promotionDialog.show();
                 } else {
                   GameService.makeMove(board, move, true);
@@ -129,13 +131,14 @@ public class GameManager extends AppCompatActivity {
               if (selectedPiece != null && isLegalMove(coord, board.board)) {
                 Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), true, true); //TODO: MAKE AN ISWHITE VARIABLE
                 move = updateMove(move);
+                move.setCapture(board.board[coord.rank][coord.file].piece);
+                capturedPiecesBlack.add(board.board[coord.rank][coord.file].piece);
+                capturedBlack.append(": " + board.board[coord.rank][coord.file].piece.getName());
                 if (move.isPromotion) {
-                  PromotionDialog promotionDialog = new PromotionDialog(GameManager.this, move);
+                  PromotionDialog promotionDialog = new PromotionDialog(GameManager.this, board, move, isWhite);
+                  promotionDialog.setOnPromotionMoveListener(GameManager.this);
                   promotionDialog.show(); //TODO: MAKE THE MOVE WITHIN HERE!!
                 } else {
-                  move.setCapture(board.board[coord.rank][coord.file].piece);
-                  capturedPiecesBlack.add(board.board[coord.rank][coord.file].piece);
-                  capturedBlack.append(": " + board.board[coord.rank][coord.file].piece.getName());
                   GameService.makeMove(board, move, true);
                   GameService.updateBoardMeta(board);
                   game.whitesMovesLog.add(move);
@@ -525,5 +528,21 @@ public class GameManager extends AppCompatActivity {
       }
     }
   }
-
+  @Override
+  public void onPromotionMove() throws CloneNotSupportedException {
+    updateBoard(board);
+    ArrayList<Move> blacksPotentialMoves = GameService.generateMoves(board, false);
+    if (((King)board.blackPieces.get(0)).isDoubleChecked) {
+      blacksPotentialMoves = GameService.generateMovesDoubleCheck(board, blacksPotentialMoves, false);
+    } else if (((King)board.blackPieces.get(0)).isChecked) {
+      blacksPotentialMoves = GameService.generateMovesCheck(board, blacksPotentialMoves, false);
+    }
+    Move adversaryMove = this.blackPlayer.getMove(board, blacksPotentialMoves, null);
+    GameService.makeMove(board, adversaryMove,false);
+    GameService.updateBoardMeta(board);
+    TextView checkStatusBlack = findViewById(R.id.checkStatusBlack);
+    TextView checkStatusWhite = findViewById(R.id.checkStatusWhite);
+    TextView message = findViewById(R.id.welcomeMessage);
+    postMoveChecks(board, false, checkStatusBlack, checkStatusWhite, message);
+  }
 }

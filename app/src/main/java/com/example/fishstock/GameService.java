@@ -124,8 +124,8 @@ public class GameService {
           curMove.promotionPiece.setPos(curMove.toCoord);
           ChessBoard.blackPieces.add(curMove.promotionPiece);
         }
-        ChessBoard.board[curMove.toCoord.rank][curMove.toCoord.file].piece = curMove.promotionPiece; //TODO: May be redundant
-        ChessBoard.board[curMove.toCoord.rank][curMove.toCoord.file].Symbol = curMove.promotionPiece.getSymbol();
+        ChessBoard.board[curMove.toCoord.rank][curMove.toCoord.file].empty();
+        ChessBoard.board[curMove.toCoord.rank][curMove.toCoord.file].putPiece(curMove.promotionPiece); //TODO: May be redundant
       }
 
        //6. Final Updates.
