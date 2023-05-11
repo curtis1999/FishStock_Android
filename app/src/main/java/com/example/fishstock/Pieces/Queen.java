@@ -1,11 +1,13 @@
 package com.example.fishstock.Pieces;
 
+import com.example.fishstock.Board;
 import com.example.fishstock.Cell;
 import com.example.fishstock.Coordinate;
 import com.example.fishstock.Move;
 import com.example.fishstock.Status;
 
 import java.util.ArrayList;
+import java.util.List;
 
 
 public class Queen implements Piece {
@@ -714,5 +716,26 @@ public class Queen implements Piece {
   }
   public char getSymbol() {
     return 'Q';
+  }
+  public int evaluate( Board board) {
+    int eval = 9;
+    Cell curCell = board.board[getPos().rank][getPos().file];
+    //Eval 1: Update the eval based on the number of attackers relative to defenders.
+    List<Piece> defenders;
+    List<Piece> attackers;
+    if (isWhite) {
+      defenders = curCell.whiteAttackers;
+      attackers = curCell.blackAttackers;
+    } else {
+      defenders = curCell.blackAttackers;
+      attackers = curCell.whiteAttackers;
+    }
+    if (attackers.size() > defenders.size()) {
+      eval -= 3 * (attackers.size() - defenders.size());
+    }
+    if (attackers.size() < defenders.size()) {
+      eval += 3 * (defenders.size() - attackers.size());
+    }
+    return eval;
   }
 }

@@ -1,6 +1,8 @@
 package com.example.fishstock.Pieces;
+import com.example.fishstock.Board;
 import com.example.fishstock.Cell;
 import com.example.fishstock.Coordinate;
+import com.example.fishstock.GameService;
 import com.example.fishstock.Move;
 import com.example.fishstock.Status;
 
@@ -618,5 +620,35 @@ public class Pawn implements Piece {
   }
   public char getSymbol() {
     return 'P';
+  }
+
+  public int evaluate(Board board) {
+    int eval = 1;
+    Cell curCell = board.board[curPos.rank][curPos.file];
+    //Eval 1: Update the eval based on the number of attackers relative to defenders.
+    List<Piece> defenders;
+    List<Piece> attackers;
+    if (isWhite) {
+      defenders = curCell.whiteAttackers;
+      attackers = curCell.blackAttackers;
+    } else {
+      defenders = curCell.blackAttackers;
+      attackers = curCell.whiteAttackers;
+    }
+    if (attackers.size() > defenders.size()) {
+      if (GameService.countPieces("Pawn", attackers) >= GameService.countPieces("Pawn", defenders)) {
+        eval -= 0.25 * (attackers.size() - defenders.size());
+      }
+    }
+    if (attackers.size() < defenders.size()) {
+      if (GameService.countPieces("Pawn", attackers) <= GameService.countPieces("Pawn", defenders)) {
+        eval += 0.25 * (defenders.size() - attackers.size());
+      }
+    }
+    //Eval 2: If the pawn is a central square.
+    if (Cell.isCentralSquare(curPos)){
+      eval += 0.5;
+    }
+    return eval;
   }
 }

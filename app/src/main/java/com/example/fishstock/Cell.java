@@ -169,6 +169,21 @@ public class Cell {
     copyCell.isEmpty=c.isEmpty;
     return copyCell;
   }
+  public static boolean isCentralSquare(Coordinate crd) {
+    boolean isCentral=false;
+    if (crd.file==3&&crd.rank==3) {
+      isCentral=true;
+    }else if (crd.file==3&&crd.rank==4) {
+      isCentral=true;
+    }
+    else if (crd.file==4&&crd.rank==3) {
+      isCentral=true;
+    }
+    else if (crd.file==4&&crd.rank==4) {
+      isCentral=true;
+    }
+    return isCentral;
+  }
   public void setXRay() {
     this.xRay=true;
   }

@@ -207,7 +207,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
   public Move updateMove(Move move) {
     if (move.piece.getName().equals("King") && Math.abs(move.toCoord.file - move.fromCoord.file) == 2) {
       move.setCastle();
-    } else if (move.piece.getName().equals("Pawn") && move.toCoord.rank == 7 || move.toCoord.rank == 0) {
+    } else if (move.piece.getName().equals("Pawn") && ((this.isWhite && move.toCoord.rank == 7) || (!this.isWhite && move.toCoord.rank == 0))) {
       move.setPromotion(new Queen (move.toCoord, move.piece.getColor())); //TODO: ASK THE USER FOR THE PROMOTION CHOICE!!
     } else if (move.piece.getName().equals("Pawn") && Math.abs(move.toCoord.file - move.fromCoord.file) == 1 &&
     board.board[move.toCoord.rank][move.toCoord.file].PieceStatus.equals(Status.EMPTY)) {

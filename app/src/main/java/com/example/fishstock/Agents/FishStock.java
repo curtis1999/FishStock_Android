@@ -564,7 +564,6 @@ public class FishStock extends Agent{
 
   public static boolean isCentralSquare(Coordinate crd) {
     boolean isCentral=false;
-
     if (crd.file==3&&crd.rank==3) {
       isCentral=true;
     }else if (crd.file==3&&crd.rank==4) {

@@ -1,5 +1,6 @@
 package com.example.fishstock.Pieces;
 
+import com.example.fishstock.Board;
 import com.example.fishstock.Cell;
 import com.example.fishstock.Coordinate;
 import com.example.fishstock.Move;
@@ -478,5 +479,9 @@ public class King implements Piece {
   }
   public char getSymbol() {
     return 'K';
+  }
+
+  public int evaluate(Board board) {
+    return 0;
   }
 }

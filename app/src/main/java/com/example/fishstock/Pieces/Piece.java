@@ -1,4 +1,5 @@
 package com.example.fishstock.Pieces;
+import com.example.fishstock.Board;
 import com.example.fishstock.Cell;
 import com.example.fishstock.Coordinate;
 import com.example.fishstock.Move;
@@ -34,4 +35,6 @@ public interface Piece {
 
   public Piece copyPiece();
   public char getSymbol();
+
+  int evaluate(Board board);
 }

@@ -653,4 +653,55 @@ public class GameService {
     }
     return isWhiteDead && isBlackDead;
   }
+
+  /**
+   * Counts the number of a specified piece in the list.
+   * @param piece
+   * @param pieces
+   * @return
+   */
+  public static int countPieces(String pieceName, List<Piece> pieces) {
+    int count = 0;
+    switch (pieceName) {
+      case "Pawn":
+        for (Piece p : pieces) {
+          if (p.getName().equals("Pawn")) {
+            count++;
+          }
+        }
+        break;
+      case "Rook":
+        for (Piece p : pieces) {
+          if (p.getName().equals("Rook")) {
+            count++;
+          }
+        }
+        break;
+      case "Knight":
+        for (Piece p : pieces) {
+          if (p.getName().equals("Knight")) {
+            count++;
+          }
+        }
+        break;
+      case "Bishop":
+        for (Piece p : pieces) {
+          if (p.getName().equals("Bishop")) {
+            count++;
+          }
+        }
+        break;
+      case "Queen":
+        for (Piece p : pieces) {
+          if (p.getName().equals("Queen")) {
+            count++;
+          }
+        }
+        break;
+      default:
+        return 1;
+    }
+    return count;
+  }
+
 }
