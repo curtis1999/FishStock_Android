@@ -16,7 +16,7 @@ public class MainActivity extends AppCompatActivity {
     // Get a reference to the button
     Button playFishStock = findViewById(R.id.PlayFishStock);
     Button playRandy = findViewById(R.id.PlayRandy);
-
+    Button playSimple = findViewById(R.id.playSimple);
     // Set a click listener on the button
     playFishStock.setOnClickListener(new View.OnClickListener() {
       @Override
@@ -29,9 +29,18 @@ public class MainActivity extends AppCompatActivity {
       }
     });
     playRandy.setOnClickListener(new View.OnClickListener() {
+      @Override
       public void onClick(View view) {
         Intent intent = new Intent(MainActivity.this, GameManager.class);
         intent.putExtra("agentType", "Randy");
+        startActivity(intent);
+      }
+    });
+    playSimple.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View v) {
+        Intent intent = new Intent(MainActivity.this, GameManager.class);
+        intent.putExtra("agentType", "Simple");
         startActivity(intent);
       }
     });

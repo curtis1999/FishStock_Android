@@ -392,6 +392,9 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
       case "Randy":
         agent = new Randy(AgentType.RANDY, false); //TODO: ASK USER IF THEY WANT TO PLAY AS WHITE OR BLACK!
         break;
+      case "Simple":
+        agent = new Simple(AgentType.SIMPLE, false);
+        break;
       default:
         agent = new FishStock(AgentType.FISHSTOCK, false);
     }
