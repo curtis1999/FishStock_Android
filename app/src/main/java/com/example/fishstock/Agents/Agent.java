@@ -7,7 +7,7 @@ import java.util.ArrayList;
 public abstract class Agent {
   public AgentType type;
   public boolean isWhite;
-  public abstract Move getMove(Board ChessBoard, ArrayList<Move> possibleMoves, ArrayList<Move> possibleMovesAdv);
+  public abstract Move getMove(Board ChessBoard, ArrayList<Move> possibleMoves, ArrayList<Move> possibleMovesAdv) throws CloneNotSupportedException;
   public Agent(AgentType type, boolean isWhite) {
     this.type = type;
     this.isWhite = isWhite;

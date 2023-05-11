@@ -16,23 +16,69 @@ public class Simple extends Agent{
   }
 
   @Override
-  public Move getMove(Board ChessBoard, ArrayList<Move> possibleMoves, ArrayList<Move> possibleMovesAdv) {
-    int maxEval = -999;
+  public Move getMove(Board ChessBoard, ArrayList<Move> possibleMoves, ArrayList<Move> possibleMovesAdv) throws CloneNotSupportedException {
+    int depth = 3; // set the depth to 4, adjust as needed
+    int alpha = Integer.MIN_VALUE;
+    int beta = Integer.MAX_VALUE;
+    int maxEval = Integer.MIN_VALUE;
     int maxIndex = 0;
     int counter = 0;
-    for (Move move : possibleMoves) {
+    for (int i = 0; i < possibleMoves.size(); i++) {
       Board board = GameService.copyBoard(ChessBoard);
-      GameService.makeMove(board, move, isWhite);
+      GameService.makeMove(board, possibleMoves.get(i), isWhite);
       GameService.updateBoardMeta(board);
-      int curEval = evaluate(board);
+      int curEval = min(board, depth - 1, alpha, beta);
       if (curEval > maxEval) {
         maxEval = curEval;
-        maxIndex = counter;
+        maxIndex = i;
       }
-      counter++;
+      alpha = Math.max(alpha, maxEval);
     }
     return possibleMoves.get(maxIndex);
   }
+
+  private int max(Board board, int depth, int alpha, int beta) throws CloneNotSupportedException {
+    if (depth == 0) {
+      return evaluate(board);
+    }
+    ArrayList<Move> possibleMoves = GameService.generateMoves(board, isWhite);
+    for (Move move : possibleMoves) {
+      if (move.isCapture && move.capturablePiece.getName().equals("King")) {
+        break;
+      }
+      Board newBoard = GameService.copyBoard(board);
+      GameService.makeMove(newBoard, move, isWhite);
+      GameService.updateBoardMeta(newBoard);
+      int eval = min(newBoard, depth - 1, alpha, beta);
+      alpha = Math.max(alpha, eval);
+      if (beta <= alpha) {
+        break; // beta cutoff
+      }
+    }
+    return alpha;
+  }
+
+  private int min(Board board, int depth, int alpha, int beta) throws CloneNotSupportedException {
+    if (depth == 0) {
+      return evaluate(board);
+    }
+    ArrayList<Move> possibleMoves = GameService.generateMoves(board, !isWhite);
+    for (Move move : possibleMoves) {
+      if (move.isCapture && move.capturablePiece.getName().equals("King")) {
+        break;
+      }
+      Board newBoard = GameService.copyBoard(board);
+      GameService.makeMove(newBoard, move, !isWhite);
+      GameService.updateBoardMeta(newBoard);
+      int eval = max(newBoard, depth - 1, alpha, beta);
+      beta = Math.min(beta, eval);
+      if (beta <= alpha) {
+        break; // alpha cutoff
+      }
+    }
+    return beta;
+  }
+
 
   /**
    * Evaluates a board position.
@@ -50,12 +96,14 @@ public class Simple extends Agent{
       ourPieces = board.blackPieces;
       adversaryPieces = board.whitePieces;
     }
+    //PART 1: Eval the pieces individually.
     for (Piece piece : ourPieces) {
       eval += piece.evaluate(board);
     }
     for (Piece piece : adversaryPieces) {
       eval -= piece.evaluate(board);
     }
+
     return eval;
   }
 

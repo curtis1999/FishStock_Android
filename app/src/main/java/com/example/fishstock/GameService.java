@@ -69,10 +69,9 @@ public class GameService {
       }
     }
 
-    //4. Castle.
+    //3. Castle.
     if (curMove.isCastle) {
       //4.1 Short Castle
-      System.out.println("Castling");
         if (curMove.toCoord.file == 1) {
           if (isWhite) {
           ((King) ChessBoard.whitePieces.get(0)).moved(); //Cannot castle again.
@@ -85,7 +84,7 @@ public class GameService {
             ((King) ChessBoard.blackPieces.get(0)).moved(); //Cannot castle again.
             int indexRook = Board.getIndex(ChessBoard.blackPieces, new Coordinate(0, 7));
             ChessBoard.blackPieces.get(indexRook).setPos(new Coordinate(2, 7));
-            ChessBoard.board[7][2].putRook(true, ChessBoard.blackPieces.get(indexRook));
+            ChessBoard.board[7][2].putRook(false, ChessBoard.blackPieces.get(indexRook));
             ChessBoard.board[7][0].empty();
           }
       }
@@ -104,7 +103,7 @@ public class GameService {
               int indexRook = Board.getIndex(ChessBoard.blackPieces, new Coordinate(7, 7));
 
               ChessBoard.blackPieces.get(indexRook).setPos(new Coordinate(4, 7));
-              ChessBoard.board[7][4].putRook(true, ChessBoard.blackPieces.get(indexRook));
+              ChessBoard.board[7][4].putRook(false, ChessBoard.blackPieces.get(indexRook));
               ChessBoard.board[7][7].empty();
             }
           }
