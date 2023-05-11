@@ -161,6 +161,18 @@ public class TestGameController {
     board = new Board(whitePieces, blackPieces);
     game = new Game(board, AgentType.RANDY, AgentType.RANDY);
   }
+  public void initCastle2() {
+    GameService.clearBoard(board);
+    whiteKing = new King(new Coordinate(3, 0), true);
+    whiteRook1 = new Rook(new Coordinate(0, 0), true);
+    whitePieces.add(whiteKing); whitePieces.add(whiteRook1);
+    blackKing = new King(new Coordinate(3, 7), false);
+    blackRook1 = new Rook (new Coordinate(7, 7), false);
+    blackKnight1 = new Knight(new Coordinate(6, 7), false);
+    blackPieces.add(blackKing);blackPieces.add(blackRook1);blackPieces.add(blackKnight1);
+    board = new Board(whitePieces, blackPieces);
+    game = new Game(board, AgentType.RANDY, AgentType.RANDY);
+  }
 
   public void initPromotion() {
     whiteKing = new King(new Coordinate(3, 0), true);
@@ -176,6 +188,15 @@ public class TestGameController {
     board = new Board(whitePieces, blackPieces);
     game = new Game(board, AgentType.RANDY, AgentType.RANDY);
   }
+  @Test
+  public void testCastle3(){
+    initCastle2();
+    GameService.updateBoardMeta(board);
+    Board.printBoard(board, true);
+    List<Move> kingMoves = board.blackPieces.get(0).generateMoves(board.blackPieces.get(0).getPos(), board.board);
+    assertEquals(5, kingMoves.size());
+  }
+
 
   @Test
   public void testChecks() throws CloneNotSupportedException {

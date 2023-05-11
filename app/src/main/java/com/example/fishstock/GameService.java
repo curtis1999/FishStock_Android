@@ -21,7 +21,6 @@ public class GameService {
       }
     }
     return numRepetitions >= 3;
-
   }
 
   /**
@@ -71,7 +70,7 @@ public class GameService {
 
     //3. Castle.
     if (curMove.isCastle) {
-      //4.1 Short Castle
+      //3.1 Short Castle
         if (curMove.toCoord.file == 1) {
           if (isWhite) {
           ((King) ChessBoard.whitePieces.get(0)).moved(); //Cannot castle again.
@@ -88,7 +87,7 @@ public class GameService {
             ChessBoard.board[7][0].empty();
           }
       }
-          //4.2: Long Castle
+          //3.2: Long Castle
           else if (curMove.toCoord.file == 5) {
             if (isWhite){
               ((King) ChessBoard.whitePieces.get(0)).moved(); //Cannot castle again.
@@ -108,7 +107,7 @@ public class GameService {
             }
           }
       }
-    //5. If the current move is a promotion.
+    //4. If the current move is a promotion.
       if (curMove.isPromotion) {
         int promotionIndex;
         if (isWhite) {
@@ -127,7 +126,7 @@ public class GameService {
         ChessBoard.board[curMove.toCoord.rank][curMove.toCoord.file].putPiece(curMove.promotionPiece); //TODO: May be redundant
       }
 
-       //6. Final Updates.
+       //5. Final Updates.
       ((King)ChessBoard.blackPieces.get(0)).unCheck();
       if (curMove.piece.getName().equals("Pawn") && !curMove.isPromotion) {
         ((Pawn) ChessBoard.board[curMove.toCoord.rank][curMove.toCoord.file].piece).growUp();
@@ -160,12 +159,121 @@ public class GameService {
   }
 
   /**
-   * Generates all the possible moves if you are not in check.
+   * Undoes the last move made on the board.
    *
-   * @param ChessBoard The Board.
-   * @return The List of all valid moves
-   * @throws CloneNotSupportedException
+   * @param ChessBoard
+   * @param curMove
+   * @param isWhite
    */
+  public static void undoMove(Board ChessBoard, Move curMove, boolean isWhite) {
+    // The id of the piece being moved this turn.
+    int pieceIndex = 0;
+    if (isWhite) {
+      pieceIndex = Board.getIndex(ChessBoard.whitePieces, curMove.toCoord);
+    } else {
+      pieceIndex = Board.getIndex(ChessBoard.blackPieces, curMove.toCoord);
+    }
+
+    // 1. Restore the board position of the moved piece.
+    ChessBoard.board[curMove.fromCoord.rank][curMove.fromCoord.file].putPiece(curMove.piece);
+    ChessBoard.board[curMove.toCoord.rank][curMove.toCoord.file].empty();
+    if (isWhite) {
+      ChessBoard.whitePieces.get(pieceIndex).setPos(curMove.fromCoord);
+    } else {
+      ChessBoard.blackPieces.get(pieceIndex).setPos(curMove.fromCoord);
+    }
+
+    // 2. If there was a capture in the move, then restore the captured piece.
+    if (curMove.isCapture) {
+      if (curMove.isEnPassant) {
+        // In the case of EnPassant, we have to put the captured pawn back on the board.
+        ChessBoard.board[curMove.capturablePiece.getPos().rank][curMove.capturablePiece.getPos().file].putPiece(curMove.capturablePiece);
+      } else {
+        // In other cases, we just add the captured piece back to the list of pieces.
+        if (isWhite) {
+          ChessBoard.blackPieces.add(curMove.capturablePiece);
+        } else {
+          ChessBoard.whitePieces.add(curMove.capturablePiece);
+        }
+      }
+    }
+
+    // 3. Undo the castle move.
+    if (curMove.isCastle) {
+      // 3.1 Short castle
+      if (curMove.toCoord.file == 1) {
+        if (isWhite) {
+          int indexRook = Board.getIndex(ChessBoard.whitePieces, new Coordinate(2, 0));
+          ChessBoard.whitePieces.get(indexRook).setPos(new Coordinate(0, 0));
+          ChessBoard.board[0][0].putRook(true, ChessBoard.whitePieces.get(indexRook));
+          ChessBoard.board[0][2].empty();
+          //((King) ChessBoard.whitePieces.get(0)).unmoved();
+        } else {
+          int indexRook = Board.getIndex(ChessBoard.blackPieces, new Coordinate(2, 7));
+          ChessBoard.blackPieces.get(indexRook).setPos(new Coordinate(0, 7));
+          ChessBoard.board[7][0].putRook(false, ChessBoard.blackPieces.get(indexRook));
+          ChessBoard.board[7][2].empty();
+          //((King) ChessBoard.blackPieces.get(0)).unmoved(); //TODO: MAKE moved an int, reverse if it's not 0
+        }
+      }
+      // 3.2 Long castle
+      else if (curMove.toCoord.file == 5) {
+        if (isWhite) {
+          int indexRook = Board.getIndex(ChessBoard.whitePieces, new Coordinate(4, 0));
+          ChessBoard.whitePieces.get(indexRook).setPos(new Coordinate(7, 0));
+          ChessBoard.board[0][7].putRook(true, ChessBoard.whitePieces.get(indexRook));
+          ChessBoard.board[0][4].empty();
+        }
+        else {
+          int indexRook = Board.getIndex(ChessBoard.blackPieces, new Coordinate(4, 7));
+          ChessBoard.blackPieces.get(indexRook).setPos(new Coordinate(7, 7));
+          ChessBoard.board[7][7].putRook(false, ChessBoard.blackPieces.get(indexRook));
+          ChessBoard.board[7][4].empty();
+          //((King) ChessBoard.blackPieces.get(0)).unmoved(); //TODO: MAKE moved an int, reverse if it's not 0
+        }
+      }
+      // 4. Undo any promotion.
+      if (curMove.isPromotion) {
+        int pieceIndex2;
+        if (isWhite) {
+          pieceIndex2 = Board.getIndex(ChessBoard.whitePieces, curMove.toCoord);
+          ChessBoard.whitePieces.remove(pieceIndex2);
+          ChessBoard.whitePieces.add(new Pawn(curMove.toCoord, true));
+        } else {
+          pieceIndex2 = Board.getIndex(ChessBoard.blackPieces, curMove.toCoord);
+          ChessBoard.blackPieces.remove(pieceIndex2);
+          ChessBoard.blackPieces.add(new Pawn( curMove.toCoord,false));
+        }
+      }
+      // 5. Restore any previous en passantable and promotion flags on the moved piece.
+      if (curMove.piece.getName().equals("Pawn")) {
+        Pawn pawn = (Pawn) ChessBoard.board[curMove.fromCoord.rank][curMove.fromCoord.file].piece;
+        pawn.enPassantable = false;
+      } else if (curMove.piece.getName().equals("King")) {
+           King king = (King) ChessBoard.board[curMove.fromCoord.rank][curMove.fromCoord.file].piece; //TODO:
+           king.hasMoved = false; //TODO: MAKE THIS A integer
+      } else if (curMove.piece.getName().equals("Rook")) {
+        //Rook rook = (Rook) ChessBoard.getSquare(curMove.fromCoord).piece; //TODO:
+        //rook.movedBack();
+      }
+      // 6. Undo any check.
+      if (curMove.isCheck) {
+        if (isWhite) {
+          ((King) ChessBoard.blackPieces.get(0)).unCheck();
+        } else {
+          ((King) ChessBoard.whitePieces.get(0)).unCheck();
+        }
+      }
+    }
+  }
+
+          /**
+           * Generates all the possible moves if you are not in check.
+           *
+           * @param ChessBoard The Board.
+           * @return The List of all valid moves
+           * @throws CloneNotSupportedException
+           */
   public static ArrayList<Move> generateMoves(Board ChessBoard, boolean isWhite) throws CloneNotSupportedException{
     ArrayList<Move> moves = new ArrayList<>();
     if (isWhite) {
@@ -655,7 +763,7 @@ public class GameService {
 
   /**
    * Counts the number of a specified piece in the list.
-   * @param piece
+   * @param pieceName
    * @param pieces
    * @return
    */

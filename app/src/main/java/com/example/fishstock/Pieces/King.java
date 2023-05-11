@@ -290,7 +290,8 @@ public class King implements Piece {
       && board[0][7].piece.getName().equals("Rook") && !((Rook)board[0][7].piece).hasMoved){
 
         if (board[0][4].blackAttackers.size() == 0 && board[0][4].PieceStatus == Status.EMPTY
-            && board[0][5].blackAttackers.size() == 0 && board[0][5].PieceStatus ==Status.EMPTY) {
+            && board[0][5].blackAttackers.size() == 0 && board[0][5].PieceStatus ==Status.EMPTY
+        && board [0][6].PieceStatus.equals(Status.EMPTY)) {
           Move longCastleMove = new Move(this.coord, new Coordinate(5, 0),"King", false, true);
           longCastleMove.setCastle();
           possibleMoves.add(longCastleMove);
@@ -313,7 +314,8 @@ public class King implements Piece {
       if (!hasMoved && board[7][7].PieceStatus == this.stat
           && board[7][7].piece.getName().equals("Rook") && !((Rook)board[7][7].piece).hasMoved){
         if (board[7][4].whiteAttackers.size() == 0 && board[7][4].PieceStatus == Status.EMPTY
-            && board[7][5].whiteAttackers.size() == 0 && board[7][5].PieceStatus == Status.EMPTY) {
+            && board[7][5].whiteAttackers.size() == 0 && board[7][5].PieceStatus == Status.EMPTY
+            && board [7][6].PieceStatus.equals(Status.EMPTY)) {
           Move longCastleMove = new Move(this.coord, new Coordinate(5, 7),"King", false, false);
           longCastleMove.setCastle();
           possibleMoves.add(longCastleMove);

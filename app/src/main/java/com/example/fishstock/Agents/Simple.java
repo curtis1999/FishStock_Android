@@ -17,7 +17,7 @@ public class Simple extends Agent{
 
   @Override
   public Move getMove(Board ChessBoard, ArrayList<Move> possibleMoves, ArrayList<Move> possibleMovesAdv) throws CloneNotSupportedException {
-    int depth = 3; // set the depth to 4, adjust as needed
+    int depth = 2; // set the depth to 4, adjust as needed
     int alpha = Integer.MIN_VALUE;
     int beta = Integer.MAX_VALUE;
     int maxEval = Integer.MIN_VALUE;
@@ -33,6 +33,7 @@ public class Simple extends Agent{
         maxIndex = i;
       }
       alpha = Math.max(alpha, maxEval);
+      GameService.undoMove(board, possibleMoves.get(i), isWhite);
     }
     return possibleMoves.get(maxIndex);
   }
