@@ -155,11 +155,15 @@ public class Cell {
     copyCell.isKnight=c.isKnight;
     copyCell.isBishop=c.isBishop;
     copyCell.isRook=c.isRook;
-    copyCell.isKing=c.isKing;
+    copyCell.isQueen=c.isQueen;
     copyCell.isKing=c.isKing;
     copyCell.isWhite=c.isWhite;
     copyCell.PieceStatus=c.PieceStatus;
-    copyCell.piece=c.piece; 	//TODO: ENSURE THIS DOESNT NEED A DEEP COPY
+    if (c.piece != null) {
+      copyCell.piece = c.piece.copyPiece();
+    } else {
+      copyCell.piece = null;//TODO: ENSURE THIS DOESNT NEED A DEEP COPY
+    }
     copyCell.whiteAttackers=(ArrayList<Piece>) c.whiteAttackers.clone();
     copyCell.blackAttackers=(ArrayList<Piece>) c.blackAttackers.clone();
     copyCell.isEmpty=c.isEmpty;

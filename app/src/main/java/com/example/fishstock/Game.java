@@ -22,21 +22,22 @@ public class Game {
     this.whitePlayer = whitePlayer;
     this.blackPlayer = blackPlayer;
   }
-  public void addWhiteMove(Move move) {
-    this.whitesMovesLog.add(move);
-  }
-  public void addBlackMove(Move move) {
-    this.blacksMovesLog.add(move);
-  }
-  public void addBoardState(Board board) {
-    this.boardStates.add(board);
-  }
 
   public Board getPreviousBoard() {
-    if(boardStates.size()>1) {
-      return boardStates.get(boardStates.size()-3);
+    if(boardStates.size()>2) {
+      Board prevBoardState = boardStates.get(boardStates.size()-3);
+      boardStates.remove(boardStates.size()-1);
+      boardStates.remove(boardStates.size()-2);
+      whitesMovesLog.remove(whitesMovesLog.size()-1);
+      blacksMovesLog.remove(blacksMovesLog.size()-1);
+      return prevBoardState;
     } else {
-      return boardStates.get(0);
+      Board prevBoardState = boardStates.get(0);
+      if (boardStates.size() == 2) {
+        boardStates.remove(1);
+        whitesMovesLog.remove(whitesMovesLog.size()-1);
+      }
+      return prevBoardState;
     }
   }
 }

@@ -537,6 +537,7 @@ public class Rook implements Piece {
     copyPiece.pinAve = this.pinAve;
     copyPiece.revealCheckerLoc = this.revealCheckerLoc;
     copyPiece.revealAve = this.revealAve;
+    copyPiece.hasMoved = this.hasMoved;
     return copyPiece;
   }
   public char getSymbol() {

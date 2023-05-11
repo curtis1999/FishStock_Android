@@ -74,7 +74,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
     undo.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View v) {
-        board = game.getPreviousBoard(); //TODO: FIX THIS.
+        board = game.getPreviousBoard();
         GameService.updateBoardMeta(board);
         updateBoard(board);
       }

@@ -10,7 +10,6 @@ public class King implements Piece {
   Coordinate coord;
   public boolean isWhite;
   public boolean isChecked;
-
   public boolean isDoubleChecked;
   public Coordinate checkerLoc;
   public Coordinate checkerLoc2;
@@ -470,6 +469,7 @@ public class King implements Piece {
     copyPiece.isRevealChecker = this.isRevealChecker;
     copyPiece.revealCheckerLoc = this.revealCheckerLoc;
     copyPiece.revealAve = this.revealAve;
+    copyPiece.hasMoved = this.hasMoved;
     return copyPiece;
   }
 

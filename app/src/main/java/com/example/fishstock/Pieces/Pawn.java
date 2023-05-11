@@ -609,10 +609,11 @@ public class Pawn implements Piece {
     copyPiece.isRevealChecker = this.isRevealChecker;
     copyPiece.revealCheckerLoc = this.revealCheckerLoc;
     copyPiece.isPinned = this.isPinned;
-    copyPiece.pinnerLoc = this.pinnerLoc.copyCoordinate();
+    copyPiece.pinnerLoc = this.pinnerLoc;
     copyPiece.pinAve = this.pinAve;
     copyPiece.revealCheckerLoc = this.revealCheckerLoc;
     copyPiece.revealAve = this.revealAve;
+    copyPiece.firstMove = this.firstMove;
     return copyPiece;
   }
   public char getSymbol() {
