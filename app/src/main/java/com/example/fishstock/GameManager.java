@@ -2,7 +2,6 @@ package com.example.fishstock;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.app.Dialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
@@ -13,8 +12,6 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import com.example.fishstock.Agents.*;
 import com.example.fishstock.Pieces.*;
-
-import org.w3c.dom.Text;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -332,6 +329,9 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
         break;
       case "Simple":
         agent = new Simple(AgentType.SIMPLE, false);
+        break;
+      case "MinMax":
+        agent = new MinMax(AgentType.MINMAX, false);
         break;
       default:
         agent = new FishStock(AgentType.FISHSTOCK, false);

@@ -42,7 +42,6 @@ public class GameOverDialog extends Dialog {
         startActivity(intent);
       }
     });
-
      */
   }
   public void setOnGameOverListener(OnGameOverMoveListener listener) {

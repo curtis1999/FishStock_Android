@@ -440,7 +440,7 @@ public class GameService {
     }
     ArrayList<Move> possibleMovesCheck = new ArrayList<Move>();
     ArrayList<Coordinate> CheckingAvenue = getCheckingAvenue(checkingPiece,checkerLoc, kingLoc);
-
+    ArrayList<Coordinate> trimmedCheckingAvenue = getCheckingAvenueTrimmed(checkingPiece, checkerLoc, kingLoc);
     //PART 2: ITERATE AND FILTER THE MOVES.
     for (Move mv : possibleMoves) {
       if (mv.piece.getName().equals("King")) {
@@ -473,7 +473,7 @@ public class GameService {
           }
         } else {
           boolean blocksCheck = false;
-          for (Coordinate crd:CheckingAvenue) {
+          for (Coordinate crd:trimmedCheckingAvenue) {
             if (crd.file == mv.toCoord.file && crd.rank == mv.toCoord.rank) {
               blocksCheck = true;
               break;
@@ -485,6 +485,84 @@ public class GameService {
       }
     }
     return possibleMovesCheck;
+  }
+
+  private static ArrayList<Coordinate> getCheckingAvenueTrimmed(Piece checkingPiece, Coordinate checkerLoc, Coordinate kingLoc) {
+    ArrayList<Coordinate> checkingAvenue = new ArrayList<>();
+    if (checkingPiece.getName().equals("Knight") || checkingPiece.getName().equals("Pawn")) {
+      checkingAvenue.add(checkerLoc);
+      checkingAvenue.add(kingLoc);
+
+      //'LONG RANGE' PIECES (ROOK, BISHOP, QUEEN)
+    }else {
+      checkingAvenue.add(checkerLoc); //Note: square of the checking piece is also added to checkingAvenue
+      //Case 1: Down the same file.
+      if (checkerLoc.file==kingLoc.file) {
+        if (checkerLoc.rank>kingLoc.rank) {
+          Coordinate tempLoc = new Coordinate(checkerLoc.file,checkerLoc.rank-1);
+          while (tempLoc.rank > 0 && tempLoc.rank > kingLoc.rank) {
+            checkingAvenue.add(tempLoc);
+            tempLoc = new Coordinate(tempLoc.file,tempLoc.rank-1);
+          }
+          //Case 1.1 Up the same rank.
+        }else {
+          Coordinate tempLoc = new Coordinate(checkerLoc.file, checkerLoc.rank+1);
+          while (tempLoc.rank < 8 && tempLoc.rank < kingLoc.rank) {
+            checkingAvenue.add(tempLoc);
+            tempLoc = new Coordinate(tempLoc.file,tempLoc.rank+1);
+          }
+        }
+        //Case 2: Along the same rank.
+      }else if (checkerLoc.rank==kingLoc.rank) {
+        //2.1 down the file
+        if (checkerLoc.file>kingLoc.file) {
+          Coordinate tempLoc = new Coordinate(checkerLoc.file-1,checkerLoc.rank);
+          while (tempLoc.file > 0 && tempLoc.file > kingLoc.file) {
+            checkingAvenue.add(tempLoc);
+            tempLoc = new Coordinate(tempLoc.file-1,tempLoc.rank);
+          }
+          //2.2: Up the file.
+        }else {
+          Coordinate tempLoc = new Coordinate(checkerLoc.file+1, checkerLoc.rank);
+          while (tempLoc.file < 8 && tempLoc.file < kingLoc.file) {
+            checkingAvenue.add(tempLoc);
+            tempLoc = new Coordinate(tempLoc.file+1,tempLoc.rank);
+          }
+        }
+      }
+      //Same Diagonal //TODO: EXTEND THE CHECKING AVENUE BY ONE.
+      else if((checkerLoc.file+checkerLoc.rank)==kingLoc.file+kingLoc.rank) {
+        if (checkerLoc.rank>kingLoc.rank) {
+          Coordinate temp = new Coordinate(checkerLoc.file+1, checkerLoc.rank-1);
+          while (temp.rank > 0 && temp.rank > kingLoc.rank) {
+            checkingAvenue.add(temp);
+            temp = new Coordinate(temp.file+1,temp.rank-1);
+          }
+        }else {
+          Coordinate temp = new Coordinate(checkerLoc.file-1, checkerLoc.rank+1);
+          while (temp.rank < 8 && temp.rank < kingLoc.rank) {
+            checkingAvenue.add(temp);
+            temp = new Coordinate(temp.file-1,temp.rank+1);
+          }
+        }
+      }
+      else if((checkerLoc.file-checkerLoc.rank)==kingLoc.file-kingLoc.rank) {
+        if (checkerLoc.rank>kingLoc.rank) {
+          Coordinate temp = new Coordinate(checkerLoc.file-1, checkerLoc.rank-1);
+          while (temp.rank > 0 && temp.rank > kingLoc.rank) {
+            checkingAvenue.add(temp);
+            temp = new Coordinate(temp.file-1,temp.rank-1);
+          }
+        }else {
+          Coordinate temp = new Coordinate(checkerLoc.file+1, checkerLoc.rank+1);
+          while (temp.rank < 8 && temp.rank < kingLoc.rank) {
+            checkingAvenue.add(temp);
+            temp = new Coordinate(temp.file+1,temp.rank+1);
+          }
+        }
+      }
+    }
+    return checkingAvenue;
   }
 
   /**
