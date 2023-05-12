@@ -246,4 +246,23 @@ public class Board implements Serializable {
     return true;
   }
 
+  /**
+   * Returns teh number of a specific piece along a file.
+   *
+   * @param board
+   * @param pieceName
+   * @param file
+   * @return
+   */
+  public static int countAlongFile(Cell[][] board, String pieceName, int file, boolean isWhite) {
+    int numInFile = 0;
+    for (int row = 0; row < 8; row++){
+      if (!board[row][file].PieceStatus.equals(Status.EMPTY)) {
+        if (board[row][file].piece.getName().equals(pieceName) && board[row][file].piece.getColor() == isWhite) {
+          numInFile++;
+        }
+      }
+    }
+    return numInFile;
+  }
 }
