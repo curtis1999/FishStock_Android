@@ -657,19 +657,19 @@ public class Pawn implements Piece {
     return 'P';
   }
 
-  public int evaluate(Board board) {
-    int eval = 1;
+  public double evaluate(Board board) {
+    double eval = 1;
     Cell curCell = board.board[curPos.rank][curPos.file];
     //EVAL 1: REMOVES 0.2 if doubled and 0.4 if trippled.
-    eval -= 0.2 * (Board.countAlongFile(board.board, "Pawn", curPos.file, isWhite) - 1);
+    eval -= 0.2 * (Board.countAlongFile(board.board, "Pawn", 1, curPos.file, isWhite) - 1);
 
     //EVAL 2: Checks if it is passed
     if (isPassed(board.board)) {
-      eval *= 2;
+      eval *= 1.75;
     }
     //Eval 3: If the pawn is a central square.
     if (Cell.isCentralSquare(curPos)) {
-      eval += 0.5;
+      eval += 0.25;
     }
     //EVAL 4: Check it's safety
     eval *= evaluateSafety();
@@ -678,18 +678,18 @@ public class Pawn implements Piece {
 
   public boolean isPassed(Cell[][] board) {
     if (curPos.file > 0 && curPos.file < 7) {
-      if (Board.countAlongFile(board, "Pawn", curPos.file, !isWhite) == 0
-          && Board.countAlongFile(board, "Pawn", curPos.file + 1, !isWhite) == 0
-          && Board.countAlongFile(board, "Pawn", curPos.file - 1, !isWhite) == 0) {
+      if (Board.countAlongFile(board, "Pawn", curPos.rank, curPos.file, !isWhite) == 0
+          && Board.countAlongFile(board, "Pawn",curPos.rank, curPos.file + 1, !isWhite) == 0
+          && Board.countAlongFile(board, "Pawn", curPos.rank, curPos.file - 1, !isWhite) == 0) {
         return true;
       } else if (curPos.file == 0) {
-        if (Board.countAlongFile(board, "Pawn", curPos.file, !isWhite) == 0
-            && Board.countAlongFile(board, "Pawn", curPos.file + 1, !isWhite) == 0) {
+        if (Board.countAlongFile(board, "Pawn", curPos.rank, curPos.file, !isWhite) == 0
+            && Board.countAlongFile(board, "Pawn",curPos.rank, curPos.file + 1, !isWhite) == 0) {
           return true;
         }
       } else if (curPos.file == 7) {
-        if (Board.countAlongFile(board, "Pawn", curPos.file, !isWhite) == 0
-            && Board.countAlongFile(board, "Pawn", curPos.file - 1, !isWhite) == 0) {
+        if (Board.countAlongFile(board, "Pawn", curPos.rank, curPos.file, !isWhite) == 0
+            && Board.countAlongFile(board, "Pawn", curPos.rank,curPos.file - 1, !isWhite) == 0) {
           return true;
         }
       }

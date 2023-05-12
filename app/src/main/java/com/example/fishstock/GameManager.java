@@ -286,7 +286,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
       if (((King) board.whitePieces.get(0)).isDoubleChecked) {
         checkStatusWhite.setText("DOUBLE CHECK!!");
         whitesPotentialMoves = GameService.generateMovesDoubleCheck(board, whitesPotentialMoves, true);
-        if (blacksPotentialMoves.size() == 0) {
+        if (whitesPotentialMoves.size() == 0) {
           message.setText("CHECKMATE!! PLAYER 1 LOSES");
           GameOverDialog ggDialog = new GameOverDialog(GameManager.this, -1);
           ggDialog.setOnGameOverListener(GameManager.this);

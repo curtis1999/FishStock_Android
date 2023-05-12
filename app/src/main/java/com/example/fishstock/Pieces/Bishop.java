@@ -415,25 +415,90 @@ public class Bishop implements Piece {
     return 'B';
   }
 
-  public int evaluate(Board board) {
-    int eval = 3;
+  public double evaluate(Board board) {
+    //EVAL 1: is Uncontested:
+    double eval = 3.33;
     Cell curCell = board.board[curPos.rank][curPos.file];
-    //Eval 1: Update the eval based on the number of attackers relative to defenders.
-    List<Piece> defenders;
-    List<Piece> attackers;
-    if (isWhite) {
-      defenders = curCell.whiteAttackers;
-      attackers = curCell.blackAttackers;
-    } else {
-      defenders = curCell.blackAttackers;
-      attackers = curCell.whiteAttackers;
-    }
-    if (attackers.size() > defenders.size()) {
-      eval -= (attackers.size() - defenders.size());
-    }
-    if (attackers.size() < defenders.size()) {
-      eval += (defenders.size() - attackers.size());
-    }
+    eval *= evaluateSafety();
     return eval;
+  }
+
+  //Analyses the list of protectors and defenders and returns a scaling factor for the eval funtion.
+  public double evaluateSafety() {
+    double eval = 1.0;
+    //PART 1: Cancel all matches from both lists.
+    ArrayList<Piece> copyProtectors = (ArrayList<Piece>) protectors.clone();
+    ArrayList<Piece> copyAttackers = (ArrayList<Piece>) attackers.clone();
+    for (Piece piece : copyProtectors) {
+      if (piece.getName().equals("Pawn")) {
+        if (removeByName(copyAttackers, "Pawn")) {
+          removeByName(copyProtectors, "Pawn");
+        }
+      } else if (piece.getName().equals("Knight") || piece.getName().equals("Bishop")) {
+        if (removeByName(copyAttackers, "Knight")){
+          removeByName(copyProtectors, "Knight");
+        }
+      } else if (piece.getName().equals("Rook")) {
+        if (removeByName(copyAttackers, "Rook")){
+          removeByName(copyProtectors, "Rook");
+        }
+      } else if (piece.getName().equals("Queen")) {
+        if (removeByName(copyAttackers, "Queen")){
+          removeByName(copyProtectors, "Queen");
+        }
+      } else {
+        if (removeByName(copyAttackers, "King")){
+          removeByName(copyProtectors, "King");
+        }
+      }
+    }
+    //PART 2: evaluate the results.
+    //2.1.1 BEST CASE: PROTECTED BY 2 PAWNS. (without any pawn attackers.
+    if (countByType(copyProtectors, "Pawn") == 2) {
+      return 1.75 + 0.15 * (protectors.size() - (1+attackers.size()));
+    }
+    //2.1.2WORST CASE: ATTACKED BY 2 PAWNS. (Without any pawn defenders
+    if (countByType(copyAttackers, "Pawn") == 2) {
+      return 0.6 - 0.15 * (attackers.size() - (1+ protectors.size()));
+    }
+
+    //2.2.1: Protected by one pawn
+    if (countByType(copyProtectors, "Pawn") == 1) {
+      return 1.4 + 0.15 * (protectors.size() - (1+attackers.size()));
+    }
+    //2.2.2: attacked by one pawn
+    if (countByType(copyAttackers, "Pawn") == 1) {
+      return 0.7 - 0.15 * (attackers.size() - (1+ protectors.size()));
+    }
+    //2.3.1: Protected by a bishop/knight
+    if (countByType(copyProtectors, "Knight") + countByType(copyProtectors, "Bishop") > 0) {
+      return 1.25 + 0.15 * (protectors.size() - (attackers.size()));
+    }
+    //2.3.1: Protected by a bishop/knight
+    if (countByType(copyAttackers, "Knight") + countByType(copyAttackers, "Bishop") > 0) {
+      return 0.8 - 0.15 * (protectors.size() - (attackers.size()));
+    }
+    return 1.0;
+  }
+
+  public static int countByType(ArrayList<Piece> pieces, String pieceName) {
+    int num = 0;
+    for (Piece piece : pieces) {
+      if (piece.getName().equals(pieceName)) {
+        num++;
+      }
+    }
+    return num;
+  }
+  //NOTE: pieceName of Knight for both Bishops and knights.
+  public boolean removeByName(List<Piece> pieces, String pieceName) {
+    boolean removed = false;
+    for (Piece piece: pieces) {
+      if (piece.getName().equals(pieceName) || piece.getName().equals("Bishop") && pieceName.equals("Knight")) {
+        pieces.remove(piece);
+        removed = true;
+      }
+    }
+    return removed;
   }
 }

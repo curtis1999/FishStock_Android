@@ -488,7 +488,7 @@ public class King implements Piece {
     return 'K';
   }
 
-  public int evaluate(Board board) {
+  public double evaluate(Board board) {
     return 0;
   }
 

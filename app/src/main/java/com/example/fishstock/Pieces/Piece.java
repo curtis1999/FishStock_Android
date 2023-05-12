@@ -36,5 +36,5 @@ public interface Piece {
   public Piece copyPiece();
   public char getSymbol();
 
-  int evaluate(Board board);
+  double evaluate(Board board);
 }

@@ -18,14 +18,14 @@ public class Simple extends Agent {
 
   @Override
   public Move getMove(Board ChessBoard, ArrayList<Move> possibleMoves, ArrayList<Move> possibleMovesAdv) {
-    int maxEval = -999;
+    double maxEval = -999;
     int maxIndex = 0;
     int counter = 0;
     for (Move move : possibleMoves) {
       Board board = GameService.copyBoard(ChessBoard);
       GameService.makeMove(board, move, isWhite);
       GameService.updateBoardMeta(board);
-      int curEval = evaluate(board);
+      double curEval = evaluate(board);
       if (curEval > maxEval) {
         maxEval = curEval;
         maxIndex = counter;
@@ -41,8 +41,8 @@ public class Simple extends Agent {
    * @param board
    * @return
    */
-  public int evaluate(Board board) {
-    int eval = 0;
+  public double evaluate(Board board) {
+    double eval = 0;
     List<Piece> ourPieces;
     List<Piece> adversaryPieces;
     if (isWhite) {
