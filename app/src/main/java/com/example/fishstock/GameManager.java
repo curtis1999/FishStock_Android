@@ -19,7 +19,7 @@ import org.w3c.dom.Text;
 import java.util.ArrayList;
 import java.util.List;
 
-public class GameManager extends AppCompatActivity implements PromotionDialog.OnPromotionMoveListener{
+public class GameManager extends AppCompatActivity implements PromotionDialog.OnPromotionMoveListener, GameOverDialog.OnGameOverMoveListener {
   Game game;
   Board board;
   Agent whitePlayer;
@@ -58,7 +58,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
     ImageButton promotionQueen = findViewById(R.id.promotionQueen);
     ImageButton promotionRook = findViewById(R.id.promotionRook);
     ImageButton promotionBishop = findViewById(R.id.promotionBishop);
-    ImageButton promotionKnight= findViewById(R.id.promotionKnight);
+    ImageButton promotionKnight = findViewById(R.id.promotionKnight);
     TextView capturedWhite = findViewById(R.id.CapturedPiecesWhite);
     TextView capturedBlack = findViewById(R.id.CapturedPiecesBlack);
     TextView checkStatusBlack = findViewById(R.id.checkStatusBlack);
@@ -105,7 +105,9 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
                   game.whitesMovesLog.add(move);
                   GameService.updateBoardMeta(board);
                   game.boardStates.add(GameService.copyBoard(board));
-                  postMoveChecks(board, true, checkStatusBlack, checkStatusWhite, message);
+                  if (postMoveChecks(board, true, checkStatusBlack, checkStatusWhite, message)) {
+                    return;
+                  };
                   message.setText("BLACK TO MOVE");
                   try {
                     ArrayList<Move> playersMoves = GameService.generateMoves(board, true); //TODO: Should be unnecessary
@@ -143,7 +145,10 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
                   GameService.updateBoardMeta(board);
                   game.whitesMovesLog.add(move);
                   game.boardStates.add(GameService.copyBoard(board));
-                  postMoveChecks(board, true, checkStatusBlack, checkStatusWhite, message);
+                  if (postMoveChecks(board, true, checkStatusBlack, checkStatusWhite, message)) {
+                    return;
+                  }
+                  ;
                   message.setText("BLACK TO MOVE");
                   try {
                     ArrayList<Move> playersMoves = GameService.generateMoves(board, true);
@@ -201,6 +206,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
 
   /**
    * Updates the move if it is is a castle, enPassant or Promotion.
+   *
    * @param move
    * @return
    */
@@ -208,38 +214,31 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
     if (move.piece.getName().equals("King") && Math.abs(move.toCoord.file - move.fromCoord.file) == 2) {
       move.setCastle();
     } else if (move.piece.getName().equals("Pawn") && ((this.isWhite && move.toCoord.rank == 7) || (!this.isWhite && move.toCoord.rank == 0))) {
-      move.setPromotion(new Queen (move.toCoord, move.piece.getColor())); //TODO: ASK THE USER FOR THE PROMOTION CHOICE!!
+      move.setPromotion(new Queen(move.toCoord, move.piece.getColor())); //TODO: ASK THE USER FOR THE PROMOTION CHOICE!!
     } else if (move.piece.getName().equals("Pawn") && Math.abs(move.toCoord.file - move.fromCoord.file) == 1 &&
-    board.board[move.toCoord.rank][move.toCoord.file].PieceStatus.equals(Status.EMPTY)) {
+        board.board[move.toCoord.rank][move.toCoord.file].PieceStatus.equals(Status.EMPTY)) {
       move.setEnPassant();
     }
     return move;
   }
 
-  public void postMoveChecks(Board board, boolean whiteMoved, TextView checkStatusBlack, TextView checkStatusWhite, TextView message) {
+  public boolean postMoveChecks(Board board, boolean whiteMoved, TextView checkStatusBlack, TextView checkStatusWhite, TextView message) {
+
     //CHECK 1: Dead position.
     if (GameService.isDeadPosition(board.whitePieces, board.blackPieces)) {
       message.setText("DRAW BY INSUFFICIENT MATERIAL");
-      try {
-        Thread.sleep(2000); // sleep for 2 second
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
-      Intent intent = new Intent(GameManager.this, MainActivity.class);
-      intent.putExtra("gameResult", "0.5"); //TODO: store the result of the game.
-      startActivity(intent);
+      GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 0);
+      ggDialog.setOnGameOverListener(GameManager.this);
+      ggDialog.show();
+      return true;
     }
     //CHeck 2: Repetition.
     if (GameService.isRepetition(game.boardStates, board)) {
       message.setText("DRAW BY REPETITION");
-      try {
-        Thread.sleep(2000); // sleep for 2 second
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
-      Intent intent = new Intent(GameManager.this, MainActivity.class);
-      intent.putExtra("gameResult", "0.5"); //TODO: store the result of the game.
-      startActivity(intent);
+      GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 0);
+      ggDialog.setOnGameOverListener(GameManager.this);
+      ggDialog.show();
+      return true;
     }
     //Check 3: Checks, mates and stalemates.
     if (whiteMoved) {
@@ -253,136 +252,75 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
         blacksPotentialMoves = GameService.generateMovesDoubleCheck(board, blacksPotentialMoves, false);
         if (blacksPotentialMoves.size() == 0) {
           message.setText("CHECKMATE!! PLAYER 1 WINS");
-          try {
-            Thread.sleep(2000); // sleep for 1 second
-          } catch (InterruptedException e) {
-            e.printStackTrace();
-          }
-          Intent intent = new Intent(GameManager.this, MainActivity.class);
-          intent.putExtra("gameResult", "1"); //TODO: store the result of the game.
-          startActivity(intent);
+          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 1);
+          ggDialog.setOnGameOverListener(GameManager.this);
+          ggDialog.show();
+          return true;
         }
       } else if (((King) board.blackPieces.get(0)).isChecked) {
         checkStatusBlack.setText("CHECK!");
         blacksPotentialMoves = GameService.generateMovesCheck(board, blacksPotentialMoves, false);
         if (blacksPotentialMoves.size() == 0) {
           message.setText("CHECKMATE!! PLAYER 1 WINS");
-          try {
-            Thread.sleep(2000); // sleep for 1 second
-          } catch (InterruptedException e) {
-            e.printStackTrace();
-          }
-          Intent intent = new Intent(GameManager.this, MainActivity.class);
-          intent.putExtra("gameResult", "1"); //TODO: store the result of the game.
-          startActivity(intent);
+          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 1);
+          ggDialog.setOnGameOverListener(GameManager.this);
+          ggDialog.show();
+          return true;
+        }
+      } else {
+        if (blacksPotentialMoves.size() == 0) {
+          message.setText("STALEMATE. THE GAME ENDS IN A DRAW");
+          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 0);
+          ggDialog.setOnGameOverListener(GameManager.this);
+          ggDialog.show();
+          return true;
+        } else {
+          updateBoard(board);
+          selectedPiece = null;
+          checkStatusWhite.setText("");
         }
       }
-      if (blacksPotentialMoves.size() == 0) {
-        message.setText("STALEMATE. THE GAME ENDS IN A DRAW");
-        try {
-          Thread.sleep(2000); // sleep for 2 seconds
-        } catch (InterruptedException e) {
-          e.printStackTrace();
-        }
-        Intent intent = new Intent(GameManager.this, MainActivity.class);
-        intent.putExtra("gameResult", "0.5"); //TODO: store the result of the game.
-        startActivity(intent);
-      }
-      updateBoard(board);
-      selectedPiece = null;
-      checkStatusWhite.setText("");
-    }else {
+    } else {
       try {
-        whitesPotentialMoves = GameService.generateMoves(board, true);
+        whitesPotentialMoves = GameService.generateMoves(board, false);
       } catch (CloneNotSupportedException e) {
         e.printStackTrace();
       }
       if (((King) board.whitePieces.get(0)).isDoubleChecked) {
         checkStatusWhite.setText("DOUBLE CHECK!!");
-        whitesPotentialMoves = GameService.generateMovesDoubleCheck(board,whitesPotentialMoves, true);
+        whitesPotentialMoves = GameService.generateMovesDoubleCheck(board, whitesPotentialMoves, true);
         if (blacksPotentialMoves.size() == 0) {
           message.setText("CHECKMATE!! PLAYER 1 LOSES");
-          try {
-            Thread.sleep(2000); // sleep for 1 second
-          } catch (InterruptedException e) {
-            e.printStackTrace();
-          }
-          Intent intent = new Intent(GameManager.this, MainActivity.class);
-          intent.putExtra("gameResult", "0"); //TODO: store the result of the game.
-          startActivity(intent);
+          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, -1);
+          ggDialog.setOnGameOverListener(GameManager.this);
+          ggDialog.show();
+          return true;
         }
       } else if (((King) board.whitePieces.get(0)).isChecked) {
         checkStatusWhite.setText("CHECK!");
         whitesPotentialMoves = GameService.generateMovesCheck(board, whitesPotentialMoves, true);
         if (whitesPotentialMoves.size() == 0) {
           message.setText("CHECKMATE!! PLAYER 1 LOSES");
-          try {
-            Thread.sleep(2000); // sleep for 1 second
-          } catch (InterruptedException e) {
-            e.printStackTrace();
-          }
-          Intent intent = new Intent(GameManager.this, MainActivity.class);
-          intent.putExtra("gameResult", "0"); //TODO: store the result of the game.
-          startActivity(intent);
+          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, -1);
+          ggDialog.setOnGameOverListener(GameManager.this);
+          ggDialog.show();
+          return true;
+        }
+      } else {
+        if (whitesPotentialMoves.size() == 0) {
+          message.setText("STALEMATE. THE GAME ENDS IN A DRAW");
+          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 0);
+          ggDialog.setOnGameOverListener(GameManager.this);
+          ggDialog.show();
+          return true;
+        } else {
+          checkStatusBlack.setText("");
+          updateBoard(board);
         }
       }
-      if (whitesPotentialMoves.size() == 0) {
-        message.setText("STALEMATE. THE GAME ENDS IN A DRAW");
-        try {
-          Thread.sleep(2000); // sleep for 2 seconds
-        } catch (InterruptedException e) {
-          e.printStackTrace();
-        }
-        Intent intent = new Intent(GameManager.this, MainActivity.class);
-        intent.putExtra("gameResult", "0.5"); //TODO: store the result of the game.
-        startActivity(intent);
-      }
-      checkStatusBlack.setText("");
-      updateBoard(board);
+
     }
-  }
-
-  private Move showPromotionDialog(Move move) {
-    Dialog dialog = new Dialog(GameManager.this);
-    dialog.setContentView(R.layout.dialog_promotion);
-    ImageButton promotionQueen = findViewById(R.id.promotionQueen);
-    ImageButton promotionRook = findViewById(R.id.promotionRook);
-    ImageButton promotionBishop = findViewById(R.id.promotionBishop);
-    ImageButton promotionKnight = findViewById(R.id.promotionKnight);
-
-    promotionQueen.setOnClickListener(new View.OnClickListener() {
-      @Override
-      public void onClick(View v) {
-        move.setPromotion(new Queen(move.toCoord, true));
-        updateMove(move);
-        dialog.dismiss();
-      }
-    });
-    promotionRook.setOnClickListener(new View.OnClickListener() {
-      @Override
-      public void onClick(View v) {
-        move.setPromotion(new Rook(move.toCoord, true));
-        updateMove(move);
-        dialog.dismiss();
-      }
-    });
-    promotionBishop.setOnClickListener(new View.OnClickListener() {
-      @Override
-      public void onClick(View v) {
-        move.setPromotion(new Bishop(move.toCoord, true));
-        updateMove(move);
-        dialog.dismiss();
-      }
-    });
-    promotionKnight.setOnClickListener(new View.OnClickListener() {
-      @Override
-      public void onClick(View v) {
-        move.setPromotion(new Knight(move.toCoord, true));
-        updateMove(move);
-        dialog.dismiss();
-      }
-    });
-    return move;
+    return false;
   }
 
 
@@ -401,9 +339,6 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
     return agent;
   }
 
-  public boolean isGameOver(Board board, boolean isWhite) {
-    return false; //TODO:
-  }
 
   public boolean isLegalMove(Coordinate coord, Cell[][] board) {
     if (selectedPiece == null) {
@@ -540,12 +475,17 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
     } else if (((King)board.blackPieces.get(0)).isChecked) {
       blacksPotentialMoves = GameService.generateMovesCheck(board, blacksPotentialMoves, false);
     }
-    Move adversaryMove = this.blackPlayer.getMove(board, blacksPotentialMoves, null);
+    Move adversaryMove = this.blackPlayer.getMove(board, blacksPotentialMoves, whitesPotentialMoves);
     GameService.makeMove(board, adversaryMove,false);
     GameService.updateBoardMeta(board);
     TextView checkStatusBlack = findViewById(R.id.checkStatusBlack);
     TextView checkStatusWhite = findViewById(R.id.checkStatusWhite);
     TextView message = findViewById(R.id.welcomeMessage);
     postMoveChecks(board, false, checkStatusBlack, checkStatusWhite, message);
+  }
+
+  @Override
+  public void onGameOver() {
+
   }
 }
