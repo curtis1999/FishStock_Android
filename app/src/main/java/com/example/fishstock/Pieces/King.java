@@ -26,6 +26,7 @@ public class King implements Piece {
   public Coordinate revealCheckerLoc;
   private ArrayList<Coordinate> revealAve;
   ArrayList<Coordinate> checkAve =  new ArrayList<>();
+  ArrayList<Coordinate> checkAve2 = new ArrayList<>();
 
 
   public King(Coordinate crd, boolean isWhite) {
@@ -271,54 +272,56 @@ public class King implements Piece {
         }
       }
     }
-    //CASTING MOVES.
-    if (isWhite) {
-      //Part 1: short castle:
-      // Check1: If the King and Rook are on starting squares and have not moved.
-      if (!hasMoved && board[0][0].PieceStatus == this.stat
-          && board[0][0].piece.getName().equals("Rook") && !((Rook)board[0][0].piece).hasMoved){
-        //Check 2: No Pieces or black attackers within the castling lane.
-        if (board[0][2].blackAttackers.size()==0 && board[0][2].PieceStatus == Status.EMPTY &&
-            board[0][1].blackAttackers.size()==0 && board[0][1].PieceStatus == Status.EMPTY) {
-          Move shortcastleMove = new Move(this.coord, new Coordinate(1, 0), "King", false, true);
-          shortcastleMove.setCastle();
-          possibleMoves.add(shortcastleMove);
+    if (!hasMoved && !isChecked) {
+      //CASTING MOVES.
+      if (isWhite) {
+        //Part 1: short castle:
+        // Check1: If the King and Rook are on starting squares and have not moved.
+        if (board[0][0].PieceStatus == this.stat
+            && board[0][0].piece.getName().equals("Rook") && !((Rook) board[0][0].piece).hasMoved) {
+          //Check 2: No Pieces or black attackers within the castling lane.
+          if (board[0][2].blackAttackers.size() == 0 && board[0][2].PieceStatus == Status.EMPTY &&
+              board[0][1].blackAttackers.size() == 0 && board[0][1].PieceStatus == Status.EMPTY) {
+            Move shortcastleMove = new Move(this.coord, new Coordinate(1, 0), "King", false, true);
+            shortcastleMove.setCastle();
+            possibleMoves.add(shortcastleMove);
+          }
         }
-      }
-      //Part 2: Long Castle
-      if (!hasMoved && board[0][7].PieceStatus == this.stat
-      && board[0][7].piece.getName().equals("Rook") && !((Rook)board[0][7].piece).hasMoved){
+        //Part 2: Long Castle
+        if (board[0][7].PieceStatus == this.stat
+            && board[0][7].piece.getName().equals("Rook") && !((Rook) board[0][7].piece).hasMoved) {
 
-        if (board[0][4].blackAttackers.size() == 0 && board[0][4].PieceStatus == Status.EMPTY
-            && board[0][5].blackAttackers.size() == 0 && board[0][5].PieceStatus ==Status.EMPTY
-        && board [0][6].PieceStatus.equals(Status.EMPTY)) {
-          Move longCastleMove = new Move(this.coord, new Coordinate(5, 0),"King", false, true);
-          longCastleMove.setCastle();
-          possibleMoves.add(longCastleMove);
+          if (board[0][4].blackAttackers.size() == 0 && board[0][4].PieceStatus == Status.EMPTY
+              && board[0][5].blackAttackers.size() == 0 && board[0][5].PieceStatus == Status.EMPTY
+              && board[0][6].PieceStatus.equals(Status.EMPTY)) {
+            Move longCastleMove = new Move(this.coord, new Coordinate(5, 0), "King", false, true);
+            longCastleMove.setCastle();
+            possibleMoves.add(longCastleMove);
+          }
         }
-      }
-    } else {
-      //Part 1: short castle:
-      // Check1: If the King and Rook are on starting squares and have not moved.
-      if (!hasMoved && board[7][0].PieceStatus == this.stat
-          && board[7][0].piece.getName().equals("Rook") && !((Rook)board[7][0].piece).hasMoved){
-        //Check 2: No black attackers within the castling lane.
-        if (board[7][2].whiteAttackers.size()==0 && board[7][2].PieceStatus == Status.EMPTY
-            && board[7][1].whiteAttackers.size()==0 && board[7][2].PieceStatus == Status.EMPTY) {
-          Move shortcastleMove = new Move(this.coord, new Coordinate(1, 7), "King", false, false);
-          shortcastleMove.setCastle();
-          possibleMoves.add(shortcastleMove);
+      } else {
+        //Part 1: short castle:
+        // Check1: If the King and Rook are on starting squares and have not moved.
+        if (!hasMoved && board[7][0].PieceStatus == this.stat
+            && board[7][0].piece.getName().equals("Rook") && !((Rook) board[7][0].piece).hasMoved) {
+          //Check 2: No black attackers within the castling lane.
+          if (board[7][2].whiteAttackers.size() == 0 && board[7][2].PieceStatus == Status.EMPTY
+              && board[7][1].whiteAttackers.size() == 0 && board[7][2].PieceStatus == Status.EMPTY) {
+            Move shortcastleMove = new Move(this.coord, new Coordinate(1, 7), "King", false, false);
+            shortcastleMove.setCastle();
+            possibleMoves.add(shortcastleMove);
+          }
         }
-      }
-      //Part 2: Long Castle
-      if (!hasMoved && board[7][7].PieceStatus == this.stat
-          && board[7][7].piece.getName().equals("Rook") && !((Rook)board[7][7].piece).hasMoved){
-        if (board[7][4].whiteAttackers.size() == 0 && board[7][4].PieceStatus == Status.EMPTY
-            && board[7][5].whiteAttackers.size() == 0 && board[7][5].PieceStatus == Status.EMPTY
-            && board [7][6].PieceStatus.equals(Status.EMPTY)) {
-          Move longCastleMove = new Move(this.coord, new Coordinate(5, 7),"King", false, false);
-          longCastleMove.setCastle();
-          possibleMoves.add(longCastleMove);
+        //Part 2: Long Castle
+        if (!hasMoved && board[7][7].PieceStatus == this.stat
+            && board[7][7].piece.getName().equals("Rook") && !((Rook) board[7][7].piece).hasMoved) {
+          if (board[7][4].whiteAttackers.size() == 0 && board[7][4].PieceStatus == Status.EMPTY
+              && board[7][5].whiteAttackers.size() == 0 && board[7][5].PieceStatus == Status.EMPTY
+              && board[7][6].PieceStatus.equals(Status.EMPTY)) {
+            Move longCastleMove = new Move(this.coord, new Coordinate(5, 7), "King", false, false);
+            longCastleMove.setCastle();
+            possibleMoves.add(longCastleMove);
+          }
         }
       }
     }
@@ -355,15 +358,17 @@ public class King implements Piece {
     return this.attackers;
   }
 
-  //TODO: CREATE A DOUBLE CHECK LOC AND AVENUE.
   public void setCheck(Coordinate checkerLoc, ArrayList<Coordinate> checkAve) {
     if (this.isChecked) {
       this.isDoubleChecked = true;
+      this.checkerLoc2 = checkerLoc;
+      this.checkAve2 = checkAve;
     } else {
       this.isChecked = true;
+      this.checkerLoc=checkerLoc;
+      this.checkAve=checkAve;
     }
-    this.checkerLoc=checkerLoc;
-    this.checkAve=checkAve;
+
   }
   public Coordinate getCheckerLoc() {
     return this.checkerLoc;
@@ -485,5 +490,9 @@ public class King implements Piece {
 
   public int evaluate(Board board) {
     return 0;
+  }
+
+  public ArrayList<Coordinate> getCheckingAve2() {
+    return this.checkAve2;
   }
 }

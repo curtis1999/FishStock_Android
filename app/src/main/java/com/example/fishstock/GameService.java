@@ -364,12 +364,14 @@ public class GameService {
   public static ArrayList<Move> generateMovesDoubleCheck(Board chessBoard, ArrayList<Move> possibleMoves, boolean isWhite) {
     ArrayList<Move> possibleMovesCheck = new ArrayList<>();
     ArrayList<Coordinate> checkingAve1;
+    ArrayList<Coordinate> checkingAve2;
     if (isWhite){
       checkingAve1 = ((King)chessBoard.whitePieces.get(0)).getCheckingAve();
+      checkingAve2 = ((King)chessBoard.whitePieces.get(0)).getCheckingAve2();
     } else {
       checkingAve1 = ((King)chessBoard.blackPieces.get(0)).getCheckingAve();
+      checkingAve2 = ((King)chessBoard.whitePieces.get(0)).getCheckingAve2();
     }
-    ArrayList<Coordinate> checkingAve2 = null; //TODO:!!!
     boolean inCheckingAve = false;
     for (Move mv : possibleMoves) {
       if (mv.piece.getName().equals("King")) {
@@ -384,6 +386,7 @@ public class GameService {
             if (!inCheckingAve) {
               possibleMovesCheck.add(mv);
             }
+            inCheckingAve = false;
           }
         } else {
           if (chessBoard.board[mv.toCoord.rank][mv.toCoord.file].whiteAttackers.size()==0) {
@@ -392,10 +395,16 @@ public class GameService {
                 inCheckingAve = true;
                 break;
               }
+            } for (Coordinate coord : checkingAve2){
+              if (mv.toCoord.rank == coord.rank && mv.toCoord.file == coord.file) {
+                inCheckingAve = true;
+                break;
+              }
             }
             if (!inCheckingAve) {
               possibleMovesCheck.add(mv);
             }
+            inCheckingAve = false;
           }
         }
       }else {
@@ -427,9 +436,6 @@ public class GameService {
     } else {
       checkerLoc = ((King)chessBoard.blackPieces.get(0)).checkerLoc;
       checkingPiece = chessBoard.board[checkerLoc.rank][checkerLoc.file].piece;
-      if (checkingPiece == null) {
-        int a = 1;
-      }
       kingLoc = new Coordinate(chessBoard.blackPieces.get(0).getPos().file, chessBoard.blackPieces.get(0).getPos().rank);
     }
     ArrayList<Move> possibleMovesCheck = new ArrayList<Move>();
@@ -527,7 +533,7 @@ public class GameService {
           Coordinate tempLoc = new Coordinate(checkerLoc.file+1, checkerLoc.rank);
           while (tempLoc.file < 8 && tempLoc.file <= kingLoc.file + 1) {
             checkingAvenue.add(tempLoc);
-            tempLoc = new Coordinate(tempLoc.file+1,tempLoc.rank+1);
+            tempLoc = new Coordinate(tempLoc.file+1,tempLoc.rank);
           }
         }
       }
@@ -586,9 +592,6 @@ public class GameService {
 
           //2 If the move is a capture.  Update the board.
         }else if (mv.isCapture){
-          if (mv.capturablePiece == null) {
-            int a =1;
-          }
           //2.1 If the captured piece is a King, then set the opponent to in Check!!
           if (mv.capturablePiece.getName().equals("King")){
             ((King)ChessBoard.blackPieces.get(0)).setCheck(mv.fromCoord, getCheckingAvenue(mv.piece, mv.fromCoord, ChessBoard.blackPieces.get(0).getPos()));
@@ -621,10 +624,6 @@ public class GameService {
 
           //2 IF the move is a capture.  Update the board, the Piece
         }else if (mv.isCapture){
-          if (mv.capturablePiece == null) {
-            Board.printBoard(ChessBoard, true);
-            int s=1;
-          }
           //CONVERT TO MOVE.capturablePiece.location!!
           //2.1 If the captured piece is a King, then set the opponent to in Check!!
           if (mv.capturablePiece.getName().equals("King")){

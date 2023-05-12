@@ -195,6 +195,14 @@ public class TestGameController {
     Board.printBoard(board, true);
     List<Move> kingMoves = board.blackPieces.get(0).generateMoves(board.blackPieces.get(0).getPos(), board.board);
     assertEquals(5, kingMoves.size());
+
+    Move rookMove = new Move(whiteRook1.getPos(), new Coordinate(0,7), "Rook", false, true);
+    GameService.makeMove(board, rookMove, true);
+    GameService.updateBoardMeta(board);
+    ArrayList<Move> rawKingMoves = board.blackPieces.get(0).generateMoves(board.blackPieces.get(0).getPos(), board.board);
+    kingMoves = GameService.generateMovesDoubleCheck(board, rawKingMoves, false);
+    Board.printBoard(board, true);
+    assertEquals(3, kingMoves.size());
   }
 
 
