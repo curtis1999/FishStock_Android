@@ -401,6 +401,9 @@ public class Knight implements Piece {
           removeByName(copyProtectors, "King");
         }
       }
+      if (copyAttackers.size() == 0 || copyProtectors.size() == 0) {
+        break;
+      }
     }
     //PART 2: evaluate the results.
     //2.1.1 BEST CASE: PROTECTED BY 2 PAWNS. (without any pawn attackers.
@@ -433,13 +436,12 @@ public class Knight implements Piece {
   }
   //NOTE: pieceName of Knight for both Bishops and knights.
   public boolean removeByName(List<Piece> pieces, String pieceName) {
-    boolean removed = false;
     for (Piece piece: pieces) {
       if (piece.getName().equals(pieceName) || piece.getName().equals("Bishop") && pieceName.equals("Knight")) {
         pieces.remove(piece);
-        removed = true;
+        return true;
       }
     }
-    return removed;
+    return false;
   }
 }

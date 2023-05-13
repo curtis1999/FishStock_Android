@@ -460,6 +460,9 @@ public class Bishop implements Piece {
           removeByName(copyProtectors, "King");
         }
       }
+      if (copyAttackers.size() == 0 || copyProtectors.size() == 0) {
+        break;
+      }
     }
     //PART 2: evaluate the results.
     //2.1.1 BEST CASE: PROTECTED BY 2 PAWNS. (without any pawn attackers.

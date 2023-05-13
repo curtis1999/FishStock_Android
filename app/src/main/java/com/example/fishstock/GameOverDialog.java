@@ -32,17 +32,30 @@ public class GameOverDialog extends Dialog {
     } else {
       gameResult.setText("YOU LOSE  :(");
     }
-    /*
+
     playAgain.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View v) {
-        Intent intent = new Intent(, GameManager.class); //HELP
+        Intent intent = new Intent(getContext(), GameManager.class); //HELP
         intent.putExtra("agentType", "FishStock");
-        // Start the activity
-        startActivity(intent);
+        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+        // Clear the activity stack and start the game again
+        getContext().startActivity(intent);
+        dismiss(); // Close the dialog
       }
     });
-     */
+    exit.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View v) {
+        Intent intent = new Intent(getContext(), MainActivity.class);
+        intent.putExtra("Result", "result"); //TODO:
+        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+        // Clear the activity stack and start the game again
+        getContext().startActivity(intent);
+        dismiss(); // Close the dialog
+      }
+    });
+
   }
   public void setOnGameOverListener(OnGameOverMoveListener listener) {
     this.listener = listener;
