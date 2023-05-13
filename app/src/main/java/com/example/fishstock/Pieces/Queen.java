@@ -726,7 +726,9 @@ public class Queen implements Piece {
 
   //Analyses the list of protectors and defenders and returns a scaling factor for the eval funtion.
   public double evaluateSafety() {
-    double eval = 1.0;
+    if (countByType(attackers, "Pawn") > 0) {
+      return 0.05;
+    }
     //PART 1: Cancel all matches from both lists.
     ArrayList<Piece> copyProtectors = (ArrayList<Piece>) protectors.clone();
     ArrayList<Piece> copyAttackers = (ArrayList<Piece>) attackers.clone();

@@ -3,6 +3,7 @@ package com.example.fishstock.Pieces;
 import com.example.fishstock.Board;
 import com.example.fishstock.Cell;
 import com.example.fishstock.Coordinate;
+import com.example.fishstock.GameService;
 import com.example.fishstock.Move;
 import com.example.fishstock.Status;
 
@@ -547,22 +548,39 @@ public class Rook implements Piece {
 
   public double evaluate(Board board) {
     double eval = 5.63;
-    Cell curCell = board.board[curPos.rank][curPos.file];
+    if (isPinned) {
+      eval *= 0.5;
+    }
+    if (isRevealChecker) {
+      eval *= 1.5;
+    }
+    double numMoves = GameService.filterMoves(possibleMoves).size();
+    eval += (numMoves/14.0) - (5.0/14.0);
+    //Eval 1: DOUBLED ROOK.
+    if (Board.countAlongFile(board.board, "Rook", 0, curPos.file, isWhite) == 2) {
+      eval += 1;
+    }
+    if ((isWhite && curPos.rank == 6) || (!isWhite && curPos.rank == 1)) {
+      eval += 0.5;
+    }
+
     eval *= evaluateSafety();
     return eval;
   }
 
   //Analyses the list of protectors and defenders and returns a scaling factor for the eval funtion.
   public double evaluateSafety() {
-    double eval = 1.0;
+    if (countByType(attackers, "Pawn") > 0) {
+      return 0.08;
+    }
+    if (countByType(attackers, "Bishop") > 0 || countByType(attackers, "Knight") > 0) {
+      return 0.6 - 0.1 * (attackers.size() - (protectors.size()));
+    }
     //PART 1: Cancel all matches from both lists.
     ArrayList<Piece> copyProtectors = (ArrayList<Piece>) protectors.clone();
     ArrayList<Piece> copyAttackers = (ArrayList<Piece>) attackers.clone();
     for (Piece piece : copyProtectors) {
       if (piece.getName().equals("Pawn")) {
-        if (removeByName(copyAttackers, "Pawn")) {
-          removeByName(copyProtectors, "Pawn");
-        }
       } else if (piece.getName().equals("Knight") || piece.getName().equals("Bishop")) {
         if (removeByName(copyAttackers, "Knight")){
           removeByName(copyProtectors, "Knight");
@@ -580,32 +598,23 @@ public class Rook implements Piece {
           removeByName(copyProtectors, "King");
         }
       }
+      if (copyAttackers.size() == 0 || copyProtectors.size() == 0) {
+        break;
+      }
     }
     //PART 2: evaluate the results.
+
     //2.1.1 BEST CASE: PROTECTED BY 2 PAWNS. (without any pawn attackers.
     if (countByType(copyProtectors, "Pawn") == 2) {
-      return 1.75 + 0.15 * (protectors.size() - (1+attackers.size()));
+      return 1.25 + 0.1 * (protectors.size() - (1+attackers.size()));
     }
-    //2.1.2WORST CASE: ATTACKED BY 2 PAWNS. (Without any pawn defenders
-    if (countByType(copyAttackers, "Pawn") == 2) {
-      return 0.6 - 0.15 * (attackers.size() - (1+ protectors.size()));
-    }
-
     //2.2.1: Protected by one pawn
     if (countByType(copyProtectors, "Pawn") == 1) {
-      return 1.4 + 0.15 * (protectors.size() - (1+attackers.size()));
-    }
-    //2.2.2: attacked by one pawn
-    if (countByType(copyAttackers, "Pawn") == 1) {
-      return 0.7 - 0.15 * (attackers.size() - (1+ protectors.size()));
+      return 1.15 + 0.1 * (protectors.size() - (1+attackers.size()));
     }
     //2.3.1: Protected by a bishop/knight
     if (countByType(copyProtectors, "Knight") + countByType(copyProtectors, "Bishop") > 0) {
-      return 1.25 + 0.15 * (protectors.size() - (attackers.size()));
-    }
-    //2.3.1: Protected by a bishop/knight
-    if (countByType(copyAttackers, "Knight") + countByType(copyAttackers, "Bishop") > 0) {
-      return 0.8 - 0.15 * (protectors.size() - (attackers.size()));
+      return 1.1 + 0.1 * (protectors.size() - (attackers.size()));
     }
     return 1.0;
   }
@@ -621,13 +630,12 @@ public class Rook implements Piece {
   }
   //NOTE: pieceName of Knight for both Bishops and knights.
   public boolean removeByName(List<Piece> pieces, String pieceName) {
-    boolean removed = false;
     for (Piece piece: pieces) {
       if (piece.getName().equals(pieceName) || piece.getName().equals("Bishop") && pieceName.equals("Knight")) {
         pieces.remove(piece);
-        removed = true;
+        return true;
       }
     }
-    return removed;
+    return false;
   }
 }

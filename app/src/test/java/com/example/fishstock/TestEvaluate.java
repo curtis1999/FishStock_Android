@@ -20,41 +20,73 @@ public class TestEvaluate {
     //WHITE PIECES
     List<Piece> whitePieces = new ArrayList<>();
     King whiteKing;
-
     Queen whiteQueen;
-
     Rook whiteRook1;
     Rook whiteRook2;
-
     Bishop whiteBishop1;
+    Bishop whiteBishop2;
     Knight whiteKnight1;
+    Knight whiteKnight2;
     Pawn whitePawn1;
     Pawn whitePawn2;
     Pawn whitePawn3;
     Pawn whitePawn4;
-
+    Pawn whitePawn5;
     //BLACK PIECES
     List<Piece> blackPieces = new ArrayList<>();
     King blackKing;
-
     Queen blackQueen;
-
     Rook blackRook1;
     Rook blackRook2;
-
     Bishop blackBishop1;
-
+    Bishop blackBishop2;
     Knight blackKnight1;
-
+    Knight blackKnight2;
     Pawn blackPawn1;
     Pawn blackPawn2;
     Pawn blackPawn3;
     Pawn blackPawn4;
+    Board board;
+    Game game;
 
-    Board board = new Board();
-    Game game = new Game(board, AgentType.RANDY, AgentType.RANDY);
+  public void initAll(){
+    //WHITE PIECES
+    whiteKing = new King(new Coordinate(1,0), true);
+    whitePawn1 = new Pawn(new Coordinate(0,1), true);
+    whitePawn2 = new Pawn (new Coordinate( 1, 2), true); whitePawn2.growUp();
+    whitePawn3 = new Pawn (new Coordinate( 2, 1), true);
+    whitePawn4 = new Pawn(new Coordinate(6,1), true);
+    whiteKnight1 = new Knight(new Coordinate(3, 2), true);
+    whiteKnight2 = new Knight(new Coordinate(7, 7), true);
+    whiteRook1 = new Rook(new Coordinate(3, 0), true);
+    whiteRook2 = new Rook(new Coordinate(7, 0), true);
+    whiteBishop1 = new Bishop (new Coordinate(1, 1), true);
+    whiteBishop2 = new Bishop (new Coordinate(5, 0), true);
+    whitePieces.add(whiteKing);
+    whitePieces.add(whitePawn1); whitePieces.add(whitePawn2); whitePieces.add(whitePawn3); whitePieces.add(whitePawn4);
+    whitePieces.add(whiteKnight1); whitePieces.add(whiteKnight2);
+    whitePieces.add(whiteRook1); whitePieces.add(whiteRook2);
+    whitePieces.add(whiteBishop1); whitePieces.add(whiteBishop2);
 
+    //BLACK PIECES
+    blackKing = new King(new Coordinate(3,7), false);
+    blackKnight1 = new Knight(new Coordinate(0, 7), false);
+    blackKnight2 = new Knight (new Coordinate(3, 4), false);
+    blackBishop1 = new Bishop (new Coordinate(1, 6), false);
+    blackBishop2 = new Bishop (new Coordinate(4, 2), false);
+    blackRook1 = new Rook (new Coordinate(0, 3), false);
+    blackRook2 = new Rook (new Coordinate(5, 1), false);
+    blackPawn1 = new Pawn (new Coordinate(2, 5), false); blackPawn1.growUp();
+    blackPawn2 = new Pawn (new Coordinate(4, 5), false);blackPawn2.growUp();
+    blackPieces.add(blackKing);
+    blackPieces.add(blackBishop1); blackPieces.add(blackBishop2);
+    blackPieces.add(blackKnight1);blackPieces.add(blackKnight2);
+    blackPieces.add(blackRook1); blackPieces.add(blackRook2);
+    blackPieces.add(blackPawn1); blackPieces.add(blackPawn2);
 
+    board = new Board(whitePieces, blackPieces);
+    game = new Game(board, AgentType.RANDY, AgentType.RANDY);
+  }
     public void initPawns(){
       //WHITE PIECES
       whiteKing = new King(new Coordinate(3,0), true);
@@ -92,4 +124,25 @@ public class TestEvaluate {
       double updatedEval2 = whitePawn2.evaluate(board);
       assertEquals(true, (updatedEval2 < eval2));
     }
+
+    @Test
+  public void allPieces() {
+    initAll();
+    GameService.updateBoardMeta(board);
+    Board.printBoard(board, true);
+    double whiteBishop1Eval = whiteBishop1.evaluate(board);
+    double whiteBishop2Eval = whiteBishop2.evaluate(board);
+    assertEquals(true, whiteBishop1Eval > whiteBishop2Eval);
+    double whiteRook1Eval = whiteRook1.evaluate(board);
+    double whiteRook2Eval = whiteRook2.evaluate(board);
+    assertEquals(true, whiteRook2Eval > whiteRook1Eval);
+
+    double whiteKnight1Eval = whiteKnight1.evaluate(board);
+    double whiteKnight2Eval = whiteKnight2.evaluate(board);
+    assertEquals(true, whiteKnight1Eval > whiteKnight2Eval);
+
+    double blackRook1Eval = blackRook1.evaluate(board);
+    double blackRook2Eval = blackRook2.evaluate(board);
+    assertEquals(true, blackRook2Eval > blackRook1Eval);
+  }
 }

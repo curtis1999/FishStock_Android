@@ -729,28 +729,28 @@ public class Pawn implements Piece {
     //PART 2: evaluate the results.
     //2.1.1 BEST CASE: PROTECTED BY 2 PAWNS. (without any pawn attackers.
     if (countByType(copyProtectors, "Pawn") == 2) {
-      return 1.75 + 0.15 * (protectors.size() - (1+attackers.size()));
+      return 1.25 + 0.1 * (protectors.size() - (1+attackers.size()));
     }
     //2.1.2WORST CASE: ATTACKED BY 2 PAWNS. (Without any pawn defenders
     if (countByType(copyAttackers, "Pawn") == 2) {
-      return 0.6 - 0.15 * (attackers.size() - (1+ protectors.size()));
+      return 0.6 - 0.1 * (attackers.size() - (1+ protectors.size()));
     }
 
     //2.2.1: Protected by one pawn
     if (countByType(copyProtectors, "Pawn") == 1) {
-      return 1.4 + 0.15 * (protectors.size() - (1+attackers.size()));
+      return 1.15 + 0.1 * (protectors.size() - (1+attackers.size()));
     }
     //2.2.2: attacked by one pawn
     if (countByType(copyAttackers, "Pawn") == 1) {
-      return 0.7 - 0.15 * (attackers.size() - (1+ protectors.size()));
+      return 0.8 - 0.1 * (attackers.size() - (1+ protectors.size()));
     }
     //2.3.1: Protected by a bishop/knight
     if (countByType(copyProtectors, "Knight") + countByType(copyProtectors, "Bishop") > 0) {
-      return 1.25 + 0.15 * (protectors.size() - (attackers.size()));
+      return 1.1 + 0.1 * (protectors.size() - (attackers.size()));
     }
     //2.3.1: Protected by a bishop/knight
     if (countByType(copyAttackers, "Knight") + countByType(copyAttackers, "Bishop") > 0) {
-      return 0.8 - 0.15 * (protectors.size() - (attackers.size()));
+      return 0.9 - 0.1 * (protectors.size() - (attackers.size()));
     }
     return 1.0;
   }

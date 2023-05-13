@@ -256,6 +256,9 @@ public class Board implements Serializable {
    */
   public static int countAlongFile(Cell[][] board, String pieceName, int startingRow, int file, boolean isWhite) {
     int numInFile = 0;
+    if (file < 0 || file > 7 || startingRow < 0 || startingRow > 7) {
+      return 0;
+    }
     for (int row = startingRow; row < 8; row++){
       if (!board[row][file].PieceStatus.equals(Status.EMPTY)) {
         if (board[row][file].piece.getName().equals(pieceName) && board[row][file].piece.getColor() == isWhite) {

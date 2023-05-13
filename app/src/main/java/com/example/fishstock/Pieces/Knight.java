@@ -3,6 +3,7 @@ package com.example.fishstock.Pieces;
 import com.example.fishstock.Board;
 import com.example.fishstock.Cell;
 import com.example.fishstock.Coordinate;
+import com.example.fishstock.GameService;
 import com.example.fishstock.Move;
 import com.example.fishstock.Status;
 
@@ -324,14 +325,57 @@ public class Knight implements Piece {
   }
   public double evaluate(Board board) {
     double eval = 3.05;
-    Cell curCell = board.board[curPos.rank][curPos.file];
+    //EVAL 1: IF THE PIECE IS PINNED CUT THE EVAL IN HALF
+    if (isPinned) {
+      eval *= 0.5;
+    }
+    //EVAL 2: IF THE PIECE IS A REVEAL CHECKER, INCREASE THE EVAL BY 2.
+    if (isRevealChecker) {
+      eval *= 1.5;
+    }
+    //EVAL 3: INCREASE OR DECREASE BASED ON THE NUMBER OF POSSIBLE MOVES. (GRIM ON RIM and happy in center)
+    double numMoves = GameService.filterMoves(possibleMoves).size();
+    eval += (numMoves/8.0) - (5.0/8.0);
+
+    //EVAL 4: IF THE PIECE IS AN OUTPOST, THEN INCREASE BY 1.
+    if (isOutPost(board.board)) {
+      eval += 1;
+    }
+
+    //EVAL 4: Piece safety.
     eval *= evaluateSafety();
+    //NOTE: SET AN UPPER LIMIT TO AVOID UNNECESSARY PIECE SACRIFICES.
+    if (eval > 5) { eval = 5; }
     return eval;
+  }
+
+  public boolean isOutPost(Cell[][] board) {
+    if (curPos.rank < 2 || curPos.rank > 5) {
+      return false;
+    }
+    if (isWhite) {
+      if (Board.countAlongFile(board, "Pawn", curPos.rank + 1, curPos.file + 1, false) == 0
+          && Board.countAlongFile(board, "Pawn", curPos.rank + 1, curPos.file - 1, false) == 0) {
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      if (Board.countAlongFile(board, "Pawn", curPos.rank - 1, curPos.file + 1, true) == 0
+          && Board.countAlongFile(board, "Pawn", curPos.rank - 1, curPos.file - 1, true) == 0) {
+        return true;
+      } else {
+        return false;
+      }
+    }
   }
 
   //Analyses the list of protectors and defenders and returns a scaling factor for the eval funtion.
   public double evaluateSafety() {
-    double eval = 1.0;
+    //If it's attacked by a pawn, lower the eval a lot.
+    if (countByType(attackers, "Pawn") > 0) {
+      return 0.01;
+    }
     //PART 1: Cancel all matches from both lists.
     ArrayList<Piece> copyProtectors = (ArrayList<Piece>) protectors.clone();
     ArrayList<Piece> copyAttackers = (ArrayList<Piece>) attackers.clone();
@@ -361,28 +405,19 @@ public class Knight implements Piece {
     //PART 2: evaluate the results.
     //2.1.1 BEST CASE: PROTECTED BY 2 PAWNS. (without any pawn attackers.
     if (countByType(copyProtectors, "Pawn") == 2) {
-      return 1.75 + 0.15 * (protectors.size() - (1+attackers.size()));
+      return 1.25 + 0.1 * (protectors.size() - (attackers.size()));
     }
-    //2.1.2WORST CASE: ATTACKED BY 2 PAWNS. (Without any pawn defenders
-    if (countByType(copyAttackers, "Pawn") == 2) {
-      return 0.6 - 0.15 * (attackers.size() - (1+ protectors.size()));
-    }
-
     //2.2.1: Protected by one pawn
     if (countByType(copyProtectors, "Pawn") == 1) {
-      return 1.4 + 0.15 * (protectors.size() - (1+attackers.size()));
-    }
-    //2.2.2: attacked by one pawn
-    if (countByType(copyAttackers, "Pawn") == 1) {
-      return 0.7 - 0.15 * (attackers.size() - (1+ protectors.size()));
+      return 1.15 + 0.1 * (protectors.size() - (attackers.size()));
     }
     //2.3.1: Protected by a bishop/knight
     if (countByType(copyProtectors, "Knight") + countByType(copyProtectors, "Bishop") > 0) {
-      return 1.25 + 0.15 * (protectors.size() - (attackers.size()));
+      return 1.1 + 0.1 * (protectors.size() - (attackers.size()));
     }
-    //2.3.1: Protected by a bishop/knight
+    //2.3.2: Attacked by a bishop/knight.
     if (countByType(copyAttackers, "Knight") + countByType(copyAttackers, "Bishop") > 0) {
-      return 0.8 - 0.15 * (protectors.size() - (attackers.size()));
+      return 0.8 - 0.15 * (attackers.size() - (protectors.size()));
     }
     return 1.0;
   }
