@@ -17,7 +17,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/textview_first"
-        app:layout_constraintVertical_bias="0.054" />
+        app:layout_constraintVertical_bias="0.189" />
 
     <Button
         android:id="@+id/PlayRandy"
@@ -26,23 +26,60 @@
         android:text="   RANDY    "
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.809"
+        app:layout_constraintHorizontal_bias="0.792"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.332" />
+        app:layout_constraintVertical_bias="0.47" />
 
-    <TextView
-        android:id="@+id/level2"
+    <Button
+        android:id="@+id/playSimple"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Level2"
-        android:textSize="20dp"
+        android:text="SIMPLE"
+        app:layout_constraintBottom_toTopOf="@+id/PlayFishStock"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.558"
+        app:layout_constraintStart_toEndOf="@+id/level2"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.796" />
+
+    <Button
+        android:id="@+id/PlayFishStock"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="FISHSTOCK"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/PlayFishStock"
-        app:layout_constraintHorizontal_bias="0.508"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.805"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/level1"
-        app:layout_constraintVertical_bias="0.047" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.739" />
+
+    <Button
+        android:id="@+id/playMinMax"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="MIN-MAX"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.796"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/playSimple"
+        app:layout_constraintVertical_bias="0.02" />
+
+    <TextView
+        android:id="@+id/textView6"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="45dp"
+        android:text="Opponent Name"
+        android:textSize="20dp"
+        app:layout_constraintBottom_toTopOf="@+id/PlayRandy"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.6"
+        app:layout_constraintStart_toEndOf="@+id/textView5"
+        app:layout_constraintTop_toBottomOf="@+id/textview_second"
+        app:layout_constraintVertical_bias="0.631" />
 
     <TextView
         android:id="@+id/level3"
@@ -55,30 +92,32 @@
         app:layout_constraintHorizontal_bias="0.508"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/level2"
-        app:layout_constraintVertical_bias="0.047" />
+        app:layout_constraintVertical_bias="0.109" />
 
     <TextView
         android:id="@+id/level1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="208dp"
+        android:layout_marginTop="348dp"
         android:text="Level1"
         android:textSize="20dp"
         app:layout_constraintEnd_toStartOf="@+id/PlayRandy"
-        app:layout_constraintHorizontal_bias="0.586"
+        app:layout_constraintHorizontal_bias="0.513"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <Button
-        android:id="@+id/PlayFishStock"
+    <TextView
+        android:id="@+id/level2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="FISHSTOCK"
+        android:text="Level2"
+        android:textSize="20dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.812"
+        app:layout_constraintEnd_toStartOf="@+id/PlayFishStock"
+        app:layout_constraintHorizontal_bias="0.513"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toBottomOf="@+id/level1"
+        app:layout_constraintVertical_bias="0.087" />
 
     <TextView
         android:id="@+id/textView5"
@@ -93,20 +132,6 @@
         app:layout_constraintVertical_bias="0.589" />
 
     <TextView
-        android:id="@+id/textView6"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="45dp"
-        android:text="Opponent Name"
-        android:textSize="20dp"
-        app:layout_constraintBottom_toTopOf="@+id/PlayRandy"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.617"
-        app:layout_constraintStart_toEndOf="@+id/textView5"
-        app:layout_constraintTop_toBottomOf="@+id/textview_second"
-        app:layout_constraintVertical_bias="0.235" />
-
-    <TextView
         android:id="@+id/textview_first"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -117,28 +142,44 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <Button
-        android:id="@+id/playSimple"
+        android:id="@+id/WHITE"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="SIMPLE"
-        app:layout_constraintBottom_toTopOf="@+id/PlayFishStock"
+        android:text="WHITE"
+        app:layout_constraintBottom_toTopOf="@+id/textview_second"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.569"
-        app:layout_constraintStart_toEndOf="@+id/level2"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.946" />
+        app:layout_constraintHorizontal_bias="0.191"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textview_first"
+        app:layout_constraintVertical_bias="0.598" />
 
     <Button
-        android:id="@+id/playMinMax"
+        android:id="@+id/BLACK"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="MIN-MAX"
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:text="BLACK"
+        android:textColor="#000000"
+        app:layout_constraintBottom_toTopOf="@+id/textview_second"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.766"
+        app:layout_constraintHorizontal_bias="0.642"
+        app:layout_constraintStart_toEndOf="@+id/WHITE"
+        app:layout_constraintTop_toBottomOf="@+id/textview_first"
+        app:layout_constraintVertical_bias="0.598"
+        app:strokeColor="#1B1111" />
+
+    <TextView
+        android:id="@+id/textView2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="37dp"
+        android:text="Play as:"
+        android:textSize="25dp"
+        app:layout_constraintBottom_toTopOf="@+id/textview_second"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.498"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/PlayFishStock"
-        app:layout_constraintVertical_bias="0.319" />
+        app:layout_constraintTop_toBottomOf="@+id/textview_first"
+        app:layout_constraintVertical_bias="0.01" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

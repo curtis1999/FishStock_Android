@@ -40,11 +40,18 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
     //1. Initialize the board, agent and game
     this.board = new Board();
     GameService.updateBoardMeta(board);
-    this.blackPlayer = initializeAgent(getIntent().getStringExtra("agentType"));
-    this.whitePlayer = new Human(AgentType.HUMAN, true);
+    this.isWhite = getIntent().getBooleanExtra("isWhite", false);
+    if (this.isWhite) {
+      this.blackPlayer = initializeAgent(getIntent().getStringExtra("agentType"));
+      this.whitePlayer = new Human(AgentType.HUMAN, true);
+    } else {
+      this.blackPlayer = new Human(AgentType.HUMAN, true);
+      this.whitePlayer = initializeAgent(getIntent().getStringExtra("agentType"));
+    }
+
     this.game = new Game(board, whitePlayer.type, blackPlayer.type);
     this.game.boardStates.add(GameService.copyBoard(this.board));
-    updateBoard(board);
+    updateBoard(board, isWhite);
 
     //2. Initialize the texts and buttons.
     TextView adversaryName = findViewById(R.id.player2);
@@ -73,7 +80,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
       public void onClick(View v) {
         board = game.getPreviousBoard();
         GameService.updateBoardMeta(board);
-        updateBoard(board);
+        updateBoard(board, isWhite);
       }
     });
 
@@ -81,7 +88,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
     //3. Set the buttons.
     for (int row = 0; row < 8; row++) {
       for (int col = 0; col < 8; col++) {
-        ImageButton button = (ImageButton) getButonFromCoord(new Coordinate(col, row));
+        ImageButton button = (ImageButton) getButonFromCoord(new Coordinate(col, row), isWhite);
         button.setOnClickListener(new View.OnClickListener() {
 
           @Override
@@ -117,7 +124,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
                     GameService.updateBoardMeta(board);
                     game.blacksMovesLog.add(adversaryMove);
                     game.boardStates.add(GameService.copyBoard(board));
-                    updateBoard(board);
+                    updateBoard(board, isWhite);
                     postMoveChecks(board, false, checkStatusBlack, checkStatusWhite, message);
                     message.setText("WHITE TO MOVE");
                   } catch (CloneNotSupportedException e) {
@@ -158,7 +165,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
                     GameService.updateBoardMeta(board);
                     game.blacksMovesLog.add(adversaryMove);
                     game.boardStates.add(GameService.copyBoard(board));
-                    updateBoard(board);
+                    updateBoard(board, isWhite);
                     postMoveChecks(board, false, checkStatusBlack, checkStatusWhite, message);
                     message.setText("WHITE TO MOVE");
                   } catch (CloneNotSupportedException e) {
@@ -170,7 +177,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
             } else {
               if (selectedPiece != null) {
                 for (Move move : GameService.filterMoves(selectedPiece.generateMoves(selectedPiece.getPos(), board.board))) {
-                  ImageButton button = (ImageButton) getButonFromCoord(move.toCoord);
+                  ImageButton button = (ImageButton) getButonFromCoord(move.toCoord, isWhite);
                   if (board.board[move.toCoord.rank][move.toCoord.file].isLight
                       && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.EMPTY) {
                     button.setImageResource(R.drawable.empty_light);
@@ -183,7 +190,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
                 selectedPiece = board.board[coord.rank][coord.file].piece;
                 ArrayList<Move> legalMoves = selectedPiece.generateMoves(coord, board.board);
                 for (Move move : GameService.filterMoves(legalMoves)) {
-                  ImageButton button = (ImageButton) getButonFromCoord(move.toCoord);
+                  ImageButton button = (ImageButton) getButonFromCoord(move.toCoord, isWhite);
                   if (board.board[move.toCoord.rank][move.toCoord.file].isLight
                       && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.EMPTY) {
                     button.setImageResource(R.drawable.white_empty_selected);
@@ -272,7 +279,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
           ggDialog.show();
           return true;
         } else {
-          updateBoard(board);
+          updateBoard(board, isWhite);
           selectedPiece = null;
           checkStatusWhite.setText("");
         }
@@ -312,7 +319,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
           return true;
         } else {
           checkStatusBlack.setText("");
-          updateBoard(board);
+          updateBoard(board, isWhite);
         }
       }
 
@@ -360,28 +367,41 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
     return new Coordinate(file, rank);
   }
 
-  public ImageView getButonFromCoord(Coordinate coord) {
-    int resId = getResources().getIdentifier("button" + (7 - coord.rank) + (7 - coord.file), "id", this.getPackageName());
+  public ImageView getButonFromCoord(Coordinate coord, boolean isWhite) {
+    int resId;
+    if (isWhite) {
+      resId = getResources().getIdentifier("button" + (7 - coord.rank) + (7 - coord.file), "id", this.getPackageName());
+    } else {
+      resId = getResources().getIdentifier("button" + (coord.rank) + (coord.file), "id", this.getPackageName());
+    }
     return findViewById(resId);
   }
 
   public static void defaultView(ArrayList<ImageButton> squares) {
   }
 
-  public void updateBoard(Board board) {
+  public void updateBoard(Board board, boolean isWhite) {
     GridLayout grid = findViewById(R.id.gridlayout);
-
-    for (int row = 0; row < 8; row++) {
-      for (int col = 0; col < 8; col++) {
-        Cell cell = board.board[row][col];
-        updateCellImage(cell, row, col);
+    if (isWhite) {
+      for (int row = 0; row < 8; row++) {
+        for (int col = 0; col < 8; col++) {
+          Cell cell = board.board[row][col];
+          updateCellImage(cell, row, col);
+        }
+      }
+    }else {
+      for (int row = 7; row >= 0; row --) {
+        for (int col = 7; col >=0; col--) {
+          Cell cell = board.board[row][col];
+          updateCellImage(cell, row, col);
+        }
       }
     }
   }
 
 
   public void updateCellImage(Cell cell, int row, int col) {
-    ImageView cellImageView = getButonFromCoord(new Coordinate(col, row));
+    ImageView cellImageView = getButonFromCoord(new Coordinate(col, row), isWhite);
     if (cell.isEmpty) {
       if (cell.isLight) {
         cellImageView.setImageResource(R.drawable.empty_light);
@@ -468,7 +488,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
   }
   @Override
   public void onPromotionMove() throws CloneNotSupportedException {
-    updateBoard(board);
+    updateBoard(board, isWhite);
     ArrayList<Move> blacksPotentialMoves = GameService.generateMoves(board, false);
     if (((King)board.blackPieces.get(0)).isDoubleChecked) {
       blacksPotentialMoves = GameService.generateMovesDoubleCheck(board, blacksPotentialMoves, false);
