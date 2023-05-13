@@ -231,7 +231,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
     //CHECK 1: Dead position.
     if (GameService.isDeadPosition(board.whitePieces, board.blackPieces)) {
       message.setText("DRAW BY INSUFFICIENT MATERIAL");
-      GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 0);
+      GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 0, isWhite);
       ggDialog.setOnGameOverListener(GameManager.this);
       ggDialog.show();
       return true;
@@ -239,7 +239,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
     //CHeck 2: Repetition.
     if (GameService.isRepetition(game.boardStates, board)) {
       message.setText("DRAW BY REPETITION");
-      GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 0);
+      GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 0, isWhite);
       ggDialog.setOnGameOverListener(GameManager.this);
       ggDialog.show();
       return true;
@@ -256,7 +256,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
         blacksPotentialMoves = GameService.generateMovesDoubleCheck(board, blacksPotentialMoves, false);
         if (blacksPotentialMoves.size() == 0) {
           message.setText("CHECKMATE!! PLAYER 1 WINS");
-          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 1);
+          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 1, isWhite);
           ggDialog.setOnGameOverListener(GameManager.this);
           ggDialog.show();
           return true;
@@ -266,7 +266,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
         blacksPotentialMoves = GameService.generateMovesCheck(board, blacksPotentialMoves, false);
         if (blacksPotentialMoves.size() == 0) {
           message.setText("CHECKMATE!! PLAYER 1 WINS");
-          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 1);
+          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 1, isWhite);
           ggDialog.setOnGameOverListener(GameManager.this);
           ggDialog.show();
           return true;
@@ -274,7 +274,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
       } else {
         if (blacksPotentialMoves.size() == 0) {
           message.setText("STALEMATE. THE GAME ENDS IN A DRAW");
-          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 0);
+          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 0, isWhite);
           ggDialog.setOnGameOverListener(GameManager.this);
           ggDialog.show();
           return true;
@@ -295,7 +295,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
         whitesPotentialMoves = GameService.generateMovesDoubleCheck(board, whitesPotentialMoves, true);
         if (whitesPotentialMoves.size() == 0) {
           message.setText("CHECKMATE!! PLAYER 1 LOSES");
-          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, -1);
+          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, -1, isWhite);
           ggDialog.setOnGameOverListener(GameManager.this);
           ggDialog.show();
           return true;
@@ -305,7 +305,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
         whitesPotentialMoves = GameService.generateMovesCheck(board, whitesPotentialMoves, true);
         if (whitesPotentialMoves.size() == 0) {
           message.setText("CHECKMATE!! PLAYER 1 LOSES");
-          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, -1);
+          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, -1, isWhite);
           ggDialog.setOnGameOverListener(GameManager.this);
           ggDialog.show();
           return true;
@@ -313,7 +313,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
       } else {
         if (whitesPotentialMoves.size() == 0) {
           message.setText("STALEMATE. THE GAME ENDS IN A DRAW");
-          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 0);
+          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 0, isWhite);
           ggDialog.setOnGameOverListener(GameManager.this);
           ggDialog.show();
           return true;

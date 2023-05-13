@@ -11,6 +11,7 @@ import androidx.annotation.NonNull;
 
 public class GameOverDialog extends Dialog {
   int result;
+  boolean isWhite;
   OnGameOverMoveListener listener;
   Button playAgain;
   Button exit;
@@ -18,9 +19,10 @@ public class GameOverDialog extends Dialog {
   public interface OnGameOverMoveListener {
     void onGameOver();
   }
-  public GameOverDialog(@NonNull Context context, int result) {
+  public GameOverDialog(@NonNull Context context, int result, boolean isWhite) {
     super(context);
     this.result = result;
+    this.isWhite = isWhite;
     setContentView(R.layout.dialog_game_over);
     playAgain = findViewById(R.id.playAgain);
     exit = findViewById(R.id.exit);
@@ -36,8 +38,9 @@ public class GameOverDialog extends Dialog {
     playAgain.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View v) {
-        Intent intent = new Intent(getContext(), GameManager.class); //HELP
+        Intent intent = new Intent(getContext(), GameManager.class);
         intent.putExtra("agentType", "FishStock");
+        intent.putExtra("isWhite", !isWhite);
         intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
         // Clear the activity stack and start the game again
         getContext().startActivity(intent);
