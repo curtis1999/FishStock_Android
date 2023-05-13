@@ -19,8 +19,8 @@ import java.util.List;
 public class GameManager extends AppCompatActivity implements PromotionDialog.OnPromotionMoveListener, GameOverDialog.OnGameOverMoveListener {
   Game game;
   Board board;
-  Agent whitePlayer;
-  Agent blackPlayer;
+  Agent player1;
+  Agent adversary;
   Piece selectedPiece;
   boolean isWhite = true; //TODO;
   ArrayList<Piece> capturedPiecesWhite = new ArrayList<>();
@@ -41,21 +41,20 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
     this.board = new Board();
     GameService.updateBoardMeta(board);
     this.isWhite = getIntent().getBooleanExtra("isWhite", false);
-    if (this.isWhite) {
-      this.blackPlayer = initializeAgent(getIntent().getStringExtra("agentType"));
-      this.whitePlayer = new Human(AgentType.HUMAN, true);
-    } else {
-      this.blackPlayer = new Human(AgentType.HUMAN, true);
-      this.whitePlayer = initializeAgent(getIntent().getStringExtra("agentType"));
-    }
+    this.adversary = initializeAgent(getIntent().getStringExtra("agentType"));
+    this.player1 = new Human(AgentType.HUMAN, true);
 
-    this.game = new Game(board, whitePlayer.type, blackPlayer.type);
+    if (isWhite) {
+      this.game = new Game(board, player1.type, adversary.type);
+    } else {
+      this.game = new Game(board, adversary.type, player1.type);
+    }
     this.game.boardStates.add(GameService.copyBoard(this.board));
     updateBoard(board, isWhite);
 
     //2. Initialize the texts and buttons.
     TextView adversaryName = findViewById(R.id.player2);
-    adversaryName.setText(blackPlayer.getName());
+    adversaryName.setText(adversary.getName());
     Button resign = findViewById(R.id.resign);
     Button undo = findViewById(R.id.undo);
     Button draw = findViewById(R.id.draw);
@@ -115,7 +114,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
                   message.setText("BLACK TO MOVE");
                   try {
                     ArrayList<Move> playersMoves = GameService.generateMoves(board, true); //TODO: Should be unnecessary
-                    Move adversaryMove = blackPlayer.getMove(board, blacksPotentialMoves, playersMoves);
+                    Move adversaryMove = adversary.getMove(board, blacksPotentialMoves, playersMoves);
                     if (adversaryMove.isCapture) {
                       capturedPiecesWhite.add(adversaryMove.capturablePiece);
                       capturedWhite.append(": " + adversaryMove.capturablePiece.getName());
@@ -156,7 +155,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
                   message.setText("BLACK TO MOVE");
                   try {
                     ArrayList<Move> playersMoves = GameService.generateMoves(board, true);
-                    Move adversaryMove = blackPlayer.getMove(board, blacksPotentialMoves, playersMoves);
+                    Move adversaryMove = adversary.getMove(board, blacksPotentialMoves, playersMoves);
                     if (adversaryMove.isCapture) {
                       capturedPiecesWhite.add(adversaryMove.capturablePiece);
                       capturedWhite.append(": " + adversaryMove.capturablePiece.getName());
@@ -231,7 +230,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
     //CHECK 1: Dead position.
     if (GameService.isDeadPosition(board.whitePieces, board.blackPieces)) {
       message.setText("DRAW BY INSUFFICIENT MATERIAL");
-      GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 0, isWhite);
+      GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 0, isWhite, this.adversary.getName());
       ggDialog.setOnGameOverListener(GameManager.this);
       ggDialog.show();
       return true;
@@ -239,7 +238,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
     //CHeck 2: Repetition.
     if (GameService.isRepetition(game.boardStates, board)) {
       message.setText("DRAW BY REPETITION");
-      GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 0, isWhite);
+      GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 0, isWhite, adversary.getName());
       ggDialog.setOnGameOverListener(GameManager.this);
       ggDialog.show();
       return true;
@@ -256,7 +255,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
         blacksPotentialMoves = GameService.generateMovesDoubleCheck(board, blacksPotentialMoves, false);
         if (blacksPotentialMoves.size() == 0) {
           message.setText("CHECKMATE!! PLAYER 1 WINS");
-          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 1, isWhite);
+          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 1, isWhite, adversary.getName());
           ggDialog.setOnGameOverListener(GameManager.this);
           ggDialog.show();
           return true;
@@ -266,7 +265,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
         blacksPotentialMoves = GameService.generateMovesCheck(board, blacksPotentialMoves, false);
         if (blacksPotentialMoves.size() == 0) {
           message.setText("CHECKMATE!! PLAYER 1 WINS");
-          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 1, isWhite);
+          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 1, isWhite, adversary.getName());
           ggDialog.setOnGameOverListener(GameManager.this);
           ggDialog.show();
           return true;
@@ -274,7 +273,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
       } else {
         if (blacksPotentialMoves.size() == 0) {
           message.setText("STALEMATE. THE GAME ENDS IN A DRAW");
-          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 0, isWhite);
+          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 0, isWhite, adversary.getName());
           ggDialog.setOnGameOverListener(GameManager.this);
           ggDialog.show();
           return true;
@@ -295,7 +294,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
         whitesPotentialMoves = GameService.generateMovesDoubleCheck(board, whitesPotentialMoves, true);
         if (whitesPotentialMoves.size() == 0) {
           message.setText("CHECKMATE!! PLAYER 1 LOSES");
-          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, -1, isWhite);
+          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, -1, isWhite, adversary.getName());
           ggDialog.setOnGameOverListener(GameManager.this);
           ggDialog.show();
           return true;
@@ -305,7 +304,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
         whitesPotentialMoves = GameService.generateMovesCheck(board, whitesPotentialMoves, true);
         if (whitesPotentialMoves.size() == 0) {
           message.setText("CHECKMATE!! PLAYER 1 LOSES");
-          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, -1, isWhite);
+          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, -1, isWhite, adversary.getName());
           ggDialog.setOnGameOverListener(GameManager.this);
           ggDialog.show();
           return true;
@@ -313,7 +312,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
       } else {
         if (whitesPotentialMoves.size() == 0) {
           message.setText("STALEMATE. THE GAME ENDS IN A DRAW");
-          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 0, isWhite);
+          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 0, isWhite, adversary.getName());
           ggDialog.setOnGameOverListener(GameManager.this);
           ggDialog.show();
           return true;
@@ -495,7 +494,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
     } else if (((King)board.blackPieces.get(0)).isChecked) {
       blacksPotentialMoves = GameService.generateMovesCheck(board, blacksPotentialMoves, false);
     }
-    Move adversaryMove = this.blackPlayer.getMove(board, blacksPotentialMoves, whitesPotentialMoves);
+    Move adversaryMove = this.adversary.getMove(board, blacksPotentialMoves, whitesPotentialMoves);
     GameService.makeMove(board, adversaryMove,false);
     GameService.updateBoardMeta(board);
     TextView checkStatusBlack = findViewById(R.id.checkStatusBlack);

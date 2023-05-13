@@ -19,7 +19,7 @@ public class GameOverDialog extends Dialog {
   public interface OnGameOverMoveListener {
     void onGameOver();
   }
-  public GameOverDialog(@NonNull Context context, int result, boolean isWhite) {
+  public GameOverDialog(@NonNull Context context, int result, boolean isWhite, String adversaryName) {
     super(context);
     this.result = result;
     this.isWhite = isWhite;
@@ -51,7 +51,8 @@ public class GameOverDialog extends Dialog {
       @Override
       public void onClick(View v) {
         Intent intent = new Intent(getContext(), MainActivity.class);
-        intent.putExtra("Result", "result"); //TODO:
+        intent.putExtra("Result", result); //TODO:
+        intent.putExtra("Adversary", adversaryName);
         intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
         // Clear the activity stack and start the game again
         getContext().startActivity(intent);

@@ -14,6 +14,8 @@ public class MainActivity extends AppCompatActivity {
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
+    int result = getIntent().getIntExtra("Result", 0);
+    String adversaryName = getIntent().getStringExtra("Adversary");
     // Get a reference to the button
     Button whiteSelection = findViewById(R.id.WHITE);
     Button blackSelection = findViewById(R.id.BLACK);
@@ -21,7 +23,24 @@ public class MainActivity extends AppCompatActivity {
     Button playRandy = findViewById(R.id.PlayRandy);
     Button playSimple = findViewById(R.id.playSimple);
     Button playMinMax = findViewById(R.id.playMinMax);
-
+    if (adversaryName != null) {
+      switch (adversaryName) {
+        case "Randy":
+          if (result == 1) {
+            playRandy.setTextColor(Color.GREEN);
+          } else if (result == -1) {
+            playRandy.setTextColor(Color.RED);
+          }
+          break;
+        case "Simple":
+          if (result == 1) {
+            playSimple.setTextColor(Color.GREEN);
+          } else if (result == -1) {
+            playSimple.setTextColor(Color.RED);
+          }
+          break;
+      }
+    }
     blackSelection.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View v) {
