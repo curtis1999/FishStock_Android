@@ -26,67 +26,67 @@ public class Board implements Serializable {
             Rook rook = new Rook(coord, coord, true);
             cur.putRook(true, rook);
             cur.setStatus(Status.WHITE);
-            whitePieces.add(rook.copyPiece());
+            whitePieces.add(rook);
           } else if (j == 1 || j == 6) {
             Knight knight = new Knight(coord, coord, true);
             cur.putKnight(true, knight);
             cur.setStatus(Status.WHITE);
-            whitePieces.add(knight.copyPiece());
+            whitePieces.add(knight);
           } else if (j == 2 || j == 5) {
             Bishop bishop = new Bishop(coord, coord, true);
             cur.putBishop(true, bishop);
             cur.setStatus(Status.WHITE);
-            whitePieces.add(bishop.copyPiece());
+            whitePieces.add(bishop);
 
           } else if (j == 3) {
             King king = new King(coord, true);//TODO: UPDATE
             cur.putKing(true, king);
             cur.setStatus(Status.WHITE);
-            whitePieces.add(0, king.copyPiece()); //King first in list
+            whitePieces.add(0, king); //King first in list
           } else if (j == 4) {
             Queen queen = new Queen(coord, coord, true);
             cur.putQueen(true, queen);
             cur.setStatus(Status.WHITE);
-            whitePieces.add(queen.copyPiece());
+            whitePieces.add(queen);
           }
         } else if (i == 1) {
           Pawn pawn = new Pawn(coord, coord, true, true);
           cur.putPawn(true, pawn);
           cur.setStatus(Status.WHITE);
-          whitePieces.add(pawn.copyPiece());
+          whitePieces.add(pawn);
         } else if (i == 6) {
 
           Pawn pawn = new Pawn(coord, coord, false, true);
           cur.putPawn(false, pawn);
           cur.setStatus(Status.BLACK);
-          blackPieces.add(pawn.copyPiece());
+          blackPieces.add(pawn);
 
         } else if (i == 7) {
           if (j == 0 || j == 7) {
             Rook rook = new Rook(coord, coord, false);
             cur.putRook(false, rook);
             cur.setStatus(Status.BLACK);
-            blackPieces.add(rook.copyPiece());
+            blackPieces.add(rook);
           } else if (j == 1 || j == 6) {
             Knight knight = new Knight(coord, coord, false);
             cur.setStatus(Status.BLACK);
             cur.putKnight(false, knight);
-            blackPieces.add(knight.copyPiece());
+            blackPieces.add(knight);
           } else if (j == 2 || j == 5) {
             Bishop bishop = new Bishop(coord, coord, false);
             cur.setStatus(Status.BLACK);
             cur.putBishop(false, bishop);
-            blackPieces.add(bishop.copyPiece());
+            blackPieces.add(bishop);
           } else if (j == 3) {
             King king = new King(coord, false);
             cur.setStatus(Status.BLACK);
             cur.putKing(false, king);
-            blackPieces.add(0, king.copyPiece()); //Sets the king to the 1st element in the list
+            blackPieces.add(0, king); //Sets the king to the 1st element in the list
           } else if (j == 4) {
             Queen queen = new Queen(coord, coord, false);
             cur.setStatus(Status.BLACK);
             cur.putQueen(false, queen);
-            blackPieces.add(queen.copyPiece());
+            blackPieces.add(queen);
           }
         }
         board[i][j] = cur;
@@ -128,7 +128,7 @@ public class Board implements Serializable {
     }
     for (Piece piece : whitePieces) {
       Cell cur = new Cell(true);
-      this.whitePieces.add(piece.copyPiece());
+      this.whitePieces.add(piece);
       Coordinate curPosition = piece.getPos();
       cur.piece = piece;
       cur.setStatus(Status.WHITE);
@@ -137,7 +137,7 @@ public class Board implements Serializable {
     }
     for (Piece piece : blackPieces) {
       Cell cur = new Cell(true);
-      this.blackPieces.add(piece.copyPiece());
+      this.blackPieces.add(piece);
       Coordinate curPosition = piece.getPos();
       cur.piece = piece;
       cur.setStatus(Status.BLACK);

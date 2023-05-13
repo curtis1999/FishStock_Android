@@ -667,8 +667,6 @@ public class GameService {
         }else if (mv.protectionMove) {
           ChessBoard.board[mv.toCoord.rank][mv.toCoord.file].addAttacker(mv.piece);
           ChessBoard.board[mv.toCoord.rank][mv.toCoord.file].piece.addProtector(mv.piece);
-          int index = Board.getIndex(ChessBoard.whitePieces, mv.toCoord);
-          ChessBoard.whitePieces.get(index).addProtector(mv.piece);
 
           //2 If the move is a capture.  Update the board.
         }else if (mv.isCapture){
@@ -678,8 +676,6 @@ public class GameService {
           }
             ChessBoard.board[mv.capturablePiece.getPos().rank][mv.capturablePiece.getPos().file].addAttacker(mv.piece);
             ChessBoard.board[mv.capturablePiece.getPos().rank][mv.capturablePiece.getPos().file].piece.addAttacker(mv.piece);
-            int index = Board.getIndex(ChessBoard.blackPieces, mv.capturablePiece.getPos());
-            ChessBoard.blackPieces.get(index).addAttacker(mv.piece);
 
 
           //2.2: If the Piece is currently X-Ray's the King through an adversary piece then set the opponent's piece to pinned
@@ -703,8 +699,6 @@ public class GameService {
         }else if (mv.protectionMove) {
           ChessBoard.board[mv.toCoord.rank][mv.toCoord.file].addAttacker(mv.piece);
           ChessBoard.board[mv.toCoord.rank][mv.toCoord.file].piece.addProtector(mv.piece);
-          int index = Board.getIndex(ChessBoard.blackPieces, mv.toCoord);
-          ChessBoard.blackPieces.get(index).addProtector(mv.piece);
 
           //2 IF the move is a capture.  Update the board, the Piece
         }else if (mv.isCapture){
@@ -715,8 +709,6 @@ public class GameService {
           }
             ChessBoard.board[mv.capturablePiece.getPos().rank][mv.capturablePiece.getPos().file].addAttacker(mv.piece);
             ChessBoard.board[mv.capturablePiece.getPos().rank][mv.capturablePiece.getPos().file].piece.addAttacker(mv.piece);
-            int index = Board.getIndex(ChessBoard.whitePieces, mv.capturablePiece.getPos());
-            ChessBoard.whitePieces.get(index).addAttacker(mv.piece);
             //2.1: If the Move is currently pinning a piece (X-Ray's the King through an adversary piece) then set the opponent's piece to pinned
           if (mv.isPin) {
             int pinnedIndex = Board.getIndex(ChessBoard.whitePieces, mv.getPinLoc());
@@ -775,29 +767,7 @@ public class GameService {
       return filteredMoves;
     }
 
-  /**
-   * A helper function which checks if the current move is a check by looping through all the moves after applying and seeing if the adversary King can be taken.
-   * @param ChessBoard
-   * @param move
-   * @return
-   */
-  public static boolean checkForCheck(Board ChessBoard, Move move) {
-    //1. Copy the whole ChessBoard.
-    Board copyBoard = copyBoard(ChessBoard);
-    //2. Make the move on the copied board.
-    makeMove(copyBoard, move, move.piece.getColor());
-    //3. Update the copy board's meta.
-    updateBoardMeta(copyBoard);
-    //4. Generate the pieces moves after making the initial moves (making two moves in a row with the same piece)
-    ArrayList<Move> l2Moves = move.piece.generateMoves(move.piece.getPos(), copyBoard.board);
-    for (Move l2move : l2Moves) {
-      //5. If on the second move, the piece can capture the king, then the original piece is checking.
-      if (l2move.isCapture && l2move.capturablePiece.getName().equals("King")){
-        return true;
-      }
-    }
-    return false;
-  }
+
   /**
    * Copies a board
    *
@@ -811,13 +781,19 @@ public class GameService {
     for (int i = 0; i < 8; i++) {
       for (int j=0; j<8; j++){
         copyBoard[i][j] = Cell.copyCell(ChessBoard.board[i][j]);
+        if (copyBoard[i][j].PieceStatus.equals(Status.WHITE)) {
+          if (copyBoard[i][j].piece.getName().equals("King")) {
+            copyWhitePieces.add(0, copyBoard[i][j].piece);
+          } else {
+            copyWhitePieces.add(copyBoard[i][j].piece);
+          }
+        } else if (copyBoard[i][j].PieceStatus.equals(Status.BLACK)) {
+          if (copyBoard[i][j].piece.getName().equals("King")) {
+            copyBlackPieces.add(0, copyBoard[i][j].piece);
+          }
+          copyBlackPieces.add(copyBoard[i][j].piece);
+        }
       }
-    }
-    for (Piece piece : ChessBoard.whitePieces) {
-      copyWhitePieces.add(piece.copyPiece());
-    }
-    for (Piece piece : ChessBoard.blackPieces) {
-      copyBlackPieces.add(piece.copyPiece());
     }
     return new Board(copyBoard, copyWhitePieces, copyBlackPieces);
   }
