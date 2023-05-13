@@ -667,6 +667,8 @@ public class GameService {
         }else if (mv.protectionMove) {
           ChessBoard.board[mv.toCoord.rank][mv.toCoord.file].addAttacker(mv.piece);
           ChessBoard.board[mv.toCoord.rank][mv.toCoord.file].piece.addProtector(mv.piece);
+          int index = Board.getIndex(ChessBoard.whitePieces, mv.toCoord);
+          ChessBoard.whitePieces.get(index).addProtector(mv.piece);
 
           //2 If the move is a capture.  Update the board.
         }else if (mv.isCapture){
@@ -676,6 +678,8 @@ public class GameService {
           }
             ChessBoard.board[mv.capturablePiece.getPos().rank][mv.capturablePiece.getPos().file].addAttacker(mv.piece);
             ChessBoard.board[mv.capturablePiece.getPos().rank][mv.capturablePiece.getPos().file].piece.addAttacker(mv.piece);
+            int index = Board.getIndex(ChessBoard.blackPieces, mv.capturablePiece.getPos());
+            ChessBoard.blackPieces.get(index).addAttacker(mv.piece);
 
 
           //2.2: If the Piece is currently X-Ray's the King through an adversary piece then set the opponent's piece to pinned
@@ -683,7 +687,7 @@ public class GameService {
             int pinnedIndex = Board.getIndex(ChessBoard.blackPieces, mv.getPinLoc());
             ChessBoard.blackPieces.get(pinnedIndex).setPin(mv.pinAvenue, mv.piece.getPos());
           }
-          //3: Otherwise (Not in contact with a piece, add an attacker to this square.
+          //3: Otherwise (Not in contact with a piece, add an attacker to this square.)
         }else {
           ChessBoard.board[mv.toCoord.rank][mv.toCoord.file].addAttacker(mv.piece);
         }
@@ -699,6 +703,8 @@ public class GameService {
         }else if (mv.protectionMove) {
           ChessBoard.board[mv.toCoord.rank][mv.toCoord.file].addAttacker(mv.piece);
           ChessBoard.board[mv.toCoord.rank][mv.toCoord.file].piece.addProtector(mv.piece);
+          int index = Board.getIndex(ChessBoard.blackPieces, mv.toCoord);
+          ChessBoard.blackPieces.get(index).addProtector(mv.piece);
 
           //2 IF the move is a capture.  Update the board, the Piece
         }else if (mv.isCapture){
@@ -709,7 +715,8 @@ public class GameService {
           }
             ChessBoard.board[mv.capturablePiece.getPos().rank][mv.capturablePiece.getPos().file].addAttacker(mv.piece);
             ChessBoard.board[mv.capturablePiece.getPos().rank][mv.capturablePiece.getPos().file].piece.addAttacker(mv.piece);
-
+            int index = Board.getIndex(ChessBoard.whitePieces, mv.capturablePiece.getPos());
+            ChessBoard.whitePieces.get(index).addAttacker(mv.piece);
             //2.1: If the Move is currently pinning a piece (X-Ray's the King through an adversary piece) then set the opponent's piece to pinned
           if (mv.isPin) {
             int pinnedIndex = Board.getIndex(ChessBoard.whitePieces, mv.getPinLoc());
@@ -733,6 +740,8 @@ public class GameService {
       for (int j=0; j<8; j++) {
         ChessBoard.board[i][j].blackAttackers = new ArrayList<Piece>();
         ChessBoard.board[i][j].whiteAttackers = new ArrayList<Piece>();
+        if (!ChessBoard.board[i][j].PieceStatus.equals(Status.EMPTY))
+          ChessBoard.board[i][j].piece.reset();
       }
     }
     for (Piece piece : ChessBoard.whitePieces) {

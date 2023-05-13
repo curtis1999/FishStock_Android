@@ -118,6 +118,7 @@ public class TestEvaluate {
       assertEquals(true, (eval1 < eval2 && eval2 > eval3));
       assertEquals(true, (eval4 > eval1));
       Pawn doublePawn = new Pawn(new Coordinate(3, 1), true);
+      board.whitePieces.add(doublePawn);
       board.board[1][3].putPiece(doublePawn);
       GameService.updateBoardMeta(board);
       Board.printBoard(board, true);

@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.Test;
 
-public class TestGameController {
+public class TestGameService {
   //WHITE PIECES
   List<Piece> whitePieces = new ArrayList<>();
   King whiteKing;

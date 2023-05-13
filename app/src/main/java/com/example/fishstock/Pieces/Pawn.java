@@ -25,7 +25,7 @@ public class Pawn implements Piece {
   private Coordinate pinnerLoc;
   private Coordinate revealCheckerLoc;
   private ArrayList<Coordinate> revealAve;
-  ArrayList<Move> possibleMoves;
+  ArrayList<Move> possibleMoves = new ArrayList<>();
 
   public Pawn(Coordinate pos, boolean isWhite) {
     this.isWhite = isWhite;

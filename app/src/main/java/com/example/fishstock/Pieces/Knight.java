@@ -24,7 +24,7 @@ public class Knight implements Piece {
   private Coordinate pinnerLoc;
   private Coordinate revealCheckerLoc;
   private ArrayList<Coordinate> revealAve;
-  ArrayList<Move>possibleMoves;
+  ArrayList<Move>possibleMoves = new ArrayList<>();
 
   public Knight (Coordinate curPos, boolean isWhite) {
     this.fromCoord=curPos;

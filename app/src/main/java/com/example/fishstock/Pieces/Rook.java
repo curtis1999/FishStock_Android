@@ -24,7 +24,7 @@ public class Rook implements Piece {
   Coordinate revealCheckerLoc;
   ArrayList<Coordinate> pinAve = new ArrayList<>();
   ArrayList<Coordinate> revealAve = new ArrayList<>();
-  ArrayList<Move>possibleMoves;
+  ArrayList<Move>possibleMoves = new ArrayList<>();
   public boolean isConnected; //True if the rooks are connected
 
   public Rook (Coordinate curPos, boolean isWhite) {

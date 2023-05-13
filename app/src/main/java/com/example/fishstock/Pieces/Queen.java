@@ -24,7 +24,7 @@ public class Queen implements Piece {
   private Coordinate pinnerLoc;
   private Coordinate revealCheckerLoc;
   private ArrayList<Coordinate> revealAve;
-  ArrayList<Move>possibleMoves;
+  ArrayList<Move>possibleMoves = new ArrayList<>();
 
   public Queen(Coordinate curPos, boolean isWhite) {
     this.fromCoord=curPos;
