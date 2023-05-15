@@ -668,6 +668,14 @@ public class GameService {
           ChessBoard.board[mv.toCoord.rank][mv.toCoord.file].addAttacker(mv.piece);
           ChessBoard.board[mv.toCoord.rank][mv.toCoord.file].piece.addProtector(mv.piece);
 
+          if (mv.isReveal) {
+            int revealIndex = Board.getIndex(ChessBoard.whitePieces, mv.getRevealLoc());
+            ChessBoard.whitePieces.get(revealIndex).setReveal();
+          }
+          if (mv.isRevealQueen) {
+            int revealIndex = Board.getIndex(ChessBoard.whitePieces, mv.getRevealQueenLocation());
+            ChessBoard.whitePieces.get(revealIndex).setRevealQueen();
+          }
           //2 If the move is a capture.  Update the board.
         }else if (mv.isCapture){
           //2.1 If the captured piece is a King, then set the opponent to in Check!!
@@ -682,6 +690,10 @@ public class GameService {
           if (mv.isPin) {
             int pinnedIndex = Board.getIndex(ChessBoard.blackPieces, mv.getPinLoc());
             ChessBoard.blackPieces.get(pinnedIndex).setPin(mv.pinAvenue, mv.piece.getPos());
+          }
+          if (mv.isPinQueen) {
+            int pinnedIndex = Board.getIndex(ChessBoard.blackPieces, mv.getQueenPinLoc());
+            ChessBoard.blackPieces.get(pinnedIndex).setQueenPin();
           }
           //3: Otherwise (Not in contact with a piece, add an attacker to this square.)
         }else {

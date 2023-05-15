@@ -19,7 +19,8 @@ public class Pawn implements Piece {
   ArrayList<Piece> attackers = new ArrayList<>();
   boolean isRevealChecker = false;
   boolean isPinned = false;
-
+  boolean isPinnedToQueen;
+  boolean isRevealQueenChecker;
   public ArrayList<Coordinate> pinAve = new ArrayList<>();
   public boolean enPassantable;
   private Coordinate pinnerLoc;
@@ -590,11 +591,6 @@ public class Pawn implements Piece {
     return this.revealCheckerLoc;
   }
 
-  @Override
-  public ArrayList<Coordinate> getRevealAve() {
-    return this.revealAve;
-  }
-
   public void unReveal() {
     this.isRevealChecker = false;
     this.revealAve = null;
@@ -766,5 +762,25 @@ public class Pawn implements Piece {
       }
     }
     return false;
+  }
+  @Override
+  public void setQueenPin() {
+    this.isPinnedToQueen = true;
+  }
+  public void setRevealQueenChecker() {
+    this.isRevealQueenChecker = true;
+  }
+  @Override
+  public void setReveal() {
+    this.isRevealChecker = true;
+  }
+
+  @Override
+  public void setRevealQueen() {
+    this.isRevealQueenChecker = true;
+  }
+
+  public boolean isRevealQueenChecker(){
+    return this.isRevealQueenChecker;
   }
 }

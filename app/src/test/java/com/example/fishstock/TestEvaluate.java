@@ -106,6 +106,27 @@ public class TestEvaluate {
       board = new Board(whitePieces, blackPieces);
       game = new Game(board, AgentType.RANDY, AgentType.RANDY);
     }
+
+    public void initReveal() {
+      whiteKing = new King(new Coordinate(3,0), true);
+      whiteRook1 = new Rook(new Coordinate(3,1), true);
+      whitePawn1 = new Pawn(new Coordinate(3,2), true);
+      whitePieces.add(whiteKing); whitePieces.add(whiteRook1); whitePieces.add(whitePawn1);
+
+      blackKing = new King(new Coordinate(3,7), false);
+      blackQueen = new Queen (new Coordinate (3, 5), false);
+      blackPieces.add(blackKing); blackPieces.add(blackQueen);
+      board = new Board(whitePieces, blackPieces);
+      game = new Game(board, AgentType.RANDY, AgentType.RANDY);
+    }
+
+    @Test
+    public void testRevealQueen() {
+      initReveal();
+      GameService.updateBoardMeta(board);
+      Board.printBoard(board, true);
+      assertEquals(true, whitePawn1.isRevealQueenChecker());
+    }
   @Test
   public void testPawnEval() {
       initPawns();

@@ -19,7 +19,9 @@ public class Bishop implements Piece {
   ArrayList<Piece> protectors = new ArrayList<>();
   ArrayList<Piece> attackers = new ArrayList<>();
   boolean isRevealChecker = false;
+  boolean isRevealQueenChecker = false;
   boolean isPinned=false;
+  boolean isPinnedToQueen = false;
   Coordinate pinnerLoc;
   ArrayList<Coordinate> pinAve = new ArrayList<>();
   private Coordinate revealCheckerLoc;
@@ -335,6 +337,14 @@ public class Bishop implements Piece {
     this.pinnerLoc = pinnerLoc;
   }
 
+  @Override
+  public void setQueenPin() {
+    this.isPinnedToQueen = true;
+  }
+  public void setRevealQueenChecker() {
+    this.isRevealQueenChecker = true;
+  }
+
   public boolean getPin() {
     return this.isPinned;
   }
@@ -360,18 +370,21 @@ public class Bishop implements Piece {
     this.revealCheckerLoc = checkerLoc;
     this.revealAve = revealAve;
   }
+
+  @Override
+  public void setReveal() {
+    this.isRevealChecker = true;
+  }
+
+  @Override
+  public void setRevealQueen() {
+    this.isRevealQueenChecker = true;
+  }
+
   public Coordinate getRevealCheckerLoc() {
     return this.revealCheckerLoc;
   }
-  @Override
-  public ArrayList<Coordinate> getRevealAve() {
-    return this.revealAve;
-  }
-  public void unReveal() {
-    this.isRevealChecker=false;
-    this.revealAve =null;
-    this.revealCheckerLoc = new Coordinate(-1,-1);
-  }
+
   @Override
   public ArrayList<Move> getPossibleMoves() {
     return this.possibleMoves;
@@ -425,7 +438,7 @@ public class Bishop implements Piece {
       eval *= 1.5;
     }
     int numMoves = GameService.filterMoves(possibleMoves).size();
-    eval +=(numMoves/12.0) - (4.0/14.0);
+    eval += (numMoves/12.0) - (4.0/14.0);
     eval *= evaluateSafety();
     return eval;
   }
@@ -485,5 +498,12 @@ public class Bishop implements Piece {
       }
     }
     return false;
+  }
+  public boolean isRevealChecker(){
+    return this.isRevealChecker;
+  }
+
+  public boolean isRevealQueenChecker(){
+    return this.isRevealQueenChecker;
   }
 }

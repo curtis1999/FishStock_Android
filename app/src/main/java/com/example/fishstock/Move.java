@@ -20,14 +20,18 @@ public class Move implements Comparable<Move>{
 
   public boolean isDoubleCheck;
   public boolean isPin;
+  public boolean isPinQueen;
   public boolean isReveal;
+  public boolean isRevealQueen;
   public boolean isCastle;
   public boolean isEnPassant;
   public Piece capturablePiece;
   public Coordinate pinLoc; //Location of the pinned piece.
   public ArrayList<Coordinate> pinAvenue= new ArrayList<>();
+  public Coordinate pinQueenLocation;
   public Coordinate revealLoc;
   public ArrayList<Coordinate> revealAvenue = new ArrayList<>();
+  public Coordinate revealQueenLocation;
   public Piece promotionPiece;
   public Coordinate protectionLocation;
   //No input then the Move is set to castle.
@@ -81,24 +85,13 @@ public class Move implements Comparable<Move>{
     this.capturablePiece=null;
   }
 
-  public String printCoord() {
-    char fromFile = (char)('h'-fromCoord.file);
-    int fromRank = fromCoord.rank+1;
-    char file = (char)('h' - toCoord.file);
-    int rank = toCoord.rank+1;
-    if (!(this.piece ==null)) {
-      return piece.getName() + " " + fromFile + " " + fromRank + " " + file + " "+ rank;
-    } else {
-      return "error";
-    }
-  }
-  //TODO: Add extra details to the string.
-  public String printMove() {
-    return "";
-  }
 
   public boolean equals(Move mv) {
-    if(mv.fromCoord.rank==this.fromCoord.rank && mv.fromCoord.file==this.fromCoord.file && mv.toCoord.rank==this.toCoord.rank && mv.toCoord.file==this.toCoord.file && this.piece.getName().equals(mv.piece.getName())) {
+    if(mv.fromCoord.rank==this.fromCoord.rank
+        && mv.fromCoord.file==this.fromCoord.file
+        && mv.toCoord.rank==this.toCoord.rank
+        && mv.toCoord.file==this.toCoord.file
+        && this.piece.getName().equals(mv.piece.getName())) {
       return true;
     }else {
       return false;
@@ -115,9 +108,6 @@ public class Move implements Comparable<Move>{
     this.isPromotion=true;
     this.promotionPiece=p;
   }
-  public Piece getPromotionPiece() {
-    return this.promotionPiece;
-  }
   public void setCoverMove() {
     this.coverMove=true;
   }
@@ -126,25 +116,20 @@ public class Move implements Comparable<Move>{
     this.protectionLocation = protectionLocation;
 
   }
-  public boolean getCover() {
-    return this.coverMove;
-  }
-  public boolean isCheck() {
-    return this.isCheck;
-  }
+
   public void setCheck(Coordinate checkerLoc, ArrayList<Coordinate> checkingAve) {
     this.isCheck = true;
     this.checkerLoc = checkerLoc;
     this.checkingAve = checkingAve;
   }
-  public void setCheck() {
-    this.isCheck = true;
-  }
-  public void setDoubleCheck() { this.isDoubleCheck = true; }
   public void setPin(Coordinate pinLoc, ArrayList<Coordinate> pinAve) {
     this.isPin = true;
     this.pinLoc = pinLoc; //Location of the pinned piece
     this.pinAvenue=pinAve;
+  }
+  public void setPinQueen(Coordinate revealQueenLoc) {
+    this.isPinQueen = true;
+    this.revealQueenLocation = revealQueenLoc;
   }
   public void setCastle() {
     this.isCastle = true;
@@ -154,29 +139,26 @@ public class Move implements Comparable<Move>{
     this.revealLoc = revealLoc;
     this.revealAvenue = revealAve;
   }
-  public void unPin( ) {
-    this.isPin= false;
-    this.pinLoc = new Coordinate(-1,-1);
+  public void setReveal(Coordinate revealLoc) {
+    this.isReveal = true;
+    this.revealLoc = revealLoc;
   }
-  public void unReveal() {
-    this.isReveal=false;
-    this.revealLoc = new Coordinate(-1,-1);
+  public Coordinate getRevealLoc () {
+    return this.revealLoc;
   }
+  public void setRevealQueen(Coordinate revealQueenLocation) {
+    this.isRevealQueen = true;
+    this.revealQueenLocation = revealQueenLocation;
+  }
+  public Coordinate getRevealQueenLocation() {
+    return this.revealQueenLocation;
+  }
+
+
   public Coordinate getPinLoc() {
     return this.pinLoc;
   }
-  public Coordinate getRevealLoc() {
-    return this.revealLoc;
-  }
-  public ArrayList<Coordinate> getPinAvenue(){
-    return this.pinAvenue;
-  }
-  public ArrayList<Coordinate> getRevealAvenue(){
-    return this.revealAvenue;
-  }
-  public void Castle() {
-    this.isCastle=true;
-  }
+  public Coordinate getQueenPinLoc() { return this.pinQueenLocation;}
   public void setEnPassant() {
     this.isEnPassant = true;
   }
@@ -189,7 +171,6 @@ public class Move implements Comparable<Move>{
   public void setEval(double d) {
     this.eval=d;
   }
-
   @Override
   public int compareTo(Move o) {
     return 0;

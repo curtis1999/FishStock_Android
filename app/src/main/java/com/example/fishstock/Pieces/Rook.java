@@ -26,7 +26,8 @@ public class Rook implements Piece {
   ArrayList<Coordinate> revealAve = new ArrayList<>();
   ArrayList<Move>possibleMoves = new ArrayList<>();
   public boolean isConnected; //True if the rooks are connected
-
+  boolean isPinnedToQueen;
+  boolean isRevealQueenChecker;
   public Rook (Coordinate curPos, boolean isWhite) {
     this.fromCoord = curPos;
     this.curPos = curPos;
@@ -100,10 +101,10 @@ public class Rook implements Piece {
             pos1 = new Coordinate(pos1.file+1,pos1.rank);
             continue;
           }
-          //Could be a pin.
+          //Could be a Reveal
         }else if (xRay && revealer){
           if (board[pos1.rank][pos1.file].PieceStatus==this.stat) {
-            break;
+            break; //TODO: Extend X-ray vision 1 more.
           }else if (board[pos1.rank][pos1.file].PieceStatus==Status.EMPTY) {
             pos1 = new Coordinate(pos1.file+1,pos1.rank);
             continue;
@@ -111,10 +112,10 @@ public class Rook implements Piece {
             if (board[pos1.rank][pos1.file].piece.getName().equals("King")) {
               ArrayList<Coordinate> revealAve = generateAvenue(pos,pos1);
               mov1.setReveal(revealerLoc, revealAve);
-              break;
-            }else {
-              break;
+            } else if (board[pos1.rank][pos1.file].piece.getName().equals("Queen")) {
+              mov1.setRevealQueen(revealerLoc);
             }
+            break;
           }
           //Could be a pin.
         }else {
@@ -127,10 +128,10 @@ public class Rook implements Piece {
             if (board[pos1.rank][pos1.file].piece.getName().equals("King")) {
               ArrayList<Coordinate> pinAve = generateAvenue(pos,pos1);
               mov1.setPin(pinneeLoc, pinAve);
-              break;
-            }else {
-              break;
+            } else if (board[pos1.rank][pos1.file].piece.getName().equals("Queen")) {
+              mov1.setPinQueen(revealerLoc);
             }
+            break;
           }
         }
       }
@@ -175,7 +176,7 @@ public class Rook implements Piece {
             pos1 = new Coordinate(pos1.file-1,pos1.rank);
             continue;
           }
-          //Could be a pin.
+          //Could be a reveal.
         }
         else if (xRay && revealer){
           if (board[pos1.rank][pos1.file].PieceStatus==this.stat) {
@@ -187,10 +188,10 @@ public class Rook implements Piece {
             if (board[pos1.rank][pos1.file].piece.getName().equals("King")) {
               ArrayList<Coordinate> revealAve = generateAvenue(pos,pos1);
               mov1.setReveal(revealerLoc, revealAve);
-              break;
-            }else {
-              break;
+            } else if (board[pos1.rank][pos1.file].piece.getName().equals("Queen")) {
+              mov1.setRevealQueen(revealerLoc);
             }
+            break;
           }
         }
         else {
@@ -203,11 +204,10 @@ public class Rook implements Piece {
             if (board[pos1.rank][pos1.file].piece.getName().equals("King")) {
               ArrayList<Coordinate> pinAve = generateAvenue(pos,pos1);
               mov1.setPin(pinneeLoc, pinAve);
-              break;
+            } else if (board[pos1.rank][pos1.file].piece.getName().equals("Queen")) {
+              mov1.setPinQueen(revealerLoc);
             }
-            else {
-              break;
-            }
+            break;
           }
         }
       }
@@ -252,7 +252,7 @@ public class Rook implements Piece {
             pos1 = new Coordinate(pos1.file,pos1.rank+1);
             continue;
           }
-          //Could be a pin.
+          //Could be a reveal.
         }else if (xRay && revealer){
           if (board[pos1.rank][pos1.file].PieceStatus==this.stat) {
             break;
@@ -263,10 +263,10 @@ public class Rook implements Piece {
             if (board[pos1.rank][pos1.file].piece.getName().equals("King")) {
               ArrayList<Coordinate> revealAve = generateAvenue(pos,pos1);
               mov1.setReveal(revealerLoc, revealAve);
-              break;
-            }else {
-              break;
+            } else if (board[pos1.rank][pos1.file].piece.getName().equals("Queen")) {
+              mov1.setRevealQueen(revealerLoc);
             }
+            break;
           }
         }else {
           if (board[pos1.rank][pos1.file].PieceStatus==this.stat) {
@@ -278,10 +278,10 @@ public class Rook implements Piece {
             if (board[pos1.rank][pos1.file].piece.getName().equals("King")) {
               ArrayList<Coordinate> pinAve = generateAvenue(pos,pos1);
               mov1.setPin(pinneeLoc, pinAve);
-              break;
-            }else {
-              break;
+            } else if (board[pos1.rank][pos1.file].piece.getName().equals("Queen")) {
+              mov1.setPinQueen(revealerLoc);
             }
+            break;
           }
         }
       }
@@ -326,7 +326,7 @@ public class Rook implements Piece {
             pos1 = new Coordinate(pos1.file,pos1.rank-1);
             continue;
           }
-          //Could be a pin.
+          //Could be a reveal.
         }else if (xRay && revealer){
           if (board[pos1.rank][pos1.file].PieceStatus==this.stat) {
             break;
@@ -337,10 +337,10 @@ public class Rook implements Piece {
             if (board[pos1.rank][pos1.file].piece.getName().equals("King")) {
               ArrayList<Coordinate> revealAve = generateAvenue(pos,pos1);
               mov1.setReveal(revealerLoc, revealAve);
-              break;
-            }else {
-              break;
+            } else if (board[pos1.rank][pos1.file].piece.getName().equals("Queen")) {
+              mov1.setRevealQueen(revealerLoc);
             }
+            break;
           }
         }else {
           if (board[pos1.rank][pos1.file].PieceStatus==this.stat) {
@@ -352,10 +352,10 @@ public class Rook implements Piece {
             if (board[pos1.rank][pos1.file].piece.getName().equals("King")) {
               ArrayList<Coordinate> pinAve = generateAvenue(pos,pos1);
               mov1.setPin(pinneeLoc, pinAve);
-              break;
-            }else {
-              break;
+            } else if (board[pos1.rank][pos1.file].piece.getName().equals("Queen")) {
+              mov1.setPinQueen(revealerLoc);
             }
+            break;
           }
         }
       }
@@ -455,15 +455,6 @@ public class Rook implements Piece {
     return this.pinnerLoc;
   }
 
-  @Override
-  public void unPin() {
-    this.isPinned=false;
-  }
-
-  @Override
-  public ArrayList<Coordinate> getPinAvenue() {
-    return this.pinAve;
-  }
 
   @Override
   public Coordinate getCheckerLoc() {
@@ -483,17 +474,6 @@ public class Rook implements Piece {
     return this.revealCheckerLoc;
   }
 
-  @Override
-  public ArrayList<Coordinate> getRevealAve() {
-    return this.revealAve;
-  }
-
-  @Override
-  public void unReveal() {
-    this.isRevealChecker=false;
-    this.revealAve=null;
-    this.revealCheckerLoc = new Coordinate(-1,-1);
-  }
   @Override
   public ArrayList<Move> getPossibleMoves() {
     return this.possibleMoves;
@@ -619,5 +599,28 @@ public class Rook implements Piece {
       }
     }
     return false;
+  }
+  @Override
+  public void setQueenPin() {
+    this.isPinnedToQueen = true;
+  }
+  public void setRevealQueenChecker() {
+    this.isRevealQueenChecker = true;
+  }
+  @Override
+  public void setReveal() {
+    this.isRevealChecker = true;
+  }
+
+  @Override
+  public void setRevealQueen() {
+    this.isRevealQueenChecker = true;
+  }
+  public boolean isRevealChecker(){
+    return this.isRevealChecker;
+  }
+
+  public boolean isRevealQueenChecker(){
+    return this.isRevealQueenChecker;
   }
 }

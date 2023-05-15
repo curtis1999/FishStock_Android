@@ -18,19 +18,19 @@ public interface Piece {
   public void addAttacker(Piece p);
   public void addProtector(Piece p);
   public void setRevealChecker(ArrayList<Coordinate> revealAve,Coordinate checkerLoc);
+  public void setReveal();
+  public void setRevealQueen();
   public void setPin(ArrayList<Coordinate> pinAve, Coordinate pinnerLoc);
+  public void setQueenPin();
   public Coordinate getPinnerLoc();
-  public void unPin();
-  public void unReveal();
   public boolean getPin();
-  public ArrayList<Coordinate> getPinAvenue();
-  public ArrayList<Coordinate> getRevealAve();
   public ArrayList<Coordinate> generateAvenue(Coordinate c1, Coordinate c2);
   public Coordinate getCheckerLoc();
   public Coordinate getRevealCheckerLoc();
   public ArrayList<Move> getPossibleMoves();
   public void setPossibleMoves(ArrayList<Move> potentialMoves_2);
-
+  public boolean isRevealChecker();
+  public boolean isRevealQueenChecker();
   public void reset();
 
   public Piece copyPiece();

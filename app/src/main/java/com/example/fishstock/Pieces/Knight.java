@@ -25,7 +25,8 @@ public class Knight implements Piece {
   private Coordinate revealCheckerLoc;
   private ArrayList<Coordinate> revealAve;
   ArrayList<Move>possibleMoves = new ArrayList<>();
-
+  boolean isPinnedToQueen;
+  boolean isRevealQueenChecker;
   public Knight (Coordinate curPos, boolean isWhite) {
     this.fromCoord=curPos;
     this.curPos = curPos;
@@ -228,15 +229,6 @@ public class Knight implements Piece {
   }
 
 
-
-  @Override
-  public ArrayList<Coordinate> getPinAvenue() {
-    return this.pinAve;
-  }
-  public void unPin() {
-    this.isPinned=false;
-    this.pinAve = null;
-  }
   public void setPin(ArrayList<Coordinate> pinAve, Coordinate pinnerLoc) {
     this.isPinned=true;
     this.pinAve=pinAve;
@@ -270,10 +262,6 @@ public class Knight implements Piece {
     return this.revealCheckerLoc;
   }
 
-  @Override
-  public ArrayList<Coordinate> getRevealAve() {
-    return this.revealAve;
-  }
   public void unReveal() {
     this.isRevealChecker=false;
     this.revealAve =null;
@@ -424,5 +412,28 @@ public class Knight implements Piece {
       }
     }
     return false;
+  }
+  @Override
+  public void setQueenPin() {
+    this.isPinnedToQueen = true;
+  }
+  public void setRevealQueenChecker() {
+    this.isRevealQueenChecker = true;
+  }
+  @Override
+  public void setReveal() {
+    this.isRevealChecker = true;
+  }
+
+  @Override
+  public void setRevealQueen() {
+    this.isRevealQueenChecker = true;
+  }
+  public boolean isRevealChecker(){
+    return this.isRevealChecker;
+  }
+
+  public boolean isRevealQueenChecker(){
+    return this.isRevealQueenChecker;
   }
 }

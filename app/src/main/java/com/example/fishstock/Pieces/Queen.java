@@ -25,7 +25,8 @@ public class Queen implements Piece {
   private Coordinate revealCheckerLoc;
   private ArrayList<Coordinate> revealAve;
   ArrayList<Move>possibleMoves = new ArrayList<>();
-
+  boolean isPinnedToQueen;
+  boolean isRevealQueenChecker;
   public Queen(Coordinate curPos, boolean isWhite) {
     this.fromCoord=curPos;
     this.coord=curPos;
@@ -666,15 +667,6 @@ public class Queen implements Piece {
   }
 
   @Override
-  public ArrayList<Coordinate> getRevealAve() {
-    return this.revealAve;
-  }
-  public void unReveal() {
-    this.isRevealChecker=false;
-    this.revealAve=null;
-    this.revealCheckerLoc = new Coordinate(-1,-1);
-  }
-  @Override
   public ArrayList<Move> getPossibleMoves() {
     return this.possibleMoves;
   }
@@ -775,5 +767,28 @@ public class Queen implements Piece {
       }
     }
     return false;
+  }
+  @Override
+  public void setQueenPin() {
+    this.isPinnedToQueen = true;
+  }
+  public void setRevealQueenChecker() {
+    this.isRevealQueenChecker = true;
+  }
+  @Override
+  public void setReveal() {
+    this.isRevealChecker = true;
+  }
+
+  @Override
+  public void setRevealQueen() {
+    this.isRevealQueenChecker = true;
+  }
+  public boolean isRevealChecker(){
+    return this.isRevealChecker;
+  }
+
+  public boolean isRevealQueenChecker(){
+    return this.isRevealQueenChecker;
   }
 }

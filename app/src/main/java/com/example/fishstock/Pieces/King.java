@@ -27,6 +27,9 @@ public class King implements Piece {
   private ArrayList<Coordinate> revealAve;
   ArrayList<Coordinate> checkAve =  new ArrayList<>();
   ArrayList<Coordinate> checkAve2 = new ArrayList<>();
+  boolean isPinnedToQueen;
+  boolean isRevealQueenChecker;
+
 
 
   public King(Coordinate crd, boolean isWhite) {
@@ -388,12 +391,6 @@ public class King implements Piece {
     return this.isPinned;
   }
 
-
-  @Override
-  public ArrayList<Coordinate> getPinAvenue() {
-    // TODO Auto-generated method stub
-    return null;
-  }
   public void unPin() {
   }
   public void setPin(ArrayList<Coordinate> pinAve, Coordinate pinnerLoc) {
@@ -418,6 +415,13 @@ public class King implements Piece {
     this.revealCheckerLoc = revealCheckerLoc;
     this.revealAve=revealAve;
   }
+  @Override
+  public void setQueenPin() {
+    this.isPinnedToQueen = true;
+  }
+  public void setRevealQueenChecker() {
+    this.isRevealQueenChecker = true;
+  }
 
   public void setDoubleChecked(Coordinate pos, Coordinate toCoord) {
     this.isDoubleChecked=true;
@@ -426,16 +430,6 @@ public class King implements Piece {
   }
   public boolean isDoubleChecked() {
     return this.isDoubleChecked;
-  }
-
-  @Override
-  public ArrayList<Coordinate> getRevealAve() {
-    return this.revealAve;
-  }
-  public void unReveal() {
-    this.isRevealChecker=false;
-    this.revealAve=null;
-    this.revealCheckerLoc = new Coordinate(-1,-1);
   }
   public void setCheckAve(ArrayList<Coordinate> checkAve) {
     this.checkAve=checkAve;
@@ -494,5 +488,21 @@ public class King implements Piece {
 
   public ArrayList<Coordinate> getCheckingAve2() {
     return this.checkAve2;
+  }
+  @Override
+  public void setReveal() {
+    this.isRevealChecker = true;
+  }
+
+  @Override
+  public void setRevealQueen() {
+    this.isRevealQueenChecker = true;
+  }
+  public boolean isRevealChecker(){
+    return this.isRevealChecker;
+  }
+
+  public boolean isRevealQueenChecker(){
+    return this.isRevealQueenChecker;
   }
 }
