@@ -703,29 +703,19 @@ public class Pawn implements Piece {
     //PART 1: Cancel all matches from both lists.
     ArrayList<Piece> copyProtectors = (ArrayList<Piece>) protectors.clone();
     ArrayList<Piece> copyAttackers = (ArrayList<Piece>) attackers.clone();
-    for (Piece piece : copyProtectors) {
+    for (Piece piece : copyAttackers) {
       if (piece.getName().equals("Pawn")) {
-        if (removeByName(copyAttackers, "Pawn")) {
-          removeByName(copyProtectors, "Pawn");
-        }
+        removeByName(copyProtectors, "Pawn");
       } else if (piece.getName().equals("Knight") || piece.getName().equals("Bishop")) {
-        if (removeByName(copyAttackers, "Knight")){
-          removeByName(copyProtectors, "Knight");
-        }
+        removeByName(copyProtectors, "Knight");
       } else if (piece.getName().equals("Rook")) {
-        if (removeByName(copyAttackers, "Rook")){
-          removeByName(copyProtectors, "Rook");
-        }
+        removeByName(copyProtectors, "Rook");
       } else if (piece.getName().equals("Queen")) {
-        if (removeByName(copyAttackers, "Queen")){
-          removeByName(copyProtectors, "Queen");
-        }
+        removeByName(copyProtectors, "Queen");
       } else {
-        if (removeByName(copyAttackers, "King")){
-          removeByName(copyProtectors, "King");
-        }
+        removeByName(copyProtectors, "King");
       }
-      if (copyAttackers.size() == 0 || copyProtectors.size() == 0) {
+      if (copyProtectors.size() == 0) {
         break;
       }
     }

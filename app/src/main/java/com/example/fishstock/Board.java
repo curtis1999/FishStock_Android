@@ -259,10 +259,21 @@ public class Board implements Serializable {
     if (file < 0 || file > 7 || startingRow < 0 || startingRow > 7) {
       return 0;
     }
-    for (int row = startingRow; row < 8; row++){
+    if (!isWhite) {
+    for (int row = startingRow; row < 8; row++) {
       if (!board[row][file].PieceStatus.equals(Status.EMPTY)) {
         if (board[row][file].piece.getName().equals(pieceName) && board[row][file].piece.getColor() == isWhite) {
           numInFile++;
+        }
+      }
+    }
+    }
+    else {
+      for (int row = startingRow; row > 0; row--) {
+        if (!board[row][file].PieceStatus.equals(Status.EMPTY)) {
+          if (board[row][file].piece.getName().equals(pieceName) && board[row][file].piece.getColor() == isWhite) {
+            numInFile++;
+          }
         }
       }
     }

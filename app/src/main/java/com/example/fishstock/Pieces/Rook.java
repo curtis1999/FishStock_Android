@@ -570,51 +570,33 @@ public class Rook implements Piece {
 
   //Analyses the list of protectors and defenders and returns a scaling factor for the eval funtion.
   public double evaluateSafety() {
-    if (countByType(attackers, "Pawn") > 0) {
-      return 0.08;
+    //A hanging piece which can be taken.
+    if (attackers.size() > 0 && protectors.size() == 0) {
+      return 0;
     }
-    if (countByType(attackers, "Bishop") > 0 || countByType(attackers, "Knight") > 0) {
-      return 0.6 - 0.1 * (attackers.size() - (protectors.size()));
-    }
-    //PART 1: Cancel all matches from both lists.
-    ArrayList<Piece> copyProtectors = (ArrayList<Piece>) protectors.clone();
-    ArrayList<Piece> copyAttackers = (ArrayList<Piece>) attackers.clone();
-    for (Piece piece : copyProtectors) {
-      if (piece.getName().equals("Pawn")) {
-      } else if (piece.getName().equals("Knight") || piece.getName().equals("Bishop")) {
-        if (removeByName(copyAttackers, "Knight")){
-          removeByName(copyProtectors, "Knight");
-        }
-      } else if (piece.getName().equals("Rook")) {
-        if (removeByName(copyAttackers, "Rook")){
-          removeByName(copyProtectors, "Rook");
-        }
-      } else if (piece.getName().equals("Queen")) {
-        if (removeByName(copyAttackers, "Queen")){
-          removeByName(copyProtectors, "Queen");
-        }
-      } else {
-        if (removeByName(copyAttackers, "King")){
-          removeByName(copyProtectors, "King");
-        }
-      }
-      if (copyAttackers.size() == 0 || copyProtectors.size() == 0) {
-        break;
-      }
-    }
-    //PART 2: evaluate the results.
 
-    //2.1.1 BEST CASE: PROTECTED BY 2 PAWNS. (without any pawn attackers.
-    if (countByType(copyProtectors, "Pawn") == 2) {
-      return 1.25 + 0.1 * (protectors.size() - (1+attackers.size()));
+    //If it can be captured by a pawn -> bad eval.
+    if (countByType(attackers, "Pawn") > 0) {
+      if (attackers.size() > protectors.size()) {
+        return 0;
+      } else {
+        return 0.1;
+      }
     }
-    //2.2.1: Protected by one pawn
-    if (countByType(copyProtectors, "Pawn") == 1) {
-      return 1.15 + 0.1 * (protectors.size() - (1+attackers.size()));
+    //If it can be captured by a minor piece -> somewhat bad eval.
+    if (countByType(attackers, "Knight") > 0) {
+      if (attackers.size() > protectors.size()) {
+        return 0.6;
+      } else {
+        return 0.8;
+      }
     }
-    //2.3.1: Protected by a bishop/knight
-    if (countByType(copyProtectors, "Knight") + countByType(copyProtectors, "Bishop") > 0) {
-      return 1.1 + 0.1 * (protectors.size() - (attackers.size()));
+    //Not attacked by a pawn or a minor piece.
+    if (countByType(protectors, "Pawn") == 2) {
+      return 1.25;
+    }
+    if (countByType(protectors, "Pawn") == 1){
+      return 1.15;
     }
     return 1.0;
   }
