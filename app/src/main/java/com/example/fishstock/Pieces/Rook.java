@@ -534,6 +534,12 @@ public class Rook implements Piece {
     if (isRevealChecker) {
       eval *= 1.5;
     }
+    if (isPinnedToQueen) {
+      eval *= 2.0/3.0;
+    }
+    if (isRevealQueenChecker) {
+      eval *= 1.25;
+    }
     double numMoves = GameService.filterMoves(possibleMoves).size();
     eval += (numMoves/14.0) - (5.0/14.0);
     //Eval 1: DOUBLED ROOK.

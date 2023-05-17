@@ -656,6 +656,18 @@ public class Pawn implements Piece {
   public double evaluate(Board board) {
     double eval = 1;
     Cell curCell = board.board[curPos.rank][curPos.file];
+    if (isPinned) {
+      eval *= 0.5;
+    }
+    if (isRevealChecker) {
+      eval *= 1.5;
+    }
+    if (isPinnedToQueen) {
+      eval *= 2.0/3.0;
+    }
+    if (isRevealQueenChecker) {
+      eval *= 1.25;
+    }
     //EVAL 1: REMOVES 0.2 if doubled and 0.4 if trippled.
     eval -= 0.2 * (Board.countAlongFile(board.board, "Pawn", 1, curPos.file, isWhite) - 1);
 

@@ -512,10 +512,16 @@ public class Bishop implements Piece {
   public double evaluate(Board board) {
     double eval = 3.33;
     if (isPinned) {
-      eval *= 1/2;
+      eval *= 1.0/2.0;
     }
     if (isRevealChecker) {
       eval *= 1.5;
+    }
+    if (isPinnedToQueen) {
+      eval *= 2.0/3.0;
+    }
+    if (isRevealQueenChecker) {
+      eval *= 1.25;
     }
     int numMoves = GameService.filterMoves(possibleMoves).size();
     eval += (numMoves/12.0) - (4.0/14.0);

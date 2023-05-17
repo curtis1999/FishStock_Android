@@ -40,8 +40,15 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
     //1. Initialize the board, agent and game
     this.board = new Board();
     GameService.updateBoardMeta(board);
+    try {
+      whitesPotentialMoves = GameService.generateMoves(board, true);
+      blacksPotentialMoves = GameService.generateMoves(board, false);
+    } catch (CloneNotSupportedException e) {
+      e.printStackTrace();
+    }
+
     this.isWhite = getIntent().getBooleanExtra("isWhite", false);
-    this.adversary = initializeAgent(getIntent().getStringExtra("agentType"));
+    this.adversary = initializeAgent(getIntent().getStringExtra("agentType"), isWhite);
     this.player1 = new Human(AgentType.HUMAN, true);
 
     if (isWhite) {
@@ -82,7 +89,25 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
         updateBoard(board, isWhite);
       }
     });
-
+    //Manually make the first move if the player is black.
+    if (!isWhite) {
+      try {
+        Move adversaryMove = adversary.getMove(board, whitesPotentialMoves, blacksPotentialMoves);
+        if (adversaryMove.isCapture) {
+            capturedPiecesBlack.add(adversaryMove.capturablePiece);
+            capturedBlack.append(": " + adversaryMove.capturablePiece.getName());
+        }
+        GameService.makeMove(board, adversaryMove, true);
+        GameService.updateBoardMeta(board);
+        game.whitesMovesLog.add(adversaryMove);
+        game.boardStates.add(GameService.copyBoard(board));
+        updateBoard(board, false);
+        postMoveChecks(board, true, checkStatusBlack, checkStatusWhite, message);
+          message.setText("BLACK TO MOVE");
+      } catch (CloneNotSupportedException e) {
+        e.printStackTrace();
+      }
+    }
 
     //3. Set the buttons.
     for (int row = 0; row < 8; row++) {
@@ -92,87 +117,137 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
 
           @Override
           public void onClick(View v) {
-            Coordinate coord = getCoordFromButton(button);
+            Coordinate coord = getCoordFromButton(button, isWhite);
             Cell cell = board.board[coord.rank][coord.file];
             //CASE 1: Making a non-capturing move. (They clicked on an empty square with a selected piece.
             if (cell.PieceStatus == Status.EMPTY) {
               if (selectedPiece != null && isLegalMove(coord, board.board)) {
-                Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), false, true); //TODO: MAKE AN ISWHITE VARIABLE
+                Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), false, isWhite);
                 move = updateMove(move);
                 if (move.isPromotion) {
                   PromotionDialog promotionDialog = new PromotionDialog(GameManager.this, board, move, isWhite);
                   promotionDialog.setOnPromotionMoveListener(GameManager.this);
                   promotionDialog.show();
                 } else {
-                  GameService.makeMove(board, move, true);
-                  game.whitesMovesLog.add(move);
+                  GameService.makeMove(board, move, isWhite);
+                  if (isWhite) {
+                    game.whitesMovesLog.add(move);
+                  } else {
+                    game.blacksMovesLog.add(move);
+                  }
                   GameService.updateBoardMeta(board);
                   game.boardStates.add(GameService.copyBoard(board));
-                  if (postMoveChecks(board, true, checkStatusBlack, checkStatusWhite, message)) {
+                  if (postMoveChecks(board, isWhite, checkStatusBlack, checkStatusWhite, message)) {
                     return;
                   };
-                  message.setText("BLACK TO MOVE");
+                  if (isWhite) {
+                    message.setText("BLACK TO MOVE");
+                  } else {
+                    message.setText("WHITE TO MOVE");
+                  }
                   try {
-                    ArrayList<Move> playersMoves = GameService.generateMoves(board, true); //TODO: Should be unnecessary
-                    Move adversaryMove = adversary.getMove(board, blacksPotentialMoves, playersMoves);
-                    if (adversaryMove.isCapture) {
-                      capturedPiecesWhite.add(adversaryMove.capturablePiece);
-                      capturedWhite.append(": " + adversaryMove.capturablePiece.getName());
+                    ArrayList<Move> playersMoves = GameService.generateMoves(board, isWhite);
+                    Move adversaryMove;
+                    if (isWhite) {
+                      adversaryMove = adversary.getMove(board, blacksPotentialMoves, playersMoves);
+                    } else {
+                      adversaryMove = adversary.getMove(board, whitesPotentialMoves, playersMoves);
                     }
-                    GameService.makeMove(board, adversaryMove, false);
+                    if (adversaryMove.isCapture) {
+                      if (isWhite) {
+                        capturedPiecesWhite.add(adversaryMove.capturablePiece);
+                        capturedWhite.append(": " + adversaryMove.capturablePiece.getName());
+                      } else {
+                        capturedPiecesBlack.add(adversaryMove.capturablePiece);
+                        capturedBlack.append(": " + adversaryMove.capturablePiece.getName());
+                      }
+                    }
+                    GameService.makeMove(board, adversaryMove, !isWhite);
                     GameService.updateBoardMeta(board);
-                    game.blacksMovesLog.add(adversaryMove);
+                    if (isWhite) {
+                      game.blacksMovesLog.add(adversaryMove);
+                    } else {
+                      game.whitesMovesLog.add(adversaryMove);
+                    }
                     game.boardStates.add(GameService.copyBoard(board));
                     updateBoard(board, isWhite);
-                    postMoveChecks(board, false, checkStatusBlack, checkStatusWhite, message);
-                    message.setText("WHITE TO MOVE");
+                    postMoveChecks(board, !isWhite, checkStatusBlack, checkStatusWhite, message);
+                    if (isWhite) {
+                      message.setText("WHITE TO MOVE");
+                    } else {
+                      message.setText("BLACK TO MOVE");
+                    }
                   } catch (CloneNotSupportedException e) {
                     e.printStackTrace();
                   }
                 }
               }
               // CASE 2: Making a capturing move. (Clicked on an adversary piece with a piece selected.
-            } else if (cell.PieceStatus == Status.BLACK) {
+            } else if ((cell.PieceStatus == Status.BLACK && isWhite) || cell.PieceStatus == Status.WHITE && !isWhite) {
               if (selectedPiece != null && isLegalMove(coord, board.board)) {
-                Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), true, true); //TODO: MAKE AN ISWHITE VARIABLE
+                Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), true, isWhite);
                 move = updateMove(move);
                 move.setCapture(board.board[coord.rank][coord.file].piece);
-                capturedPiecesBlack.add(board.board[coord.rank][coord.file].piece);
-                capturedBlack.append(": " + board.board[coord.rank][coord.file].piece.getName());
+                if (isWhite) {
+                  capturedPiecesBlack.add(board.board[coord.rank][coord.file].piece);
+                  capturedBlack.append(": " + board.board[coord.rank][coord.file].piece.getName());
+                } else {
+                  capturedPiecesWhite.add(board.board[coord.rank][coord.file].piece);
+                  capturedWhite.append(": " + board.board[coord.rank][coord.file].piece.getName());
+                }
                 if (move.isPromotion) {
                   PromotionDialog promotionDialog = new PromotionDialog(GameManager.this, board, move, isWhite);
                   promotionDialog.setOnPromotionMoveListener(GameManager.this);
                   promotionDialog.show(); //TODO: MAKE THE MOVE WITHIN HERE!!
                 } else {
-                  GameService.makeMove(board, move, true);
+                  GameService.makeMove(board, move, isWhite);
                   GameService.updateBoardMeta(board);
-                  game.whitesMovesLog.add(move);
+                  if (isWhite) {
+                    game.whitesMovesLog.add(move);
+                  } else {
+                    game.blacksMovesLog.add(move);
+                  }
                   game.boardStates.add(GameService.copyBoard(board));
-                  if (postMoveChecks(board, true, checkStatusBlack, checkStatusWhite, message)) {
+                  if (postMoveChecks(board, isWhite, checkStatusBlack, checkStatusWhite, message)) {
                     return;
                   }
-                  ;
-                  message.setText("BLACK TO MOVE");
+                  if (isWhite) {
+                    message.setText("BLACK TO MOVE");
+                  } else {
+                    message.setText("WHITE TO MOVE");
+                  }
                   try {
-                    ArrayList<Move> playersMoves = GameService.generateMoves(board, true);
-                    Move adversaryMove = adversary.getMove(board, blacksPotentialMoves, playersMoves);
-                    if (adversaryMove.isCapture) {
-                      capturedPiecesWhite.add(adversaryMove.capturablePiece);
-                      capturedWhite.append(": " + adversaryMove.capturablePiece.getName());
-                    }
-                    GameService.makeMove(board, adversaryMove, false);
+                    ArrayList<Move> playersMoves = GameService.generateMoves(board, isWhite);
+                    Move adversaryMove;
+                    if (isWhite) {
+                      adversaryMove = adversary.getMove(board, blacksPotentialMoves, playersMoves);
+                    } else {
+                      adversaryMove = adversary.getMove(board, whitesPotentialMoves, playersMoves);
+                    }if (adversaryMove.isCapture) {
+                        capturedPiecesWhite.add(adversaryMove.capturablePiece);
+                        capturedWhite.append(": " + adversaryMove.capturablePiece.getName());
+                      }
+                    GameService.makeMove(board, adversaryMove, !isWhite);
                     GameService.updateBoardMeta(board);
-                    game.blacksMovesLog.add(adversaryMove);
+                    if (isWhite) {
+                      game.blacksMovesLog.add(adversaryMove);
+                    } else {
+                      game.whitesMovesLog.add(adversaryMove);
+                    }
                     game.boardStates.add(GameService.copyBoard(board));
                     updateBoard(board, isWhite);
-                    postMoveChecks(board, false, checkStatusBlack, checkStatusWhite, message);
-                    message.setText("WHITE TO MOVE");
+                    postMoveChecks(board, !isWhite, checkStatusBlack, checkStatusWhite, message);
+                    if (isWhite) {
+                      message.setText("WHITE TO MOVE");
+                    } else {
+                      message.setText("BLACK TO MOVE");
+                    }
                   } catch (CloneNotSupportedException e) {
                     e.printStackTrace();
                   }
                 }
               }
-              //CASE 3: The player clicked a white piece.
+              //CASE 3: The player clicked on one of their pieces.
             } else {
               if (selectedPiece != null) {
                 for (Move move : GameService.filterMoves(selectedPiece.generateMoves(selectedPiece.getPos(), board.board))) {
@@ -285,7 +360,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
       }
     } else {
       try {
-        whitesPotentialMoves = GameService.generateMoves(board, false);
+        whitesPotentialMoves = GameService.generateMoves(board, true);
       } catch (CloneNotSupportedException e) {
         e.printStackTrace();
       }
@@ -321,26 +396,25 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
           updateBoard(board, isWhite);
         }
       }
-
     }
     return false;
   }
 
 
-  public static Agent initializeAgent(String agentName) {
+  public static Agent initializeAgent(String agentName, boolean isWhite) {
     Agent agent;
     switch (agentName) {
       case "Randy":
-        agent = new Randy(AgentType.RANDY, false); //TODO: ASK USER IF THEY WANT TO PLAY AS WHITE OR BLACK!
+        agent = new Randy(AgentType.RANDY, !isWhite); //TODO: ASK USER IF THEY WANT TO PLAY AS WHITE OR BLACK!
         break;
       case "Simple":
-        agent = new Simple(AgentType.SIMPLE, false);
+        agent = new Simple(AgentType.SIMPLE, !isWhite);
         break;
       case "MinMax":
-        agent = new MinMax(AgentType.MINMAX, false);
+        agent = new MinMax(AgentType.MINMAX, !isWhite);
         break;
       default:
-        agent = new FishStock(AgentType.FISHSTOCK, false);
+        agent = new FishStock(AgentType.FISHSTOCK, !isWhite);
     }
     return agent;
   }
@@ -359,10 +433,17 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
     return false;
   }
 
-  public Coordinate getCoordFromButton(View button) {
+  public Coordinate getCoordFromButton(View button, boolean isWhite) {
     String buttonId = getResources().getResourceEntryName(button.getId());
-    int rank = 7 - (buttonId.charAt(6) - '0');
-    int file = 7 - (buttonId.charAt(7) - '0');
+    int rank;
+    int file;
+    if (isWhite) {
+      rank = 7 - (buttonId.charAt(6) - '0');
+      file = 7 - (buttonId.charAt(7) - '0');
+    } else {
+      rank = buttonId.charAt(6) - '0';
+      file = buttonId.charAt(7) - '0';
+    }
     return new Coordinate(file, rank);
   }
 

@@ -321,6 +321,12 @@ public class Knight implements Piece {
     if (isRevealChecker) {
       eval *= 1.5;
     }
+    if (isPinnedToQueen) {
+      eval *= 2.0/3.0;
+    }
+    if (isRevealQueenChecker) {
+      eval *= 1.25;
+    }
     //EVAL 3: INCREASE OR DECREASE BASED ON THE NUMBER OF POSSIBLE MOVES. (GRIM ON RIM and happy in center)
     double numMoves = GameService.filterMoves(possibleMoves).size();
     eval += (numMoves/8.0) - (5.0/8.0);

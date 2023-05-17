@@ -195,4 +195,9 @@ public class TestEvaluate {
     double blackRook2Eval = blackRook2.evaluate(board);
     assertEquals(true, blackRook2Eval > blackRook1Eval);
   }
+
+  @Test
+  public void testSimple() {
+
+  }
 }

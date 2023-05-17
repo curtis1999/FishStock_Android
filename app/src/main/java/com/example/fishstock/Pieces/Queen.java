@@ -726,6 +726,19 @@ public class Queen implements Piece {
   }
   public double evaluate( Board board) {
     double eval = 9.5;
+    if (isPinned) {
+      eval *= 0.5;
+    }
+    //EVAL 2: IF THE PIECE IS A REVEAL CHECKER, INCREASE THE EVAL BY 2.
+    if (isRevealChecker) {
+      eval *= 1.5;
+    }
+    if (isPinnedToQueen) {
+      eval *= 2.0/3.0;
+    }
+    if (isRevealQueenChecker) {
+      eval *= 1.25;
+    }
     Cell curCell = board.board[getPos().rank][getPos().file];
     eval *= evaluateSafety();
     return eval;
