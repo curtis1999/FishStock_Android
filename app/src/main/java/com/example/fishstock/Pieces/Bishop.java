@@ -95,8 +95,7 @@ public class Bishop implements Piece {
             continue;
           }else {
             if (board[pos1.rank][pos1.file].piece.getName().equals("King")) {
-              ArrayList<Coordinate> revealAve = generateAvenue(pos, pos1);
-              mv1.setReveal(revealerLoc, revealAve);
+              mv1.setReveal(revealerLoc);
             } else if (board[pos1.rank][pos1.file].piece.getName().equals("Queen")) {
               mv1.setRevealQueen(revealerLoc);
             }
@@ -166,8 +165,7 @@ public class Bishop implements Piece {
             continue;
           }else {
             if (board[pos2.rank][pos2.file].piece.getName().equals("King")) {
-              ArrayList<Coordinate> revealAve = generateAvenue(pos, pos2);
-              mv2.setReveal(revealerLoc, revealAve);
+              mv2.setReveal(revealerLoc);
             } else if (board[pos2.rank][pos2.file].piece.getName().equals("Queen")) {
               mv2.setRevealQueen(revealerLoc);
             }
@@ -238,8 +236,7 @@ public class Bishop implements Piece {
             continue;
           }else {
             if (board[pos3.rank][pos3.file].piece.getName().equals("King")) {
-              ArrayList<Coordinate> revealAve = generateAvenue(pos, pos3);
-              mv3.setReveal(revealerLoc, revealAve);
+              mv3.setReveal(revealerLoc);
             } else if (board[pos3.rank][pos3.file].piece.getName().equals("Queen")) {
               mv3.setRevealQueen(revealerLoc);
             }
@@ -311,8 +308,7 @@ public class Bishop implements Piece {
             continue;
           }else {
             if (board[pos4.rank][pos4.file].piece.getName().equals("King")) {
-              ArrayList<Coordinate> revealAve = generateAvenue(pos, pos4);
-              mv4.setReveal(revealerLoc, revealAve);
+              mv4.setReveal(revealerLoc);
             } else if (board[pos4.rank][pos4.file].piece.getName().equals("Queen")) {
               mv4.setRevealQueen(revealerLoc);
             }

@@ -94,28 +94,29 @@ public class Queen implements Piece {
             pinneeLoc=new Coordinate(pos1.file,pos1.rank);
             pos1 = new Coordinate(pos1.file+1,pos1.rank);
           }
-          //X-RAY vision.  Looking for pins/reveal Checks.
+          //X-RAY vision.  Looking for pins/reveals (To King or Queen).
         }else {
           if (board[pos1.rank][pos1.file].PieceStatus==this.stat) {
             break;
           }else if (board[pos1.rank][pos1.file].PieceStatus==Status.EMPTY) {
             pos1 = new Coordinate(pos1.file+1,pos1.rank);
-
             //Can see an adversary piece through the X-RAY.
           }else {
             if (board[pos1.rank][pos1.file].piece.getName().equals("King")) {
               if (mov1.protectionMove) {
-                ArrayList<Coordinate> revealAve = generateAvenue(pos, pos1);
-                mov1.setReveal(revealLoc, revealAve);
-                break;
+                mov1.setReveal(revealLoc);
               } else { //(A pin)
                 ArrayList<Coordinate> pinAve = generateAvenue(pos, pos1);
                 mov1.setPin(pinneeLoc, pinAve);
-                break;
               }
-            }else {
-              break;
+            } else if (board[pos1.rank][pos1.file].piece.getName().equals("Queen")) {
+              if (mov1.protectionMove) {
+                mov1.setRevealQueen(revealLoc);
+              } else { //(A pin)
+                mov1.setPinQueen(pinneeLoc);
+              }
             }
+            break;
           }
         }
       }
@@ -164,18 +165,19 @@ public class Queen implements Piece {
           }else {
             if (board[pos1.rank][pos1.file].piece.getName().equals("King")) {
               if (mov1.protectionMove) {
-                ArrayList<Coordinate> revealAve = generateAvenue(pos, pos1);
-                mov1.setReveal(revealLoc, revealAve);
-                break;
+                mov1.setReveal(revealLoc);
               } else { //(A pin)
                 ArrayList<Coordinate> pinAve = generateAvenue(pos, pos1);
                 mov1.setPin(pinneeLoc, pinAve);
-                break;
+              }
+            } else if (board[pos1.rank][pos1.file].piece.getName().equals("Queen")) {
+              if (mov1.protectionMove) {
+                mov1.setRevealQueen(revealLoc);
+              } else { //(A pin)
+                mov1.setPinQueen(pinneeLoc);
               }
             }
-            else {
-              break;
-            }
+            break;
           }
         }
       }
@@ -224,17 +226,20 @@ public class Queen implements Piece {
           }else {
             if (board[pos1.rank][pos1.file].piece.getName().equals("King")) {
               if (mov1.protectionMove) {
-                ArrayList<Coordinate> revealAve = generateAvenue(pos, pos1);
-                mov1.setReveal(revealLoc, revealAve);
-                break;
+                mov1.setReveal(revealLoc);
               } else {
                 ArrayList<Coordinate> pinAve = generateAvenue(pos, pos1);
                 mov1.setPin(pinneeLoc, pinAve);
-                break;
               }
-            }else {
-              break;
+            } else if (board[pos1.rank][pos1.file].piece.getName().equals("Queen")) {
+              if (mov1.protectionMove) {
+                mov1.setRevealQueen(revealLoc);
+              } else {
+                ArrayList<Coordinate> pinAve = generateAvenue(pos, pos1);
+                mov1.setPinQueen(pinneeLoc);
+              }
             }
+            break;
           }
         }
       }
@@ -283,17 +288,19 @@ public class Queen implements Piece {
           }else {
             if (board[pos1.rank][pos1.file].piece.getName().equals("King")) {
               if (mov1.protectionMove) {
-                ArrayList<Coordinate> revealAve = generateAvenue(pos, pos1);
-                mov1.setReveal(revealLoc, revealAve);
-                break;
+                mov1.setReveal(revealLoc);
               } else {
                 ArrayList<Coordinate> pinAve = generateAvenue(pos, pos1);
                 mov1.setPin(pinneeLoc, pinAve);
-                break;
               }
-            }else {
-              break;
+            } else if (board[pos1.rank][pos1.file].piece.getName().equals("Queen")) {
+              if (mov1.protectionMove) {
+                mov1.setRevealQueen(revealLoc);
+              } else {
+                mov1.setPinQueen(pinneeLoc);
+              }
             }
+            break;
           }
         }
       }
@@ -339,17 +346,19 @@ public class Queen implements Piece {
           } else {
             if (board[pos1.rank][pos1.file].piece.getName().equals("King")) {
               if (mov1.protectionMove) {
-                ArrayList<Coordinate> revealAve = generateAvenue(pos, pos1);
-                mov1.setReveal(revealLoc, revealAve);
-                break;
+                mov1.setReveal(revealLoc);
               } else {
                 ArrayList<Coordinate> pinAve = generateAvenue(pos, pos1);
                 mov1.setPin(pinLoc, pinAve);
-                break;
               }
-            } else {
-              break;
+            } else if (board[pos1.rank][pos1.file].piece.getName().equals("Queen")) {
+              if (mov1.protectionMove) {
+                mov1.setRevealQueen(revealLoc);
+              } else {
+                mov1.setPinQueen(pinLoc);
+              }
             }
+            break;
           }
         }
       }
@@ -394,17 +403,19 @@ public class Queen implements Piece {
           } else {
             if (board[pos2.rank][pos2.file].piece.getName().equals("King")) {
               if (mov2.protectionMove) {
-                ArrayList<Coordinate> revealAve = generateAvenue(pos, pos2);
-                mov2.setReveal(revealLoc, revealAve);
-                break;
+                mov2.setReveal(revealLoc);
               } else {
                 ArrayList<Coordinate> pinAve = generateAvenue(pos, pos2);
                 mov2.setPin(pinLoc, pinAve);
-                break;
               }
-            } else {
-              break;
+            } else if (board[pos2.rank][pos2.file].piece.getName().equals("Queen")) {
+              if (mov2.protectionMove) {
+                mov2.setRevealQueen(revealLoc);
+              } else {
+                mov2.setPinQueen(pinLoc);
+              }
             }
+            break;
           }
         }
       }
@@ -451,17 +462,19 @@ public class Queen implements Piece {
           } else {
             if (board[pos3.rank][pos3.file].piece.getName().equals("King")) {
               if (mov3.protectionMove) {
-                ArrayList<Coordinate> revealAve = generateAvenue(pos, pos3);
-                mov3.setReveal(revealLoc, revealAve);
-                break;
+                mov3.setReveal(revealLoc);
               } else {
                 ArrayList<Coordinate> pinAve = generateAvenue(pos, pos3);
                 mov3.setPin(pinLoc, pinAve);
-                break;
               }
-            } else {
-              break;
+            } else if (board[pos3.rank][pos3.file].piece.getName().equals("Queen")) {
+              if (mov3.protectionMove) {
+                mov3.setRevealQueen(revealLoc);
+              } else {
+                mov3.setPinQueen(pinLoc);
+              }
             }
+            break;
           }
         }
       }
@@ -508,17 +521,19 @@ public class Queen implements Piece {
           } else {
             if (board[pos4.rank][pos4.file].piece.getName().equals("King")) {
               if (mov4.protectionMove) {
-                ArrayList<Coordinate> revealAve = generateAvenue(pos, pos4);
-                mov4.setReveal(revealLoc, revealAve);
-                break;
+                mov4.setReveal(revealLoc);
               } else {
                 ArrayList<Coordinate> pinAve = generateAvenue(pos, pos4);
                 mov4.setPin(pinLoc, pinAve);
-                break;
               }
-            } else {
-              break;
+            } else if (board[pos4.rank][pos4.file].piece.getName().equals("Queen")) {
+              if (mov4.protectionMove) {
+                mov4.setRevealQueen(revealLoc);
+              } else {
+                mov4.setPinQueen(pinLoc);
+              }
             }
+            break;
           }
         }
       }
