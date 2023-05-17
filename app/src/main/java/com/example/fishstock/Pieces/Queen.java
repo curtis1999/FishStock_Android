@@ -629,7 +629,7 @@ public class Queen implements Piece {
     this.isRevealChecker=true;
   }
 
-  public boolean getPin() {
+  public boolean isPinned() {
     return this.isPinned;
   }
 
@@ -790,5 +790,8 @@ public class Queen implements Piece {
 
   public boolean isRevealQueenChecker(){
     return this.isRevealQueenChecker;
+  }
+  public boolean isPinnedToQueen() {
+    return this.isPinnedToQueen;
   }
 }

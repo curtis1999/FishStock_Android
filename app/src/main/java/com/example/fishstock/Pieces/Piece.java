@@ -23,7 +23,8 @@ public interface Piece {
   public void setPin(ArrayList<Coordinate> pinAve, Coordinate pinnerLoc);
   public void setQueenPin();
   public Coordinate getPinnerLoc();
-  public boolean getPin();
+  public boolean isPinned();
+  public boolean isPinnedToQueen();
   public ArrayList<Coordinate> generateAvenue(Coordinate c1, Coordinate c2);
   public Coordinate getCheckerLoc();
   public Coordinate getRevealCheckerLoc();
@@ -32,7 +33,6 @@ public interface Piece {
   public boolean isRevealChecker();
   public boolean isRevealQueenChecker();
   public void reset();
-
   public Piece copyPiece();
   public char getSymbol();
 

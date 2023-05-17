@@ -127,9 +127,9 @@ public class Move implements Comparable<Move>{
     this.pinLoc = pinLoc; //Location of the pinned piece
     this.pinAvenue=pinAve;
   }
-  public void setPinQueen(Coordinate revealQueenLoc) {
+  public void setPinQueen(Coordinate pinQueenLoc) {
     this.isPinQueen = true;
-    this.revealQueenLocation = revealQueenLoc;
+    this.pinQueenLocation = pinQueenLoc;
   }
   public void setCastle() {
     this.isCastle = true;

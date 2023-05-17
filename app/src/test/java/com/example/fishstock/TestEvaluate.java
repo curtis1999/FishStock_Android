@@ -126,6 +126,16 @@ public class TestEvaluate {
       GameService.updateBoardMeta(board);
       Board.printBoard(board, true);
       assertEquals(true, whitePawn1.isRevealQueenChecker());
+
+      //Swap the white pawn for a black one to test Pin.
+      blackPawn1 = new Pawn(new Coordinate (3, 2), false);
+      whitePieces.remove(whitePawn1);
+      board.blackPieces.add(blackPawn1);
+      board.board[2][3].empty();
+      board.board[2][3].putPiece(blackPawn1);
+      GameService.updateBoardMeta(board);
+      Board.printBoard(board, true);
+      assertEquals(true, blackPawn1.isPinnedToQueen());
     }
   @Test
   public void testPawnEval() {

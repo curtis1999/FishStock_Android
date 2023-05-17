@@ -278,7 +278,7 @@ public class GameService {
     ArrayList<Move> moves = new ArrayList<>();
     if (isWhite) {
       for (Piece piece : ChessBoard.whitePieces) {
-        if (!piece.getPin()) {
+        if (!piece.isPinned()) {
           ArrayList<Move> filteredMoves = filterMoves(piece.generateMoves(piece.getPos(), ChessBoard.board));
           for (Move aMove : filteredMoves) {
             if (aMove.isPromotion) {
@@ -316,7 +316,7 @@ public class GameService {
       }
     } else {
       for (Piece piece : ChessBoard.blackPieces) {
-        if (!piece.getPin()) {
+        if (!piece.isPinned()) {
           ArrayList<Move> filteredMoves = filterMoves(piece.generateMoves(piece.getPos(), ChessBoard.board));
           for (Move aMove : filteredMoves) {
             if (aMove.isPromotion) {

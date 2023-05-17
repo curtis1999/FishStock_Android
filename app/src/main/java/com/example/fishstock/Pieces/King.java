@@ -387,7 +387,7 @@ public class King implements Piece {
     return this.revealCheckerLoc;
   }
 
-  public boolean getPin() {
+  public boolean isPinned() {
     return this.isPinned;
   }
 
@@ -504,5 +504,8 @@ public class King implements Piece {
 
   public boolean isRevealQueenChecker(){
     return this.isRevealQueenChecker;
+  }
+  public boolean isPinnedToQueen() {
+    return this.isPinnedToQueen;
   }
 }

@@ -345,7 +345,7 @@ public class Bishop implements Piece {
     this.isRevealQueenChecker = true;
   }
 
-  public boolean getPin() {
+  public boolean isPinned() {
     return this.isPinned;
   }
   public ArrayList<Coordinate> getPinAvenue() {
@@ -505,5 +505,9 @@ public class Bishop implements Piece {
 
   public boolean isRevealQueenChecker(){
     return this.isRevealQueenChecker;
+  }
+
+  public boolean isPinnedToQueen() {
+    return this.isPinnedToQueen;
   }
 }

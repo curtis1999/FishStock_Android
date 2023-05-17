@@ -212,7 +212,7 @@ public class TestGameService {
     GameService.updateBoardMeta(board);
     Board.printBoard(board, true);
     assertEquals(false, whiteKing.isChecked);
-    assertEquals(true, whiteKnight1.getPin());
+    assertEquals(true, whiteKnight1.isPinned());
     //Test 1: Giving a check with ROok
     Move move1 = new Move(blackRook1.getPos(), new Coordinate(2,0), "Rook", false, false);
     GameService.makeMove(board, move1, false);
@@ -443,9 +443,9 @@ public class TestGameService {
     Move move1 = new Move(whiteBishop1.getPos(), new Coordinate (6, 7), "Bishop", false, true);
     GameService.makeMove(board, move1, true);
     Board.printBoard(board, true); System.out.println("|||||||||||||||||||||||||");
-    assertEquals( false, blackKnight1.getPin());
+    assertEquals( false, blackKnight1.isPinned());
     GameService.updateBoardMeta(board);
-    assertEquals(true, blackKnight1.getPin());
+    assertEquals(true, blackKnight1.isPinned());
     assertEquals(3, board.board[3][3].blackAttackers.size());
     ArrayList<Move> blacksMoves = GameService.generateMoves(board, false);
     assertEquals(5, blacksMoves.size());
@@ -603,9 +603,9 @@ public class TestGameService {
   //MOVING THE KING AWAY FROM THE PIN
   Move move16 = new Move(blackKing.getPos(), new Coordinate(3, 6), "King", false, false);
   GameService.makeMove(board, move16, false);
-  assertTrue(board.blackPieces.get(1).getPin());
+  assertTrue(board.blackPieces.get(1).isPinned());
   GameService.updateBoardMeta(board);
-  assertTrue(!board.blackPieces.get(1).getPin());
+  assertTrue(!board.blackPieces.get(1).isPinned());
   Board.printBoard(board, true);
   Move move17 = new Move(whitePawn2.getPos(), new Coordinate(1, 6), "Pawn", false, true);
   GameService.makeMove(board, move17, true);

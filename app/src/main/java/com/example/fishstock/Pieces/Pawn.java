@@ -525,8 +525,12 @@ public class Pawn implements Piece {
     this.isRevealChecker = true;
   }
 
-  public boolean getPin() {
+  public boolean isPinned() {
     return this.isPinned;
+  }
+
+  public boolean isPinnedToQueen() {
+    return this.isPinnedToQueen;
   }
 
   public void setEnPassantable() {
@@ -539,10 +543,6 @@ public class Pawn implements Piece {
 
   public boolean isRevealChecker() {
     return this.isRevealChecker;
-  }
-
-  public boolean isPinned() {
-    return this.isPinned;
   }
 
 

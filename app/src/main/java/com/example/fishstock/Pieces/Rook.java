@@ -129,7 +129,7 @@ public class Rook implements Piece {
               ArrayList<Coordinate> pinAve = generateAvenue(pos,pos1);
               mov1.setPin(pinneeLoc, pinAve);
             } else if (board[pos1.rank][pos1.file].piece.getName().equals("Queen")) {
-              mov1.setPinQueen(revealerLoc);
+              mov1.setPinQueen(pinneeLoc);
             }
             break;
           }
@@ -205,7 +205,7 @@ public class Rook implements Piece {
               ArrayList<Coordinate> pinAve = generateAvenue(pos,pos1);
               mov1.setPin(pinneeLoc, pinAve);
             } else if (board[pos1.rank][pos1.file].piece.getName().equals("Queen")) {
-              mov1.setPinQueen(revealerLoc);
+              mov1.setPinQueen(pinneeLoc);
             }
             break;
           }
@@ -279,7 +279,7 @@ public class Rook implements Piece {
               ArrayList<Coordinate> pinAve = generateAvenue(pos,pos1);
               mov1.setPin(pinneeLoc, pinAve);
             } else if (board[pos1.rank][pos1.file].piece.getName().equals("Queen")) {
-              mov1.setPinQueen(revealerLoc);
+              mov1.setPinQueen(pinneeLoc);
             }
             break;
           }
@@ -353,7 +353,7 @@ public class Rook implements Piece {
               ArrayList<Coordinate> pinAve = generateAvenue(pos,pos1);
               mov1.setPin(pinneeLoc, pinAve);
             } else if (board[pos1.rank][pos1.file].piece.getName().equals("Queen")) {
-              mov1.setPinQueen(revealerLoc);
+              mov1.setPinQueen(pinneeLoc);
             }
             break;
           }
@@ -432,7 +432,7 @@ public class Rook implements Piece {
 
 
   @Override
-  public boolean getPin() {
+  public boolean isPinned() {
     return this.isPinned;
   }
   public void moved() {
@@ -622,5 +622,8 @@ public class Rook implements Piece {
 
   public boolean isRevealQueenChecker(){
     return this.isRevealQueenChecker;
+  }
+  public boolean isPinnedToQueen() {
+    return this.isPinnedToQueen;
   }
 }
