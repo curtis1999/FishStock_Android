@@ -110,8 +110,11 @@ public class TestEvaluate {
     public void initReveal() {
       whiteKing = new King(new Coordinate(3,0), true);
       whiteRook1 = new Rook(new Coordinate(3,1), true);
+      whiteBishop1 = new Bishop (new Coordinate(7,1), true);
       whitePawn1 = new Pawn(new Coordinate(3,2), true);
-      whitePieces.add(whiteKing); whitePieces.add(whiteRook1); whitePieces.add(whitePawn1);
+      whitePawn2 = new Pawn(new Coordinate(6, 2), true);
+      whitePieces.add(whiteKing); whitePieces.add(whiteRook1); whitePieces.add(whiteBishop1);
+      whitePieces.add(whitePawn1); whitePieces.add(whitePawn2);
 
       blackKing = new King(new Coordinate(3,7), false);
       blackQueen = new Queen (new Coordinate (3, 5), false);
@@ -126,16 +129,22 @@ public class TestEvaluate {
       GameService.updateBoardMeta(board);
       Board.printBoard(board, true);
       assertEquals(true, whitePawn1.isRevealQueenChecker());
-
-      //Swap the white pawn for a black one to test Pin.
+      assertEquals(true, whitePawn2.isRevealQueenChecker());
+      //Swap the white pawns for a black ones to test Pin.
       blackPawn1 = new Pawn(new Coordinate (3, 2), false);
+      blackPawn2 = new Pawn(new Coordinate(6, 2), false);
       whitePieces.remove(whitePawn1);
+      whitePieces.remove(whitePawn2);
       board.blackPieces.add(blackPawn1);
+      board.blackPieces.add(blackPawn2);
       board.board[2][3].empty();
       board.board[2][3].putPiece(blackPawn1);
+      board.board[2][6].empty();
+      board.board[2][6].putPiece(blackPawn2);
       GameService.updateBoardMeta(board);
       Board.printBoard(board, true);
       assertEquals(true, blackPawn1.isPinnedToQueen());
+      assertEquals(true, blackPawn2.isPinnedToQueen());
     }
   @Test
   public void testPawnEval() {

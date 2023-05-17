@@ -53,7 +53,9 @@ public class Bishop implements Piece {
     //Towards a8
     if (pos.file<7 && pos.rank<7) {
       boolean xRay = false;
+      boolean revealer = false;
       Coordinate pinLoc = new Coordinate(-1,-1);
+      Coordinate revealerLoc = new Coordinate(-1, -1);
       Move mv1 = new Move(false);
       Coordinate pos1 = new Coordinate(pos.file+1,pos.rank+1);
       while (pos1.file<=7 && pos1.rank<=7) {
@@ -63,7 +65,7 @@ public class Bishop implements Piece {
             legalMoves.add(mv1);
             pos1 = new Coordinate(pos1.file+1,pos1.rank+1);
             continue;
-          }else if (board[pos1.rank][pos1.file].PieceStatus!=this.stat) {
+          } else if (board[pos1.rank][pos1.file].PieceStatus!=this.stat) {
             mv1 = new Move(pos,pos1,"Bishop",true, this.isWhite);
             mv1.setCapture(board[pos1.rank][pos1.file].piece);
             if (board[pos1.rank][pos1.file].piece.getName().equals("King")) {
@@ -78,10 +80,30 @@ public class Bishop implements Piece {
             mv1 = new Move(pos,pos1,"Bishop",false, this.isWhite);
             mv1.setProtectionMove(pos1);
             legalMoves.add(mv1);
+            revealer=true; //Could lead to a reveal check.
+            xRay=true;
+            revealerLoc = new Coordinate(pos1.file,pos1.rank);
+            pos1 = new Coordinate(pos1.file+1,pos1.rank+1);
+            continue;
+          }
+        }	//Could be a reveal Check (On King/Queen)
+        else if (xRay && revealer) {
+          if (board[pos1.rank][pos1.file].PieceStatus==this.stat) {
+            break; //TODO: Extend X-ray vision 1 more.
+          }else if (board[pos1.rank][pos1.file].PieceStatus==Status.EMPTY) {
+            pos1 = new Coordinate(pos1.file+1,pos1.rank+1);
+            continue;
+          }else {
+            if (board[pos1.rank][pos1.file].piece.getName().equals("King")) {
+              ArrayList<Coordinate> revealAve = generateAvenue(pos, pos1);
+              mv1.setReveal(revealerLoc, revealAve);
+            } else if (board[pos1.rank][pos1.file].piece.getName().equals("Queen")) {
+              mv1.setRevealQueen(revealerLoc);
+            }
             break;
           }
-        }				//x-ray "moves".
-        else {
+          //Could be a pin
+        } else {
           if (board[pos1.rank][pos1.file].PieceStatus==Status.EMPTY) {
             pos1 = new Coordinate(pos1.file+1,pos1.rank+1);
             continue;
@@ -90,12 +112,9 @@ public class Bishop implements Piece {
               ArrayList<Coordinate> pinAvenue = generateAvenue(pos,pos1);
               //board[pinLoc.rank][pinLoc.file].piece.setPin(pinAvenue,pos);
               mv1.setPin(pinLoc,pinAvenue);
-              break;
-            }else {
-              break;
+            } else if (board[pos1.rank][pos1.file].piece.getName().equals("Queen")) {
+              mv1.setPinQueen(pinLoc);
             }
-          }else {	//TODO: ADD FOR REVEAL CHECKS
-            break;
           }
         }
       }
@@ -105,8 +124,10 @@ public class Bishop implements Piece {
     if (pos.file<7 && pos.rank>0) {
       Coordinate pos2 = new Coordinate(pos.file+1,pos.rank-1);
       Coordinate pinLoc = new Coordinate(-1,-1);
+      Coordinate revealerLoc = new Coordinate(-1, -1);
       Move mv2 = new Move(false);
       boolean xRay = false;
+      boolean revealer = false;
       while (pos2.file<=7 && pos2.rank>=0) {
         if (!xRay) {
           if (board[pos2.rank][pos2.file].PieceStatus==Status.EMPTY) {
@@ -130,10 +151,31 @@ public class Bishop implements Piece {
             mv2 = new Move(pos,pos2,"Bishop",false, this.isWhite);
             mv2.setProtectionMove(pos2);
             legalMoves.add(mv2);
+            revealer=true; //Could lead to a reveal check.
+            xRay=true;
+            revealerLoc = new Coordinate(pos2.file,pos2.rank);
+            pos2 = new Coordinate(pos2.file+1,pos2.rank-1);
+            continue;
+          }
+
+        } else if (xRay && revealer) {
+          if (board[pos2.rank][pos2.file].PieceStatus==this.stat) {
+            break; //TODO: Extend X-ray vision 1 more.
+          }else if (board[pos2.rank][pos2.file].PieceStatus==Status.EMPTY) {
+            pos2 = new Coordinate(pos2.file+1,pos2.rank-1);
+            continue;
+          }else {
+            if (board[pos2.rank][pos2.file].piece.getName().equals("King")) {
+              ArrayList<Coordinate> revealAve = generateAvenue(pos, pos2);
+              mv2.setReveal(revealerLoc, revealAve);
+            } else if (board[pos2.rank][pos2.file].piece.getName().equals("Queen")) {
+              mv2.setRevealQueen(revealerLoc);
+            }
             break;
           }
-        } else {
-          if (board[pos2.rank][pos2.file].PieceStatus==Status.EMPTY) {
+        }
+         else {
+           if (board[pos2.rank][pos2.file].PieceStatus==Status.EMPTY) {
             pos2= new Coordinate(pos2.file+1,pos2.rank-1);
             continue;
             //If there is an enemy piece in the way.
@@ -142,13 +184,11 @@ public class Bishop implements Piece {
               ArrayList<Coordinate> pinAvenue = generateAvenue(pos,pos2);
               //board[pinLoc.rank][pinLoc.file].piece.setPin(pinAvenue,pos);
               mv2.setPin(pinLoc,pinAvenue);
-              break;
-            }else {
-              break;
+            } else if (board[pos2.rank][pos2.file].piece.getName().equals("Queen")) {
+              mv2.setPinQueen(pinLoc);
             }
-          }else {
-            break;
-          }
+             break;
+           }
         }
       }
     }
@@ -156,8 +196,10 @@ public class Bishop implements Piece {
     if (pos.file>0 && pos.rank<7) {
       Coordinate pos3 = new Coordinate(pos.file-1,pos.rank+1);
       Coordinate pinLoc = new Coordinate(-1,-1);
+      Coordinate revealerLoc = new Coordinate(-1,-1);
       Move mv3 = new Move(false);
-      boolean xRay=false;
+      boolean xRay = false;
+      boolean revealer = false;
       while (pos3.file>=0 && pos3.rank<=7) {
         if (!xRay) {
           if (board[pos3.rank][pos3.file].PieceStatus==Status.EMPTY) {
@@ -182,9 +224,29 @@ public class Bishop implements Piece {
             mv3 = new Move(pos,pos3,"Bishop",false, this.isWhite);
             mv3.setProtectionMove(pos3);
             legalMoves.add(mv3);
+            revealer=true; //Could lead to a reveal check.
+            xRay=true;
+            revealerLoc = new Coordinate(pos3.file,pos3.rank);
+            pos3 = new Coordinate(pos3.file-1,pos3.rank+1);
+            continue;
+          }
+        } else if (xRay && revealer) {
+          if (board[pos3.rank][pos3.file].PieceStatus==this.stat) {
+            break; //TODO: Extend X-ray vision 1 more.
+          }else if (board[pos3.rank][pos3.file].PieceStatus==Status.EMPTY) {
+            pos3 = new Coordinate(pos3.file-1,pos3.rank+1);
+            continue;
+          }else {
+            if (board[pos3.rank][pos3.file].piece.getName().equals("King")) {
+              ArrayList<Coordinate> revealAve = generateAvenue(pos, pos3);
+              mv3.setReveal(revealerLoc, revealAve);
+            } else if (board[pos3.rank][pos3.file].piece.getName().equals("Queen")) {
+              mv3.setRevealQueen(revealerLoc);
+            }
             break;
           }
-        }else {
+        }
+        else {
           if (board[pos3.rank][pos3.file].PieceStatus==Status.EMPTY) {
             pos3 = new Coordinate(pos3.file-1, pos3.rank+1);
             continue;
@@ -193,10 +255,10 @@ public class Bishop implements Piece {
               ArrayList<Coordinate> pinAvenue = generateAvenue(pos,pos3);
               //board[pinLoc.rank][pinLoc.file].piece.setPin(pinAvenue,pos);
               mv3.setPin(pinLoc, pinAvenue);
-              break;
-            }else {
-              break;
+            } else if (board[pos3.rank][pos3.file].piece.getName().equals("Queen")) {
+              mv3.setPinQueen(pinLoc);
             }
+            break;
           }else {
             break;
           }
@@ -207,8 +269,10 @@ public class Bishop implements Piece {
     if (pos.file>0 && pos.rank>0) {
       Coordinate pos4 = new Coordinate(pos.file-1,pos.rank-1);
       Coordinate pinLoc = new Coordinate(-1,-1);
+      Coordinate revealerLoc = new Coordinate(-1,-1);
       Move mv4 = new Move(false);
       boolean xRay=false;
+      boolean revealer = false;
       while (pos4.file>=0 && pos4.rank>=0) {
         if (!xRay) {
           if (board[pos4.rank][pos4.file].PieceStatus==Status.EMPTY) {
@@ -233,9 +297,29 @@ public class Bishop implements Piece {
             mv4= new Move(pos,pos4,"Bishop",false, this.isWhite);
             mv4.setProtectionMove(pos4);
             legalMoves.add(mv4);
+            revealer=true; //Could lead to a reveal check.
+            xRay=true;
+            revealerLoc = new Coordinate(pos4.file,pos4.rank);
+            pos4 = new Coordinate(pos4.file-1,pos4.rank-1);
+            continue;
+          }
+        } else if (xRay && revealer) {
+          if (board[pos4.rank][pos4.file].PieceStatus==this.stat) {
+            break; //TODO: Extend X-ray vision 1 more.
+          }else if (board[pos4.rank][pos4.file].PieceStatus==Status.EMPTY) {
+            pos4 = new Coordinate(pos4.file-1,pos4.rank-1);
+            continue;
+          }else {
+            if (board[pos4.rank][pos4.file].piece.getName().equals("King")) {
+              ArrayList<Coordinate> revealAve = generateAvenue(pos, pos4);
+              mv4.setReveal(revealerLoc, revealAve);
+            } else if (board[pos4.rank][pos4.file].piece.getName().equals("Queen")) {
+              mv4.setRevealQueen(revealerLoc);
+            }
             break;
           }
-        }else {
+        }
+        else {
           if (board[pos4.rank][pos4.file].PieceStatus==Status.EMPTY) {
             pos4 = new Coordinate(pos4.file-1, pos4.rank-1);
             continue;
@@ -244,10 +328,10 @@ public class Bishop implements Piece {
               ArrayList<Coordinate> pinAvenue = generateAvenue(pos,pos4);
               //board[pinLoc.rank][pinLoc.file].piece.setPin(pinAvenue,pos);
               mv4.setPin(pinLoc,pinAvenue);
-              break;
-            }else {
-              break;
+            } else if (board[pos4.rank][pos4.file].piece.getName().equals("Queen")) {
+              mv4.setPinQueen(pinLoc);
             }
+            break;
           }else {
             break;
           }
