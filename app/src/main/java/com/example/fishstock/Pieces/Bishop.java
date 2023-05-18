@@ -114,6 +114,9 @@ public class Bishop implements Piece {
             } else if (board[pos1.rank][pos1.file].piece.getName().equals("Queen")) {
               mv1.setPinQueen(pinLoc);
             }
+            break;
+          } else {
+            break;
           }
         }
       }
@@ -185,6 +188,8 @@ public class Bishop implements Piece {
             } else if (board[pos2.rank][pos2.file].piece.getName().equals("Queen")) {
               mv2.setPinQueen(pinLoc);
             }
+             break;
+           } else {
              break;
            }
         }

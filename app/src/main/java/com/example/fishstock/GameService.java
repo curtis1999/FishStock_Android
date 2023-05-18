@@ -685,7 +685,6 @@ public class GameService {
             ChessBoard.board[mv.capturablePiece.getPos().rank][mv.capturablePiece.getPos().file].addAttacker(mv.piece);
             ChessBoard.board[mv.capturablePiece.getPos().rank][mv.capturablePiece.getPos().file].piece.addAttacker(mv.piece);
 
-
           //2.2: If the Piece is currently X-Ray's the King through an adversary piece then set the opponent's piece to pinned
           if (mv.isPin) {
             int pinnedIndex = Board.getIndex(ChessBoard.blackPieces, mv.getPinLoc());
@@ -802,8 +801,9 @@ public class GameService {
         } else if (copyBoard[i][j].PieceStatus.equals(Status.BLACK)) {
           if (copyBoard[i][j].piece.getName().equals("King")) {
             copyBlackPieces.add(0, copyBoard[i][j].piece);
+          } else {
+            copyBlackPieces.add(copyBoard[i][j].piece);
           }
-          copyBlackPieces.add(copyBoard[i][j].piece);
         }
       }
     }

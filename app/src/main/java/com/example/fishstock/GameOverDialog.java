@@ -39,7 +39,7 @@ public class GameOverDialog extends Dialog {
       @Override
       public void onClick(View v) {
         Intent intent = new Intent(getContext(), GameManager.class);
-        intent.putExtra("agentType", "FishStock");
+        intent.putExtra("agentType", adversaryName);
         intent.putExtra("isWhite", !isWhite);
         intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
         // Clear the activity stack and start the game again
@@ -51,7 +51,7 @@ public class GameOverDialog extends Dialog {
       @Override
       public void onClick(View v) {
         Intent intent = new Intent(getContext(), MainActivity.class);
-        intent.putExtra("Result", result); //TODO:
+        intent.putExtra("Result", result);
         intent.putExtra("Adversary", adversaryName);
         intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
         // Clear the activity stack and start the game again

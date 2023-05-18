@@ -22,7 +22,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
   Agent player1;
   Agent adversary;
   Piece selectedPiece;
-  boolean isWhite = true; //TODO;
+  boolean isWhite = true;
   ArrayList<Piece> capturedPiecesWhite = new ArrayList<>();
   ArrayList<Piece> capturedPiecesBlack = new ArrayList<>();
   ArrayList<Move> blacksPotentialMoves = new ArrayList<>();
@@ -121,7 +121,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
             Cell cell = board.board[coord.rank][coord.file];
             //CASE 1: Making a non-capturing move. (They clicked on an empty square with a selected piece.
             if (cell.PieceStatus == Status.EMPTY) {
-              if (selectedPiece != null && isLegalMove(coord, board.board)) {
+              if (selectedPiece != null && isLegalMove(coord, board)) {
                 Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), false, isWhite);
                 move = updateMove(move);
                 if (move.isPromotion) {
@@ -184,7 +184,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
               }
               // CASE 2: Making a capturing move. (Clicked on an adversary piece with a piece selected.
             } else if ((cell.PieceStatus == Status.BLACK && isWhite) || cell.PieceStatus == Status.WHITE && !isWhite) {
-              if (selectedPiece != null && isLegalMove(coord, board.board)) {
+              if (selectedPiece != null && isLegalMove(coord, board)) {
                 Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), true, isWhite);
                 move = updateMove(move);
                 move.setCapture(board.board[coord.rank][coord.file].piece);
@@ -198,7 +198,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
                 if (move.isPromotion) {
                   PromotionDialog promotionDialog = new PromotionDialog(GameManager.this, board, move, isWhite);
                   promotionDialog.setOnPromotionMoveListener(GameManager.this);
-                  promotionDialog.show(); //TODO: MAKE THE MOVE WITHIN HERE!!
+                  promotionDialog.show();
                 } else {
                   GameService.makeMove(board, move, isWhite);
                   GameService.updateBoardMeta(board);
@@ -264,13 +264,15 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
                 selectedPiece = board.board[coord.rank][coord.file].piece;
                 ArrayList<Move> legalMoves = selectedPiece.generateMoves(coord, board.board);
                 for (Move move : GameService.filterMoves(legalMoves)) {
-                  ImageButton button = (ImageButton) getButonFromCoord(move.toCoord, isWhite);
+                  if (isLegalMove(move.toCoord, board)) {
+                    ImageButton button = (ImageButton) getButonFromCoord(move.toCoord, isWhite);
                   if (board.board[move.toCoord.rank][move.toCoord.file].isLight
                       && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.EMPTY) {
                     button.setImageResource(R.drawable.white_empty_selected);
                   } else if (board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.EMPTY) {
                     button.setImageResource(R.drawable.black_empty_selected);
                   }
+                }
                 }
               } else {
                 selectedPiece = null;
@@ -292,7 +294,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
     if (move.piece.getName().equals("King") && Math.abs(move.toCoord.file - move.fromCoord.file) == 2) {
       move.setCastle();
     } else if (move.piece.getName().equals("Pawn") && ((this.isWhite && move.toCoord.rank == 7) || (!this.isWhite && move.toCoord.rank == 0))) {
-      move.setPromotion(new Queen(move.toCoord, move.piece.getColor())); //TODO: ASK THE USER FOR THE PROMOTION CHOICE!!
+      move.setPromotion(new Queen(move.toCoord, move.piece.getColor()));
     } else if (move.piece.getName().equals("Pawn") && Math.abs(move.toCoord.file - move.fromCoord.file) == 1 &&
         board.board[move.toCoord.rank][move.toCoord.file].PieceStatus.equals(Status.EMPTY)) {
       move.setEnPassant();
@@ -405,7 +407,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
     Agent agent;
     switch (agentName) {
       case "Randy":
-        agent = new Randy(AgentType.RANDY, !isWhite); //TODO: ASK USER IF THEY WANT TO PLAY AS WHITE OR BLACK!
+        agent = new Randy(AgentType.RANDY, !isWhite);
         break;
       case "Simple":
         agent = new Simple(AgentType.SIMPLE, !isWhite);
@@ -420,11 +422,41 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
   }
 
 
-  public boolean isLegalMove(Coordinate coord, Cell[][] board) {
+  public boolean isLegalMove(Coordinate coord, Board board) {
     if (selectedPiece == null) {
       return false;
     }
-    List<Move> moves = selectedPiece.generateMoves(selectedPiece.getPos(), board);
+    if ((isWhite && ((King)board.whitePieces.get(0)).isChecked)
+       || (!isWhite && ((King)board.blackPieces.get(0)).isChecked)) {
+      List<Move> checkMoves;
+      if (isWhite) {
+        checkMoves = GameService.generateMovesCheck(board, whitesPotentialMoves, true);
+      } else {
+        checkMoves = GameService.generateMovesCheck(board, blacksPotentialMoves, false);
+      }
+      for (Move move: checkMoves) {
+        if (Coordinate.compareCoords(move.toCoord, coord) && move.piece.getName().equals(selectedPiece.getName())) {
+          return true;
+        }
+      }
+      return false;
+    }
+    if (((King)board.whitePieces.get(0)).isDoubleChecked) {
+      List<Move> doubleCheckMoves;
+      if (isWhite) {
+        doubleCheckMoves = GameService.generateMovesDoubleCheck(board, whitesPotentialMoves, true);
+      } else {
+        doubleCheckMoves = GameService.generateMovesDoubleCheck(board, blacksPotentialMoves, false);
+      }
+      for (Move move: doubleCheckMoves) {
+        if (Coordinate.compareCoords(move.toCoord, coord) && move.piece.getName().equals(selectedPiece.getName())) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    List<Move> moves = GameService.filterMoves(selectedPiece.generateMoves(selectedPiece.getPos(), board.board));
     for (Move move : moves) {
       if (move.toCoord.file == coord.file && move.toCoord.rank == coord.rank) {
         return true;

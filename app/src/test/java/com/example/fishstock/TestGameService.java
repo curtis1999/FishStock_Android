@@ -604,6 +604,7 @@ public class TestGameService {
   Move move16 = new Move(blackKing.getPos(), new Coordinate(3, 6), "King", false, false);
   GameService.makeMove(board, move16, false);
   assertTrue(board.blackPieces.get(1).isPinned());
+  Board.printBoard(board, true); System.out.println("|||||||||||||||||||||||||");
   GameService.updateBoardMeta(board);
   assertTrue(!board.blackPieces.get(1).isPinned());
   Board.printBoard(board, true);
