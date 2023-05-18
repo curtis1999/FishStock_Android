@@ -6,6 +6,43 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".MainActivity">
+
+    <TextView
+        android:id="@+id/numCapturedBlackQueens"
+        android:layout_width="8dp"
+        android:layout_height="17dp"
+        android:text="0"
+        app:layout_constraintBottom_toTopOf="@+id/imageView5"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.31"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="1.01" />
+
+    <TextView
+        android:id="@+id/numCapturedBlackKnights"
+        android:layout_width="8dp"
+        android:layout_height="17dp"
+        android:text="0"
+        app:layout_constraintBottom_toTopOf="@+id/imageView3"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.175"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/welcomeMessage"
+        app:layout_constraintVertical_bias="1.013" />
+
+    <TextView
+        android:id="@+id/numCapturedBlackRooks"
+        android:layout_width="8dp"
+        android:layout_height="17dp"
+        android:text="0"
+        app:layout_constraintBottom_toTopOf="@+id/imageView2"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.103"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/welcomeMessage"
+        app:layout_constraintVertical_bias="1.00" />
+
     <TextView
         android:id="@+id/player1"
         android:layout_width="wrap_content"
@@ -947,28 +984,28 @@
             tools:src="@drawable/empty_light" />
     </GridLayout>
 
-    <ImageView
-        android:id="@+id/imageView3"
-        android:layout_width="25dp"
-        android:layout_height="46dp"
-        app:layout_constraintBottom_toTopOf="@+id/gridlayout"
-        app:layout_constraintEnd_toEndOf="@+id/checkStatusBlack"
-        app:layout_constraintHorizontal_bias="0.282"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/welcomeMessage"
-        app:layout_constraintVertical_bias="0.638"
-        app:srcCompat="@drawable/black_knight" />
-
     <TextView
         android:id="@+id/CapturedPiecesBlack"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
+        android:layout_marginTop="33dp"
         android:text="CapturedPieces"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.025"
+        app:layout_constraintHorizontal_bias="0.057"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <ImageView
+        android:id="@+id/imageView2"
+        android:layout_width="30dp"
+        android:layout_height="44dp"
+        app:layout_constraintBottom_toTopOf="@+id/gridlayout"
+        app:layout_constraintEnd_toEndOf="@+id/player2"
+        app:layout_constraintHorizontal_bias="0.078"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.912"
+        app:srcCompat="@drawable/black_rook" />
 
     <TextView
         android:id="@+id/checkStatusBlack"
@@ -977,57 +1014,80 @@
         android:text=""
         app:layout_constraintBottom_toTopOf="@+id/gridlayout"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toEndOf="@+id/CapturedPiecesBlack"
         app:layout_constraintTop_toBottomOf="@+id/welcomeMessage"
-        app:layout_constraintVertical_bias="0.412" />
-
-    <ImageView
-        android:id="@+id/imageView2"
-        android:layout_width="46dp"
-        android:layout_height="43dp"
-        app:layout_constraintBottom_toTopOf="@+id/gridlayout"
-        app:layout_constraintEnd_toEndOf="@+id/player2"
-        app:layout_constraintHorizontal_bias="0.136"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.651"
-        app:srcCompat="@drawable/black_rook" />
+        app:layout_constraintVertical_bias="0.693" />
 
     <ImageView
         android:id="@+id/imageView"
-        android:layout_width="50dp"
-        android:layout_height="43dp"
+        android:layout_width="34dp"
+        android:layout_height="37dp"
         app:layout_constraintBottom_toTopOf="@+id/gridlayout"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintHorizontal_bias="0.007"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@+id/welcomeMessage"
-        app:layout_constraintVertical_bias="0.643"
+        app:layout_constraintVertical_bias="0.913"
         app:srcCompat="@drawable/black_pawn" />
 
     <ImageView
         android:id="@+id/imageView5"
-        android:layout_width="27dp"
-        android:layout_height="52dp"
+        android:layout_width="21dp"
+        android:layout_height="46dp"
         app:layout_constraintBottom_toTopOf="@+id/gridlayout"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.3"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@+id/welcomeMessage"
-        app:layout_constraintVertical_bias="0.626"
+        app:layout_constraintVertical_bias="0.909"
         app:srcCompat="@drawable/black_queen" />
 
     <ImageView
         android:id="@+id/imageView4"
-        android:layout_width="41dp"
-        android:layout_height="43dp"
+        android:layout_width="28dp"
+        android:layout_height="45dp"
         app:layout_constraintBottom_toTopOf="@+id/gridlayout"
         app:layout_constraintEnd_toEndOf="@+id/checkStatusBlack"
-        app:layout_constraintHorizontal_bias="0.381"
+        app:layout_constraintHorizontal_bias="0.229"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@+id/welcomeMessage"
-        app:layout_constraintVertical_bias="0.628"
+        app:layout_constraintVertical_bias="0.91"
         app:srcCompat="@drawable/black_bishop" />
+
+    <ImageView
+        android:id="@+id/imageView3"
+        android:layout_width="25dp"
+        android:layout_height="46dp"
+        app:layout_constraintBottom_toTopOf="@+id/gridlayout"
+        app:layout_constraintEnd_toEndOf="@+id/checkStatusBlack"
+        app:layout_constraintHorizontal_bias="0.163"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/welcomeMessage"
+        app:layout_constraintVertical_bias="0.909"
+        app:srcCompat="@drawable/black_knight" />
+
+    <TextView
+        android:id="@+id/numCapturedBlackPawns"
+        android:layout_width="14dp"
+        android:layout_height="17dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginBottom="6dp"
+        android:text="0"
+        app:layout_constraintBottom_toTopOf="@+id/imageView"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <TextView
+        android:id="@+id/numCapturedBlackBishops"
+        android:layout_width="8dp"
+        android:layout_height="17dp"
+        android:text="0"
+        app:layout_constraintBottom_toTopOf="@+id/imageView4"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.244"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/welcomeMessage"
+        app:layout_constraintVertical_bias="1.00" />
 
     <ImageView
         android:id="@+id/imageView9"
@@ -1082,7 +1142,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="32dp"
-        android:text="CapturedPiecess"
+        android:text="CapturedPiece's"
         app:layout_constraintBottom_toTopOf="@+id/draw"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"

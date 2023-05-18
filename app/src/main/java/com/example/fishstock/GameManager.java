@@ -69,8 +69,11 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
     ImageButton promotionRook = findViewById(R.id.promotionRook);
     ImageButton promotionBishop = findViewById(R.id.promotionBishop);
     ImageButton promotionKnight = findViewById(R.id.promotionKnight);
-    TextView capturedWhite = findViewById(R.id.CapturedPiecesWhite);
-    TextView capturedBlack = findViewById(R.id.CapturedPiecesBlack);
+    TextView numCapturedBlackPawns = findViewById(R.id.numCapturedBlackPawns);
+    TextView numCapturedBlackRooks = findViewById(R.id.numCapturedBlackRooks);
+    TextView numCapturedBlackKnights = findViewById(R.id.numCapturedBlackKnights);
+    TextView numCapturedBlackBishops = findViewById(R.id.numCapturedBlackBishops);
+    TextView numCapturedBlackQueens = findViewById(R.id.numCapturedBlackQueens);
     TextView checkStatusBlack = findViewById(R.id.checkStatusBlack);
     TextView checkStatusWhite = findViewById(R.id.checkStatusWhite);
     TextView message = findViewById(R.id.welcomeMessage);
@@ -95,7 +98,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
         Move adversaryMove = adversary.getMove(board, whitesPotentialMoves, blacksPotentialMoves);
         if (adversaryMove.isCapture) {
             capturedPiecesBlack.add(adversaryMove.capturablePiece);
-            capturedBlack.append(": " + adversaryMove.capturablePiece.getName());
+            //TODO: Add to white's captured piece lists.
         }
         GameService.makeMove(board, adversaryMove, true);
         GameService.updateBoardMeta(board);
@@ -156,10 +159,21 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
                     if (adversaryMove.isCapture) {
                       if (isWhite) {
                         capturedPiecesWhite.add(adversaryMove.capturablePiece);
-                        capturedWhite.append(": " + adversaryMove.capturablePiece.getName());
+                        //TODO: capturedWhite.append(": " + adversaryMove.capturablePiece.getName());
                       } else {
                         capturedPiecesBlack.add(adversaryMove.capturablePiece);
-                        capturedBlack.append(": " + adversaryMove.capturablePiece.getName());
+                        switch(adversaryMove.capturablePiece.getName()) {
+                          case "Pawn":
+                            numCapturedBlackPawns.setText( Integer.valueOf((String) numCapturedBlackPawns.getText()) + 1);
+                          case "Rook":
+                            numCapturedBlackRooks.setText( Integer.valueOf((String) numCapturedBlackRooks.getText()) + 1);
+                          case "Knight":
+                            numCapturedBlackKnights.setText( Integer.valueOf((String) numCapturedBlackKnights.getText()) + 1);
+                          case "Bishop":
+                            numCapturedBlackBishops.setText( Integer.valueOf((String) numCapturedBlackBishops.getText()) + 1);
+                          case "Queen":
+                            numCapturedBlackQueens.setText( Integer.valueOf((String) numCapturedBlackQueens.getText()) + 1);
+                        }
                       }
                     }
                     GameService.makeMove(board, adversaryMove, !isWhite);
@@ -190,10 +204,26 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
                 move.setCapture(board.board[coord.rank][coord.file].piece);
                 if (isWhite) {
                   capturedPiecesBlack.add(board.board[coord.rank][coord.file].piece);
-                  capturedBlack.append(": " + board.board[coord.rank][coord.file].piece.getName());
+                  switch(board.board[coord.rank][coord.file].piece.getName()) {
+                    case "Pawn":
+                      numCapturedBlackPawns.setText(String.valueOf(Integer.valueOf((String) numCapturedBlackPawns.getText()) + 1));
+                      break;
+                    case "Rook":
+                      numCapturedBlackRooks.setText( String.valueOf(Integer.valueOf((String) numCapturedBlackRooks.getText()) + 1));
+                      break;
+                    case "Knight":
+                      numCapturedBlackKnights.setText( String.valueOf(Integer.valueOf((String) numCapturedBlackKnights.getText()) + 1));
+                      break;
+                    case "Bishop":
+                      numCapturedBlackBishops.setText( String.valueOf(Integer.valueOf((String) numCapturedBlackBishops.getText()) + 1));
+                      break;
+                    case "Queen":
+                      numCapturedBlackQueens.setText( String.valueOf(Integer.valueOf((String) numCapturedBlackQueens.getText()) + 1));
+                      break;
+                  }
                 } else {
                   capturedPiecesWhite.add(board.board[coord.rank][coord.file].piece);
-                  capturedWhite.append(": " + board.board[coord.rank][coord.file].piece.getName());
+                  //TODO:capturedWhite.append(": " + board.board[coord.rank][coord.file].piece.getName());
                 }
                 if (move.isPromotion) {
                   PromotionDialog promotionDialog = new PromotionDialog(GameManager.this, board, move, isWhite);
@@ -225,7 +255,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
                       adversaryMove = adversary.getMove(board, whitesPotentialMoves, playersMoves);
                     }if (adversaryMove.isCapture) {
                         capturedPiecesWhite.add(adversaryMove.capturablePiece);
-                        capturedWhite.append(": " + adversaryMove.capturablePiece.getName());
+                       //TODO: capturedWhite.append(": " + adversaryMove.capturablePiece.getName());
                       }
                     GameService.makeMove(board, adversaryMove, !isWhite);
                     GameService.updateBoardMeta(board);
