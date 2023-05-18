@@ -74,6 +74,11 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
     TextView numCapturedBlackKnights = findViewById(R.id.numCapturedBlackKnights);
     TextView numCapturedBlackBishops = findViewById(R.id.numCapturedBlackBishops);
     TextView numCapturedBlackQueens = findViewById(R.id.numCapturedBlackQueens);
+    TextView numCapturedWhitePawns = findViewById(R.id.numCapturedWhitePawns);
+    TextView numCapturedWhiteRooks = findViewById(R.id.numCapturedWhiteRooks);
+    TextView numCapturedWhiteKnights = findViewById(R.id.numCapturedWhiteKnights);
+    TextView numCapturedWhiteBishops = findViewById(R.id.numCapturedWhiteBishops);
+    TextView numCapturedWhiteQueens = findViewById(R.id.numCapturedWhiteQueens);
     TextView checkStatusBlack = findViewById(R.id.checkStatusBlack);
     TextView checkStatusWhite = findViewById(R.id.checkStatusWhite);
     TextView message = findViewById(R.id.welcomeMessage);
@@ -159,20 +164,41 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
                     if (adversaryMove.isCapture) {
                       if (isWhite) {
                         capturedPiecesWhite.add(adversaryMove.capturablePiece);
-                        //TODO: capturedWhite.append(": " + adversaryMove.capturablePiece.getName());
+                        switch(adversaryMove.capturablePiece.getName()) {
+                          case "Pawn":
+                            numCapturedWhitePawns.setText( String.valueOf(Integer.valueOf((String) numCapturedWhitePawns.getText()) + 1));
+                            break;
+                          case "Rook":
+                            numCapturedWhiteRooks.setText( String.valueOf(Integer.valueOf((String) numCapturedWhiteRooks.getText()) + 1));
+                            break;
+                          case "Knight":
+                            numCapturedWhiteKnights.setText( String.valueOf(Integer.valueOf((String) numCapturedWhiteKnights.getText()) + 1));
+                            break;
+                          case "Bishop":
+                            numCapturedWhiteBishops.setText( String.valueOf(Integer.valueOf((String) numCapturedWhiteBishops.getText()) + 1));
+                            break;
+                          case "Queen":
+                            numCapturedWhiteQueens.setText( String.valueOf(Integer.valueOf((String) numCapturedWhiteQueens.getText()) + 1));
+                            break;
+                        }
                       } else {
                         capturedPiecesBlack.add(adversaryMove.capturablePiece);
                         switch(adversaryMove.capturablePiece.getName()) {
                           case "Pawn":
-                            numCapturedBlackPawns.setText( Integer.valueOf((String) numCapturedBlackPawns.getText()) + 1);
+                            numCapturedBlackPawns.setText( String.valueOf(Integer.valueOf((String) numCapturedBlackPawns.getText()) + 1));
+                            break;
                           case "Rook":
-                            numCapturedBlackRooks.setText( Integer.valueOf((String) numCapturedBlackRooks.getText()) + 1);
+                            numCapturedBlackRooks.setText( String.valueOf(Integer.valueOf((String) numCapturedBlackRooks.getText()) + 1));
+                            break;
                           case "Knight":
-                            numCapturedBlackKnights.setText( Integer.valueOf((String) numCapturedBlackKnights.getText()) + 1);
+                            numCapturedBlackKnights.setText( String.valueOf(Integer.valueOf((String) numCapturedBlackKnights.getText()) + 1));
+                              break;
                           case "Bishop":
-                            numCapturedBlackBishops.setText( Integer.valueOf((String) numCapturedBlackBishops.getText()) + 1);
+                            numCapturedBlackBishops.setText( String.valueOf(Integer.valueOf((String) numCapturedBlackBishops.getText()) + 1));
+                            break;
                           case "Queen":
-                            numCapturedBlackQueens.setText( Integer.valueOf((String) numCapturedBlackQueens.getText()) + 1);
+                            numCapturedBlackQueens.setText( String.valueOf(Integer.valueOf((String) numCapturedBlackQueens.getText()) + 1));
+                            break;
                         }
                       }
                     }
@@ -223,7 +249,23 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
                   }
                 } else {
                   capturedPiecesWhite.add(board.board[coord.rank][coord.file].piece);
-                  //TODO:capturedWhite.append(": " + board.board[coord.rank][coord.file].piece.getName());
+                  switch(board.board[coord.rank][coord.file].piece.getName()) {
+                    case "Pawn":
+                      numCapturedWhitePawns.setText(String.valueOf(Integer.valueOf((String) numCapturedWhitePawns.getText()) + 1));
+                      break;
+                    case "Rook":
+                      numCapturedWhiteRooks.setText( String.valueOf(Integer.valueOf((String) numCapturedWhiteRooks.getText()) + 1));
+                      break;
+                    case "Knight":
+                      numCapturedWhiteKnights.setText( String.valueOf(Integer.valueOf((String) numCapturedWhiteKnights.getText()) + 1));
+                      break;
+                    case "Bishop":
+                      numCapturedWhiteBishops.setText( String.valueOf(Integer.valueOf((String) numCapturedWhiteBishops.getText()) + 1));
+                      break;
+                    case "Queen":
+                      numCapturedWhiteQueens.setText( String.valueOf(Integer.valueOf((String) numCapturedWhiteQueens.getText()) + 1));
+                      break;
+                  }
                 }
                 if (move.isPromotion) {
                   PromotionDialog promotionDialog = new PromotionDialog(GameManager.this, board, move, isWhite);
@@ -255,7 +297,24 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
                       adversaryMove = adversary.getMove(board, whitesPotentialMoves, playersMoves);
                     }if (adversaryMove.isCapture) {
                         capturedPiecesWhite.add(adversaryMove.capturablePiece);
-                       //TODO: capturedWhite.append(": " + adversaryMove.capturablePiece.getName());
+                        //TODO: DO AN ISWHITE CHECK!!
+                      switch(board.board[coord.rank][coord.file].piece.getName()) {
+                        case "Pawn":
+                          numCapturedWhitePawns.setText(String.valueOf(Integer.valueOf((String) numCapturedWhitePawns.getText()) + 1));
+                          break;
+                        case "Rook":
+                          numCapturedWhiteRooks.setText( String.valueOf(Integer.valueOf((String) numCapturedWhiteRooks.getText()) + 1));
+                          break;
+                        case "Knight":
+                          numCapturedWhiteKnights.setText( String.valueOf(Integer.valueOf((String) numCapturedWhiteKnights.getText()) + 1));
+                          break;
+                        case "Bishop":
+                          numCapturedWhiteBishops.setText( String.valueOf(Integer.valueOf((String) numCapturedWhiteBishops.getText()) + 1));
+                          break;
+                        case "Queen":
+                          numCapturedWhiteQueens.setText( String.valueOf(Integer.valueOf((String) numCapturedWhiteQueens.getText()) + 1));
+                          break;
+                      }
                       }
                     GameService.makeMove(board, adversaryMove, !isWhite);
                     GameService.updateBoardMeta(board);
