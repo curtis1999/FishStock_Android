@@ -295,27 +295,47 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
                       adversaryMove = adversary.getMove(board, blacksPotentialMoves, playersMoves);
                     } else {
                       adversaryMove = adversary.getMove(board, whitesPotentialMoves, playersMoves);
-                    }if (adversaryMove.isCapture) {
+                    } if (adversaryMove.isCapture) {
+                      if (isWhite) {
                         capturedPiecesWhite.add(adversaryMove.capturablePiece);
-                        //TODO: DO AN ISWHITE CHECK!!
-                      switch(board.board[coord.rank][coord.file].piece.getName()) {
-                        case "Pawn":
-                          numCapturedWhitePawns.setText(String.valueOf(Integer.valueOf((String) numCapturedWhitePawns.getText()) + 1));
-                          break;
-                        case "Rook":
-                          numCapturedWhiteRooks.setText( String.valueOf(Integer.valueOf((String) numCapturedWhiteRooks.getText()) + 1));
-                          break;
-                        case "Knight":
-                          numCapturedWhiteKnights.setText( String.valueOf(Integer.valueOf((String) numCapturedWhiteKnights.getText()) + 1));
-                          break;
-                        case "Bishop":
-                          numCapturedWhiteBishops.setText( String.valueOf(Integer.valueOf((String) numCapturedWhiteBishops.getText()) + 1));
-                          break;
-                        case "Queen":
-                          numCapturedWhiteQueens.setText( String.valueOf(Integer.valueOf((String) numCapturedWhiteQueens.getText()) + 1));
-                          break;
+                        switch(board.board[coord.rank][coord.file].piece.getName()) {
+                          case "Pawn":
+                            numCapturedWhitePawns.setText(String.valueOf(Integer.valueOf((String) numCapturedWhitePawns.getText()) + 1));
+                            break;
+                          case "Rook":
+                            numCapturedWhiteRooks.setText( String.valueOf(Integer.valueOf((String) numCapturedWhiteRooks.getText()) + 1));
+                            break;
+                          case "Knight":
+                            numCapturedWhiteKnights.setText( String.valueOf(Integer.valueOf((String) numCapturedWhiteKnights.getText()) + 1));
+                            break;
+                          case "Bishop":
+                            numCapturedWhiteBishops.setText( String.valueOf(Integer.valueOf((String) numCapturedWhiteBishops.getText()) + 1));
+                            break;
+                          case "Queen":
+                            numCapturedWhiteQueens.setText( String.valueOf(Integer.valueOf((String) numCapturedWhiteQueens.getText()) + 1));
+                            break;
+                        }
+                      } else {
+                        capturedPiecesBlack.add(adversaryMove.capturablePiece);
+                        switch(board.board[coord.rank][coord.file].piece.getName()) {
+                          case "Pawn":
+                            numCapturedBlackPawns.setText(String.valueOf(Integer.valueOf((String) numCapturedBlackPawns.getText()) + 1));
+                            break;
+                          case "Rook":
+                            numCapturedBlackRooks.setText( String.valueOf(Integer.valueOf((String) numCapturedBlackRooks.getText()) + 1));
+                            break;
+                          case "Knight":
+                            numCapturedBlackKnights.setText( String.valueOf(Integer.valueOf((String) numCapturedBlackKnights.getText()) + 1));
+                            break;
+                          case "Bishop":
+                            numCapturedBlackBishops.setText( String.valueOf(Integer.valueOf((String) numCapturedBlackBishops.getText()) + 1));
+                            break;
+                          case "Queen":
+                            numCapturedBlackQueens.setText( String.valueOf(Integer.valueOf((String) numCapturedBlackQueens.getText()) + 1));
+                            break;
+                        }
                       }
-                      }
+                    }
                     GameService.makeMove(board, adversaryMove, !isWhite);
                     GameService.updateBoardMeta(board);
                     if (isWhite) {

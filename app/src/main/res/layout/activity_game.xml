@@ -8,7 +8,7 @@
     tools:context=".MainActivity">
 
     <TextView
-        android:id="@+id/numCapturedWhiteQueens"
+        android:id="@+id/numCapturedBlackQueens"
         android:layout_width="8dp"
         android:layout_height="17dp"
         android:text="0"
@@ -20,7 +20,7 @@
         app:layout_constraintVertical_bias="1.0" />
 
     <TextView
-        android:id="@+id/numCapturedWhiteBishops"
+        android:id="@+id/numCapturedBlackBishops"
         android:layout_width="8dp"
         android:layout_height="17dp"
         android:text="0"
@@ -32,7 +32,7 @@
         app:layout_constraintVertical_bias="0.975" />
 
     <TextView
-        android:id="@+id/numCapturedBlackQueens"
+        android:id="@+id/numCapturedWhiteQueens"
         android:layout_width="8dp"
         android:layout_height="17dp"
         android:text="0"
@@ -44,7 +44,7 @@
         app:layout_constraintVertical_bias="1.01" />
 
     <TextView
-        android:id="@+id/numCapturedBlackKnights"
+        android:id="@+id/numCapturedWhiteKnights"
         android:layout_width="8dp"
         android:layout_height="17dp"
         android:text="0"
@@ -56,7 +56,7 @@
         app:layout_constraintVertical_bias="1.013" />
 
     <TextView
-        android:id="@+id/numCapturedBlackRooks"
+        android:id="@+id/numCapturedWhiteRooks"
         android:layout_width="8dp"
         android:layout_height="17dp"
         android:text="0"
@@ -1029,7 +1029,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.912"
-        app:srcCompat="@drawable/black_rook" />
+        app:srcCompat="@drawable/whie_rook" />
 
     <TextView
         android:id="@+id/checkStatusBlack"
@@ -1052,8 +1052,8 @@
         app:layout_constraintHorizontal_bias="0.007"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@+id/welcomeMessage"
-        app:layout_constraintVertical_bias="0.913"
-        app:srcCompat="@drawable/black_pawn" />
+        app:layout_constraintVertical_bias="0.90"
+        app:srcCompat="@drawable/white_pawn" />
 
     <ImageView
         android:id="@+id/imageView5"
@@ -1065,7 +1065,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@+id/welcomeMessage"
         app:layout_constraintVertical_bias="0.909"
-        app:srcCompat="@drawable/black_queen" />
+        app:srcCompat="@drawable/white_queen" />
 
     <ImageView
         android:id="@+id/imageView4"
@@ -1077,7 +1077,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@+id/welcomeMessage"
         app:layout_constraintVertical_bias="0.91"
-        app:srcCompat="@drawable/black_bishop" />
+        app:srcCompat="@drawable/white_bishop" />
 
     <ImageView
         android:id="@+id/imageView3"
@@ -1089,10 +1089,10 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@+id/welcomeMessage"
         app:layout_constraintVertical_bias="0.909"
-        app:srcCompat="@drawable/black_knight" />
+        app:srcCompat="@drawable/white_knight" />
 
     <TextView
-        android:id="@+id/numCapturedBlackPawns"
+        android:id="@+id/numCapturedWhitePawns"
         android:layout_width="14dp"
         android:layout_height="17dp"
         android:layout_marginStart="16dp"
@@ -1102,7 +1102,7 @@
         app:layout_constraintStart_toStartOf="parent" />
 
     <TextView
-        android:id="@+id/numCapturedBlackBishops"
+        android:id="@+id/numCapturedWhiteBishops"
         android:layout_width="8dp"
         android:layout_height="17dp"
         android:text="0"
@@ -1123,7 +1123,7 @@
         app:layout_constraintStart_toStartOf="@+id/CapturedPiecesWhite"
         app:layout_constraintTop_toBottomOf="@+id/gridlayout"
         app:layout_constraintVertical_bias="0.492"
-        app:srcCompat="@drawable/white_knight" />
+        app:srcCompat="@drawable/black_knight" />
 
     <ImageView
         android:id="@+id/imageView8"
@@ -1135,7 +1135,7 @@
         app:layout_constraintStart_toStartOf="@+id/CapturedPiecesWhite"
         app:layout_constraintTop_toBottomOf="@+id/gridlayout"
         app:layout_constraintVertical_bias="0.497"
-        app:srcCompat="@drawable/white_bishop" />
+        app:srcCompat="@drawable/black_bishop" />
 
     <ImageView
         android:id="@+id/imageView6"
@@ -1147,7 +1147,7 @@
         app:layout_constraintStart_toStartOf="@+id/CapturedPiecesWhite"
         app:layout_constraintTop_toBottomOf="@+id/gridlayout"
         app:layout_constraintVertical_bias="0.497"
-        app:srcCompat="@drawable/white_pawn" />
+        app:srcCompat="@drawable/black_pawn" />
 
     <ImageView
         android:id="@+id/imageView7"
@@ -1158,8 +1158,8 @@
         app:layout_constraintHorizontal_bias="0.086"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/gridlayout"
-        app:layout_constraintVertical_bias="0.507"
-        app:srcCompat="@drawable/whie_rook" />
+        app:layout_constraintVertical_bias="0.490"
+        app:srcCompat="@drawable/black_rook" />
 
     <TextView
         android:id="@+id/CapturedPiecesWhite"
@@ -1181,11 +1181,11 @@
         app:layout_constraintHorizontal_bias="0.325"
         app:layout_constraintStart_toStartOf="@+id/CapturedPiecesWhite"
         app:layout_constraintTop_toBottomOf="@+id/gridlayout"
-        app:layout_constraintVertical_bias="0.492"
-        app:srcCompat="@drawable/white_queen" />
+        app:layout_constraintVertical_bias="0.485"
+        app:srcCompat="@drawable/black_queen" />
 
     <TextView
-        android:id="@+id/numCapturedWhitePawns"
+        android:id="@+id/numCapturedBlackPawns"
         android:layout_width="8dp"
         android:layout_height="17dp"
         android:text="0"
@@ -1197,7 +1197,7 @@
         app:layout_constraintVertical_bias="1.0" />
 
     <TextView
-        android:id="@+id/numCapturedWhiteRooks"
+        android:id="@+id/numCapturedBlackRooks"
         android:layout_width="8dp"
         android:layout_height="17dp"
         android:text="0"
@@ -1209,7 +1209,7 @@
         app:layout_constraintVertical_bias="1.0" />
 
     <TextView
-        android:id="@+id/numCapturedWhiteKnights"
+        android:id="@+id/numCapturedBlackKnights"
         android:layout_width="8dp"
         android:layout_height="17dp"
         android:text="0"
