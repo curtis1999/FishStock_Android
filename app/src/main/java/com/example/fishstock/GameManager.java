@@ -1,8 +1,11 @@
 package com.example.fishstock;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 import android.content.Intent;
+import android.graphics.Color;
+import android.graphics.PorterDuff;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -103,7 +106,6 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
         Move adversaryMove = adversary.getMove(board, whitesPotentialMoves, blacksPotentialMoves);
         if (adversaryMove.isCapture) {
             capturedPiecesBlack.add(adversaryMove.capturablePiece);
-            //TODO: Add to white's captured piece lists.
         }
         GameService.makeMove(board, adversaryMove, true);
         GameService.updateBoardMeta(board);
@@ -366,6 +368,9 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
                     button.setImageResource(R.drawable.empty_light);
                   } else if (board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.EMPTY) {
                     button.setImageResource(R.drawable.empty_dark);
+                  } else if ((isWhite && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.BLACK) ||
+                      (!isWhite && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.WHITE)){
+                    button.setColorFilter(null);
                   }
                 }
               }
@@ -380,6 +385,10 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
                     button.setImageResource(R.drawable.white_empty_selected);
                   } else if (board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.EMPTY) {
                     button.setImageResource(R.drawable.black_empty_selected);
+                  }
+                  else if ((isWhite && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.BLACK) ||
+                      (!isWhite && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.WHITE)){
+                    button.setColorFilter(Color.RED, PorterDuff.Mode.OVERLAY);
                   }
                 }
                 }
@@ -631,83 +640,109 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
     if (cell.isEmpty) {
       if (cell.isLight) {
         cellImageView.setImageResource(R.drawable.empty_light);
+        cellImageView.setColorFilter(null);
       } else {
         cellImageView.setImageResource(R.drawable.empty_dark);
+        cellImageView.setColorFilter(null);
       }
     } else if (cell.isWhite) {
       if (cell.isKing) {
         if (cell.isLight) {
           cellImageView.setImageResource(R.drawable.white_king_on_light);
+          cellImageView.setColorFilter(null);
         } else {
           cellImageView.setImageResource(R.drawable.white_king_on_dark);
+          cellImageView.setColorFilter(null);
         }
       } else if (cell.isQueen) {
         if (cell.isLight) {
           cellImageView.setImageResource(R.drawable.white_queen_on_light);
+          cellImageView.setColorFilter(null);
         } else {
           cellImageView.setImageResource(R.drawable.white_queen_on_dark);
+          cellImageView.setColorFilter(null);
         }
       } else if (cell.isBishop) {
         if (cell.isLight) {
           cellImageView.setImageResource(R.drawable.white_bishop_on_light);
+          cellImageView.setColorFilter(null);
         } else {
           cellImageView.setImageResource(R.drawable.white_bishop_on_dark);
+          cellImageView.setColorFilter(null);
         }
       } else if (cell.isKnight) {
         if (cell.isLight) {
           cellImageView.setImageResource(R.drawable.white_knight_on_light);
+          cellImageView.setColorFilter(null);
         } else {
           cellImageView.setImageResource(R.drawable.white_knight_on_dark);
+          cellImageView.setColorFilter(null);
         }
       } else if (cell.isRook) {
         if (cell.isLight) {
           cellImageView.setImageResource(R.drawable.white_rook_on_light);
+          cellImageView.setColorFilter(null);
         } else {
           cellImageView.setImageResource(R.drawable.white_rook_on_dark);
+          cellImageView.setColorFilter(null);
         }
       } else if (cell.isPawn) {
         if (cell.isLight) {
           cellImageView.setImageResource(R.drawable.white_pawn_on_light);
+          cellImageView.setColorFilter(null);
         } else {
           cellImageView.setImageResource(R.drawable.white_pawn_on_dark);
+          cellImageView.setColorFilter(null);
         }
       }
     } else {
       if (cell.isKing) {
         if (cell.isLight) {
           cellImageView.setImageResource(R.drawable.black_king_on_light);
+          cellImageView.setColorFilter(null);
         } else {
           cellImageView.setImageResource(R.drawable.black_king_on_dark);
+          cellImageView.setColorFilter(null);
         }
       } else if (cell.isQueen) {
         if (cell.isLight) {
           cellImageView.setImageResource(R.drawable.black_queen_on_light);
+          cellImageView.setColorFilter(null);
         } else {
           cellImageView.setImageResource(R.drawable.black_queen_on_dark);
+          cellImageView.setColorFilter(null);
         }
       } else if (cell.isBishop) {
         if (cell.isLight) {
           cellImageView.setImageResource(R.drawable.black_bishop_on_light);
+          cellImageView.setColorFilter(null);
         } else {
           cellImageView.setImageResource(R.drawable.black_bishop_on_dark);
+          cellImageView.setColorFilter(null);
         }
       } else if (cell.isKnight) {
         if (cell.isLight) {
           cellImageView.setImageResource(R.drawable.black_knight_on_light);
+          cellImageView.setColorFilter(null);
         } else {
           cellImageView.setImageResource(R.drawable.black_knight_on_dark);
+          cellImageView.setColorFilter(null);
         }
       } else if (cell.isRook) {
         if (cell.isLight) {
           cellImageView.setImageResource(R.drawable.black_rook_on_light);
+          cellImageView.setColorFilter(null);
         } else {
           cellImageView.setImageResource(R.drawable.black_rook_on_dark);
+          cellImageView.setColorFilter(null);
         }
       } else if (cell.isPawn) {
         if (cell.isLight) {
           cellImageView.setImageResource(R.drawable.black_pawn_on_light);
+          cellImageView.setColorFilter(null);
         } else {
           cellImageView.setImageResource(R.drawable.black_pawn_on_dark);
+          cellImageView.setColorFilter(null);
         }
       }
     }
