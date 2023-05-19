@@ -362,6 +362,8 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
             } else {
               if (selectedPiece != null) {
                 for (Move move : GameService.filterMoves(selectedPiece.generateMoves(selectedPiece.getPos(), board.board))) {
+                  ImageButton curPieceButton = (ImageButton) getButonFromCoord(selectedPiece.getPos(), isWhite);
+                  curPieceButton.setColorFilter(null);
                   ImageButton button = (ImageButton) getButonFromCoord(move.toCoord, isWhite);
                   if (board.board[move.toCoord.rank][move.toCoord.file].isLight
                       && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.EMPTY) {
@@ -376,6 +378,8 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
               }
               if (!cell.piece.equals(selectedPiece)) {
                 selectedPiece = board.board[coord.rank][coord.file].piece;
+                ImageButton curPiece = (ImageButton) getButonFromCoord(selectedPiece.getPos(), isWhite);
+                curPiece.setColorFilter(Color.YELLOW, PorterDuff.Mode.OVERLAY);
                 ArrayList<Move> legalMoves = selectedPiece.generateMoves(coord, board.board);
                 for (Move move : GameService.filterMoves(legalMoves)) {
                   if (isLegalMove(move.toCoord, board)) {
@@ -393,6 +397,8 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
                 }
                 }
               } else {
+                ImageButton curPieceButton = (ImageButton) getButonFromCoord(selectedPiece.getPos(), isWhite);
+                curPieceButton.setColorFilter(null);
                 selectedPiece = null;
               }
             }
