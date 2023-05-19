@@ -43,6 +43,7 @@ public class GameService {
     ChessBoard.board[curMove.toCoord.rank][curMove.toCoord.file].empty();
     ChessBoard.board[curMove.toCoord.rank][curMove.toCoord.file].putPiece(curMove.piece);
     ChessBoard.board[curMove.fromCoord.rank][curMove.fromCoord.file].empty();
+
     if (isWhite) {
       ChessBoard.whitePieces.get(pieceIndex).setPos(curMove.toCoord);
       ((King)ChessBoard.whitePieces.get(0)).unCheck(); //NOTE: I UNCHECKED THE KING'S HERE
@@ -156,6 +157,7 @@ public class GameService {
         ((King) ChessBoard.blackPieces.get(pieceIndex)).moved();
       }
     }
+    curMove.piece.setPossibleMoves(curMove.piece.generateMoves(curMove.piece.getPos(), ChessBoard.board));
   }
 
   /**

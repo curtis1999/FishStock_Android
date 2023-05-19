@@ -196,6 +196,151 @@ public class Knight implements Piece {
     return legalMoves;
   }
 
+  public double evaluate(Board board) {
+    double eval = 3.05;
+    Cell curCell = board.board[curPos.rank][curPos.file];
+    //EVAL 1: IF THE PIECE IS PINNED CUT THE EVAL IN HALF
+    if (isPinned) {
+      eval *= 0.5;
+    }
+    //EVAL 2: IF THE PIECE IS A REVEAL CHECKER, INCREASE THE EVAL BY 2.
+    if (isRevealChecker) {
+      eval *= 1.5;
+    }
+    if (isPinnedToQueen) {
+      eval *= 2.0/3.0;
+    }
+    if (isRevealQueenChecker) {
+      eval *= 1.25;
+    }
+    //EVAL 3: INCREASE OR DECREASE BASED ON THE NUMBER OF POSSIBLE MOVES. (GRIM ON RIM and happy in center)
+    double numMoves = GameService.filterMoves(possibleMoves).size();
+    eval += (numMoves/8.0) - (5.0/8.0);
+
+    //EVAL 4: IF THE PIECE IS AN OUTPOST, THEN INCREASE BY 1.
+    if (isOutPost(board.board)) {
+      eval += 1;
+    }
+
+    //EVAL 4: Piece safety.
+    eval *= evaluateSafety(curCell);
+    //NOTE: SET AN UPPER LIMIT TO AVOID UNNECESSARY PIECE SACRIFICES.
+    if (eval > 5) { eval = 5; }
+    return eval;
+  }
+
+  public boolean isOutPost(Cell[][] board) {
+    if (curPos.rank < 2 || curPos.rank > 5) {
+      return false;
+    }
+    if (isWhite) {
+      if (Board.countAlongFile(board, "Pawn", curPos.rank + 1, curPos.file + 1, false) == 0
+          && Board.countAlongFile(board, "Pawn", curPos.rank + 1, curPos.file - 1, false) == 0) {
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      if (Board.countAlongFile(board, "Pawn", curPos.rank - 1, curPos.file + 1, true) == 0
+          && Board.countAlongFile(board, "Pawn", curPos.rank - 1, curPos.file - 1, true) == 0) {
+        return true;
+      } else {
+        return false;
+      }
+    }
+  }
+
+  //Analyses the list of protectors and defenders and returns a scaling factor for the eval funtion.
+  public double evaluateSafety(Cell curCell) {
+    ArrayList<Piece> attackers;
+    ArrayList<Piece> protectors;
+    if (isWhite) {
+      attackers = curCell.blackAttackers;
+      protectors = curCell.whiteAttackers;
+    } else {
+      attackers = curCell.whiteAttackers;
+      protectors = curCell.blackAttackers;
+    }
+    //A hanging piece which can be taken.
+    if (attackers.size() > 0 && protectors.size() == 0) {
+      return -1;
+    }
+    //If it can be captured by a pawn -> bad eval.
+    if (countByType(attackers, "Pawn") > 0) {
+      if (attackers.size() > protectors.size()) {
+        return -1;
+      } else {
+        return -0.5;
+      }
+    }
+    if (countByType(protectors, "Pawn") == 2) {
+      return 1.25;
+    }
+    if (countByType(protectors, "Pawn") == 1){
+      return 1.15;
+    }
+    //No pawns attacking or defending.
+    if (countByType(protectors, "Knight") > countByType(attackers, "knight")) {
+      if (attackers.size() > protectors.size()) {
+        //Could give up a rook for two minor pieces.
+        if (countByType(attackers, "Rook") > 0) {
+          return 0.8;
+        } else {
+          return 1.1;
+        }
+      } else {
+        return 1.15;
+      }
+    }
+    return 1.0;
+  }
+
+  public static int countByType(ArrayList<Piece> pieces, String pieceName) {
+    int num = 0;
+    for (Piece piece : pieces) {
+      if (piece.getName().equals(pieceName)) {
+        num++;
+      }
+    }
+    return num;
+  }
+  //NOTE: pieceName of Knight for both Bishops and knights.
+  public boolean removeByName(List<Piece> pieces, String pieceName) {
+    for (Piece piece: pieces) {
+      if (piece.getName().equals(pieceName) || piece.getName().equals("Bishop") && pieceName.equals("Knight")) {
+        pieces.remove(piece);
+        return true;
+      }
+    }
+    return false;
+  }
+  @Override
+  public void setQueenPin() {
+    this.isPinnedToQueen = true;
+  }
+  public void setRevealQueenChecker() {
+    this.isRevealQueenChecker = true;
+  }
+  @Override
+  public void setReveal() {
+    this.isRevealChecker = true;
+  }
+
+  @Override
+  public void setRevealQueen() {
+    this.isRevealQueenChecker = true;
+  }
+  public boolean isRevealChecker(){
+    return this.isRevealChecker;
+  }
+
+  public boolean isRevealQueenChecker(){
+    return this.isRevealQueenChecker;
+  }
+  public boolean isPinnedToQueen() {
+    return this.isPinnedToQueen;
+  }
+
   public boolean getColor() {
     return this.isWhite;
   }
@@ -310,139 +455,5 @@ public class Knight implements Piece {
   }
   public char getSymbol() {
     return 'N';
-  }
-  public double evaluate(Board board) {
-    double eval = 3.05;
-    //EVAL 1: IF THE PIECE IS PINNED CUT THE EVAL IN HALF
-    if (isPinned) {
-      eval *= 0.5;
-    }
-    //EVAL 2: IF THE PIECE IS A REVEAL CHECKER, INCREASE THE EVAL BY 2.
-    if (isRevealChecker) {
-      eval *= 1.5;
-    }
-    if (isPinnedToQueen) {
-      eval *= 2.0/3.0;
-    }
-    if (isRevealQueenChecker) {
-      eval *= 1.25;
-    }
-    //EVAL 3: INCREASE OR DECREASE BASED ON THE NUMBER OF POSSIBLE MOVES. (GRIM ON RIM and happy in center)
-    double numMoves = GameService.filterMoves(possibleMoves).size();
-    eval += (numMoves/8.0) - (5.0/8.0);
-
-    //EVAL 4: IF THE PIECE IS AN OUTPOST, THEN INCREASE BY 1.
-    if (isOutPost(board.board)) {
-      eval += 1;
-    }
-
-    //EVAL 4: Piece safety.
-    eval *= evaluateSafety();
-    //NOTE: SET AN UPPER LIMIT TO AVOID UNNECESSARY PIECE SACRIFICES.
-    if (eval > 5) { eval = 5; }
-    return eval;
-  }
-
-  public boolean isOutPost(Cell[][] board) {
-    if (curPos.rank < 2 || curPos.rank > 5) {
-      return false;
-    }
-    if (isWhite) {
-      if (Board.countAlongFile(board, "Pawn", curPos.rank + 1, curPos.file + 1, false) == 0
-          && Board.countAlongFile(board, "Pawn", curPos.rank + 1, curPos.file - 1, false) == 0) {
-        return true;
-      } else {
-        return false;
-      }
-    } else {
-      if (Board.countAlongFile(board, "Pawn", curPos.rank - 1, curPos.file + 1, true) == 0
-          && Board.countAlongFile(board, "Pawn", curPos.rank - 1, curPos.file - 1, true) == 0) {
-        return true;
-      } else {
-        return false;
-      }
-    }
-  }
-
-  //Analyses the list of protectors and defenders and returns a scaling factor for the eval funtion.
-  public double evaluateSafety() {
-    //A hanging piece which can be taken.
-    if (attackers.size() > 0 && protectors.size() == 0) {
-      return 0;
-    }
-    //If it can be captured by a pawn -> bad eval.
-    if (countByType(attackers, "Pawn") > 0) {
-      if (attackers.size() > protectors.size()) {
-        return 0;
-      } else {
-        return 0.1;
-      }
-    }
-    if (countByType(protectors, "Pawn") == 2) {
-      return 1.25;
-    }
-    if (countByType(protectors, "Pawn") == 1){
-      return 1.15;
-    }
-    //No pawns attacking or defending.
-    if (countByType(protectors, "Knight") > countByType(attackers, "knight")) {
-      if (attackers.size() > protectors.size()) {
-        //Could give up a rook for two minor pieces.
-        if (countByType(attackers, "Rook") > 0) {
-          return 0.8;
-        } else {
-          return 1.1;
-        }
-      } else {
-        return 1.15;
-      }
-    }
-    return 1.0;
-  }
-
-  public static int countByType(ArrayList<Piece> pieces, String pieceName) {
-    int num = 0;
-    for (Piece piece : pieces) {
-      if (piece.getName().equals(pieceName)) {
-        num++;
-      }
-    }
-    return num;
-  }
-  //NOTE: pieceName of Knight for both Bishops and knights.
-  public boolean removeByName(List<Piece> pieces, String pieceName) {
-    for (Piece piece: pieces) {
-      if (piece.getName().equals(pieceName) || piece.getName().equals("Bishop") && pieceName.equals("Knight")) {
-        pieces.remove(piece);
-        return true;
-      }
-    }
-    return false;
-  }
-  @Override
-  public void setQueenPin() {
-    this.isPinnedToQueen = true;
-  }
-  public void setRevealQueenChecker() {
-    this.isRevealQueenChecker = true;
-  }
-  @Override
-  public void setReveal() {
-    this.isRevealChecker = true;
-  }
-
-  @Override
-  public void setRevealQueen() {
-    this.isRevealQueenChecker = true;
-  }
-  public boolean isRevealChecker(){
-    return this.isRevealChecker;
-  }
-
-  public boolean isRevealQueenChecker(){
-    return this.isRevealQueenChecker;
-  }
-  public boolean isPinnedToQueen() {
-    return this.isPinnedToQueen;
   }
 }

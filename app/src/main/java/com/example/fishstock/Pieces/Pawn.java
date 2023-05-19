@@ -483,6 +483,156 @@ public class Pawn implements Piece {
     return legalMoves;
   }
 
+  public double evaluate(Board board) {
+    double eval = 1;
+    Cell curCell = board.board[curPos.rank][curPos.file];
+    if (isPinned) {
+      eval *= 0.5;
+    }
+    if (isRevealChecker) {
+      eval *= 1.5;
+    }
+    if (isPinnedToQueen) {
+      eval *= 2.0/3.0;
+    }
+    if (isRevealQueenChecker) {
+      eval *= 1.25;
+    }
+    //EVAL 1: REMOVES 0.2 if doubled and 0.4 if trippled.
+    eval -= 0.2 * (Board.countAlongFile(board.board, "Pawn", 1, curPos.file, isWhite) - 1);
+
+    //EVAL 2: Checks if it is passed
+    if (isPassed(board.board)) {
+      eval *= 1.75;
+    }
+    //Eval 3: If the pawn is a central square.
+    if (Cell.isCentralSquare(curPos)) {
+      eval += 0.25;
+    }
+    //EVAL 4: Check it's safety
+    eval *= evaluateSafety(curCell);
+    return eval;
+  }
+
+  public boolean isPassed(Cell[][] board) {
+    if (curPos.file > 0 && curPos.file < 7) {
+      if (Board.countAlongFile(board, "Pawn", curPos.rank, curPos.file, !isWhite) == 0
+          && Board.countAlongFile(board, "Pawn",curPos.rank, curPos.file + 1, !isWhite) == 0
+          && Board.countAlongFile(board, "Pawn", curPos.rank, curPos.file - 1, !isWhite) == 0) {
+        return true;
+      } else if (curPos.file == 0) {
+        if (Board.countAlongFile(board, "Pawn", curPos.rank, curPos.file, !isWhite) == 0
+            && Board.countAlongFile(board, "Pawn",curPos.rank, curPos.file + 1, !isWhite) == 0) {
+          return true;
+        }
+      } else if (curPos.file == 7) {
+        if (Board.countAlongFile(board, "Pawn", curPos.rank, curPos.file, !isWhite) == 0
+            && Board.countAlongFile(board, "Pawn", curPos.rank,curPos.file - 1, !isWhite) == 0) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  //Analyses the list of protectors and defenders and returns a scaling factor for the eval funtion.
+  public double evaluateSafety(Cell curCell) {
+    ArrayList<Piece> attackers;
+    ArrayList<Piece> protectors;
+    if (isWhite) {
+      attackers = curCell.blackAttackers;
+      protectors = curCell.whiteAttackers;
+    } else {
+      attackers = curCell.whiteAttackers;
+      protectors = curCell.blackAttackers;
+    }
+    double eval = 1.0;
+    //PART 1: Cancel all matches from both lists.
+    ArrayList<Piece> copyProtectors = (ArrayList<Piece>) protectors.clone();
+    ArrayList<Piece> copyAttackers = (ArrayList<Piece>) attackers.clone();
+    for (Piece piece : copyAttackers) {
+      if (piece.getName().equals("Pawn")) {
+        removeByName(copyProtectors, "Pawn");
+      } else if (piece.getName().equals("Knight") || piece.getName().equals("Bishop")) {
+        removeByName(copyProtectors, "Knight");
+      } else if (piece.getName().equals("Rook")) {
+        removeByName(copyProtectors, "Rook");
+      } else if (piece.getName().equals("Queen")) {
+        removeByName(copyProtectors, "Queen");
+      } else {
+        removeByName(copyProtectors, "King");
+      }
+      if (copyProtectors.size() == 0) {
+        break;
+      }
+    }
+    //PART 2: evaluate the results.
+    //2.1.1 BEST CASE: PROTECTED BY 2 PAWNS. (without any pawn attackers.
+    if (countByType(copyProtectors, "Pawn") == 2) {
+      return 1.25 + 0.1 * (protectors.size() - (1+attackers.size()));
+    }
+    //2.1.2WORST CASE: ATTACKED BY 2 PAWNS. (Without any pawn defenders
+    if (countByType(copyAttackers, "Pawn") == 2) {
+      return 0.6 - 0.1 * (attackers.size() - (1+ protectors.size()));
+    }
+
+    //2.2.1: Protected by one pawn
+    if (countByType(copyProtectors, "Pawn") == 1) {
+      return 1.15 + 0.1 * (protectors.size() - (1+attackers.size()));
+    }
+    //2.2.2: attacked by one pawn
+    if (countByType(copyAttackers, "Pawn") == 1) {
+      return 0.8 - 0.1 * (attackers.size() - (1+ protectors.size()));
+    }
+    //2.3.1: Protected by a bishop/knight
+    if (countByType(copyProtectors, "Knight") + countByType(copyProtectors, "Bishop") > 0) {
+      return 1.1 + 0.1 * (protectors.size() - (attackers.size()));
+    }
+    //2.3.1: Protected by a bishop/knight
+    if (countByType(copyAttackers, "Knight") + countByType(copyAttackers, "Bishop") > 0) {
+      return 0.9 - 0.1 * (protectors.size() - (attackers.size()));
+    }
+    return 1.0;
+  }
+
+  public static int countByType(ArrayList<Piece> pieces, String pieceName) {
+    int num = 0;
+    for (Piece piece : pieces) {
+      if (piece.getName().equals(pieceName)) {
+        num++;
+      }
+    }
+    return num;
+  }
+//NOTE: pieceName of Knight for both Bishops and knights.
+  public boolean removeByName(List<Piece> pieces, String pieceName) {
+    for (Piece piece: pieces) {
+      if (piece.getName().equals(pieceName) || piece.getName().equals("Bishop") && pieceName.equals("Knight")) {
+        pieces.remove(piece);
+        return true;
+      }
+    }
+    return false;
+  }
+  @Override
+  public void setQueenPin() {
+    this.isPinnedToQueen = true;
+  }
+  public void setRevealQueenChecker() {
+    this.isRevealQueenChecker = true;
+  }
+  @Override
+  public void setReveal() {
+    this.isRevealChecker = true;
+  }
+
+  @Override
+  public void setRevealQueen() {
+    this.isRevealQueenChecker = true;
+  }
+
+  public boolean isRevealQueenChecker(){
+    return this.isRevealQueenChecker;
+  }
   public String getName() {
     return "Pawn";
   }
@@ -651,148 +801,5 @@ public class Pawn implements Piece {
 
   public char getSymbol() {
     return 'P';
-  }
-
-  public double evaluate(Board board) {
-    double eval = 1;
-    Cell curCell = board.board[curPos.rank][curPos.file];
-    if (isPinned) {
-      eval *= 0.5;
-    }
-    if (isRevealChecker) {
-      eval *= 1.5;
-    }
-    if (isPinnedToQueen) {
-      eval *= 2.0/3.0;
-    }
-    if (isRevealQueenChecker) {
-      eval *= 1.25;
-    }
-    //EVAL 1: REMOVES 0.2 if doubled and 0.4 if trippled.
-    eval -= 0.2 * (Board.countAlongFile(board.board, "Pawn", 1, curPos.file, isWhite) - 1);
-
-    //EVAL 2: Checks if it is passed
-    if (isPassed(board.board)) {
-      eval *= 1.75;
-    }
-    //Eval 3: If the pawn is a central square.
-    if (Cell.isCentralSquare(curPos)) {
-      eval += 0.25;
-    }
-    //EVAL 4: Check it's safety
-    eval *= evaluateSafety();
-    return eval;
-  }
-
-  public boolean isPassed(Cell[][] board) {
-    if (curPos.file > 0 && curPos.file < 7) {
-      if (Board.countAlongFile(board, "Pawn", curPos.rank, curPos.file, !isWhite) == 0
-          && Board.countAlongFile(board, "Pawn",curPos.rank, curPos.file + 1, !isWhite) == 0
-          && Board.countAlongFile(board, "Pawn", curPos.rank, curPos.file - 1, !isWhite) == 0) {
-        return true;
-      } else if (curPos.file == 0) {
-        if (Board.countAlongFile(board, "Pawn", curPos.rank, curPos.file, !isWhite) == 0
-            && Board.countAlongFile(board, "Pawn",curPos.rank, curPos.file + 1, !isWhite) == 0) {
-          return true;
-        }
-      } else if (curPos.file == 7) {
-        if (Board.countAlongFile(board, "Pawn", curPos.rank, curPos.file, !isWhite) == 0
-            && Board.countAlongFile(board, "Pawn", curPos.rank,curPos.file - 1, !isWhite) == 0) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-//TODO: IMPROVE THIS.
-  //Analyses the list of protectors and defenders and returns a scaling factor for the eval funtion.
-  public double evaluateSafety() {
-    double eval = 1.0;
-    //PART 1: Cancel all matches from both lists.
-    ArrayList<Piece> copyProtectors = (ArrayList<Piece>) protectors.clone();
-    ArrayList<Piece> copyAttackers = (ArrayList<Piece>) attackers.clone();
-    for (Piece piece : copyAttackers) {
-      if (piece.getName().equals("Pawn")) {
-        removeByName(copyProtectors, "Pawn");
-      } else if (piece.getName().equals("Knight") || piece.getName().equals("Bishop")) {
-        removeByName(copyProtectors, "Knight");
-      } else if (piece.getName().equals("Rook")) {
-        removeByName(copyProtectors, "Rook");
-      } else if (piece.getName().equals("Queen")) {
-        removeByName(copyProtectors, "Queen");
-      } else {
-        removeByName(copyProtectors, "King");
-      }
-      if (copyProtectors.size() == 0) {
-        break;
-      }
-    }
-    //PART 2: evaluate the results.
-    //2.1.1 BEST CASE: PROTECTED BY 2 PAWNS. (without any pawn attackers.
-    if (countByType(copyProtectors, "Pawn") == 2) {
-      return 1.25 + 0.1 * (protectors.size() - (1+attackers.size()));
-    }
-    //2.1.2WORST CASE: ATTACKED BY 2 PAWNS. (Without any pawn defenders
-    if (countByType(copyAttackers, "Pawn") == 2) {
-      return 0.6 - 0.1 * (attackers.size() - (1+ protectors.size()));
-    }
-
-    //2.2.1: Protected by one pawn
-    if (countByType(copyProtectors, "Pawn") == 1) {
-      return 1.15 + 0.1 * (protectors.size() - (1+attackers.size()));
-    }
-    //2.2.2: attacked by one pawn
-    if (countByType(copyAttackers, "Pawn") == 1) {
-      return 0.8 - 0.1 * (attackers.size() - (1+ protectors.size()));
-    }
-    //2.3.1: Protected by a bishop/knight
-    if (countByType(copyProtectors, "Knight") + countByType(copyProtectors, "Bishop") > 0) {
-      return 1.1 + 0.1 * (protectors.size() - (attackers.size()));
-    }
-    //2.3.1: Protected by a bishop/knight
-    if (countByType(copyAttackers, "Knight") + countByType(copyAttackers, "Bishop") > 0) {
-      return 0.9 - 0.1 * (protectors.size() - (attackers.size()));
-    }
-    return 1.0;
-  }
-
-  public static int countByType(ArrayList<Piece> pieces, String pieceName) {
-    int num = 0;
-    for (Piece piece : pieces) {
-      if (piece.getName().equals(pieceName)) {
-        num++;
-      }
-    }
-    return num;
-  }
-//NOTE: pieceName of Knight for both Bishops and knights.
-  public boolean removeByName(List<Piece> pieces, String pieceName) {
-    for (Piece piece: pieces) {
-      if (piece.getName().equals(pieceName) || piece.getName().equals("Bishop") && pieceName.equals("Knight")) {
-        pieces.remove(piece);
-        return true;
-      }
-    }
-    return false;
-  }
-  @Override
-  public void setQueenPin() {
-    this.isPinnedToQueen = true;
-  }
-  public void setRevealQueenChecker() {
-    this.isRevealQueenChecker = true;
-  }
-  @Override
-  public void setReveal() {
-    this.isRevealChecker = true;
-  }
-
-  @Override
-  public void setRevealQueen() {
-    this.isRevealQueenChecker = true;
-  }
-
-  public boolean isRevealQueenChecker(){
-    return this.isRevealQueenChecker;
   }
 }
