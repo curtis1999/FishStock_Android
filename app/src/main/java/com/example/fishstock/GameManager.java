@@ -407,6 +407,11 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
     } else if (move.piece.getName().equals("Pawn") && Math.abs(move.toCoord.file - move.fromCoord.file) == 1 &&
         board.board[move.toCoord.rank][move.toCoord.file].PieceStatus.equals(Status.EMPTY)) {
       move.setEnPassant();
+      if (isWhite) {
+        move.setCapture(board.board[move.toCoord.rank - 1][move.toCoord.file].piece);
+      } else {
+        move.setCapture(board.board[move.toCoord.rank + 1][move.toCoord.file].piece);
+      }
     }
     return move;
   }
