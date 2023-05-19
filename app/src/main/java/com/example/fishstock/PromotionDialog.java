@@ -36,7 +36,12 @@ public class PromotionDialog extends Dialog {
     promotionRook = findViewById(R.id.promotionRook);
     promotionBishop = findViewById(R.id.promotionBishop);
     promotionKnight = findViewById(R.id.promotionKnight);
-
+    if (!isWhite) {
+      promotionQueen.setImageResource(R.drawable.promotion_queen_black);
+      promotionRook.setImageResource(R.drawable.promotion_rook_black);
+      promotionBishop.setImageResource(R.drawable.promotion_bishop_black);
+      promotionKnight.setImageResource(R.drawable.promotion_knight_black);
+    }
     promotionQueen.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View v) {
