@@ -405,6 +405,33 @@ public class Rook implements Piece {
     return pinAvenue;
   }
 
+  @Override
+  public double evaluateSimple(Board board) {
+    double eval = 5.63;
+    if (isPinned) {
+      eval *= 0.5;
+    }
+    if (isRevealChecker) {
+      eval *= 1.5;
+    }
+    if (isPinnedToQueen) {
+      eval *= 2.0/3.0;
+    }
+    if (isRevealQueenChecker) {
+      eval *= 1.25;
+    }
+    double numMoves = GameService.filterMoves(possibleMoves).size();
+    eval += (numMoves/14.0) - (5.0/14.0);
+    //Eval 1: DOUBLED ROOK.
+    if (Board.countAlongFile(board.board, "Rook", 0, curPos.file, isWhite) == 2) {
+      eval += 1;
+    }
+    if ((isWhite && curPos.rank == 6) || (!isWhite && curPos.rank == 1)) {
+      eval += 0.5;
+    }
+    return eval;
+  }
+
   public double evaluate(Board board) {
     Cell curCell = board.board[curPos.rank][curPos.file];
     double eval = 5.63;

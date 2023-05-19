@@ -93,11 +93,10 @@ public class Simple extends Agent {
       ourPieceQuality += piece.evaluate(board);
     }
     double theirPieceQuality = 0.0;
-    /*
+
     for (Piece piece : adversaryPieces) {
-      theirPieceQuality += piece.evaluate(board);
+      theirPieceQuality += piece.evaluateSimple(board);
     }
-     */
     double ourPawnStructure = evaluatePawnStructure(board, isWhite);
     double theirPawnStructure = evaluatePawnStructure(board, !isWhite);
     double ourKingSafety = evaluateKingSafety(board, isWhite);

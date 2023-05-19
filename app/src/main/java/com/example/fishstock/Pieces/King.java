@@ -486,6 +486,11 @@ public class King implements Piece {
     return 0;
   }
 
+  @Override
+  public double evaluateSimple(Board board) {
+    return 0;
+  }
+
   public ArrayList<Coordinate> getCheckingAve2() {
     return this.checkAve2;
   }

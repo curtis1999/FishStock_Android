@@ -483,6 +483,11 @@ public class Pawn implements Piece {
     return legalMoves;
   }
 
+  @Override
+  public double evaluateSimple(Board board) {
+    return 1.0;
+  }
+
   public double evaluate(Board board) {
     double eval = 1;
     Cell curCell = board.board[curPos.rank][curPos.file];

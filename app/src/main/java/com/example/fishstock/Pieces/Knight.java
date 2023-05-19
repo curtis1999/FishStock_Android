@@ -195,7 +195,33 @@ public class Knight implements Piece {
     this.possibleMoves=legalMoves;
     return legalMoves;
   }
+  public double evaluateSimple(Board board) {
+    double eval = 3.05;
+    Cell curCell = board.board[curPos.rank][curPos.file];
+    //EVAL 1: IF THE PIECE IS PINNED CUT THE EVAL IN HALF
+    if (isPinned) {
+      eval *= 0.5;
+    }
+    //EVAL 2: IF THE PIECE IS A REVEAL CHECKER, INCREASE THE EVAL BY 2.
+    if (isRevealChecker) {
+      eval *= 1.5;
+    }
+    if (isPinnedToQueen) {
+      eval *= 2.0/3.0;
+    }
+    if (isRevealQueenChecker) {
+      eval *= 1.25;
+    }
+    //EVAL 3: INCREASE OR DECREASE BASED ON THE NUMBER OF POSSIBLE MOVES. (GRIM ON RIM and happy in center)
+    double numMoves = GameService.filterMoves(possibleMoves).size();
+    eval += (numMoves/8.0) - (5.0/8.0);
 
+    //EVAL 4: IF THE PIECE IS AN OUTPOST, THEN INCREASE BY 1.
+    if (isOutPost(board.board)) {
+      eval += 1;
+    }
+    return eval;
+  }
   public double evaluate(Board board) {
     double eval = 3.05;
     Cell curCell = board.board[curPos.rank][curPos.file];

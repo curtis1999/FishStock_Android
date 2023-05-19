@@ -37,4 +37,5 @@ public interface Piece {
   public char getSymbol();
 
   double evaluate(Board board);
+  double evaluateSimple(Board board);
 }

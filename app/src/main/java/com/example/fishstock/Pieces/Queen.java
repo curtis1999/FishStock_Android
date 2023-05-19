@@ -616,7 +616,13 @@ public class Queen implements Piece {
   public char getSymbol() {
     return 'Q';
   }
-  public double evaluate( Board board) {
+
+  @Override
+  public double evaluateSimple(Board board) {
+    return 9.5;
+  }
+
+  public double evaluate(Board board) {
     Cell curCell = board.board[coord.rank][coord.file];
     double eval = 9.5;
     if (isPinned) {
