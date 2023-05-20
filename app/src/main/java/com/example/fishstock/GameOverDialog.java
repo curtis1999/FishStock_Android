@@ -30,7 +30,7 @@ public class GameOverDialog extends Dialog {
     if (result == 0) {
       gameResult.setText("DRAW :|");
     } else if(result == 1) {
-      gameResult.setText("YOU WIN!! :)"); //TODO: MAKE ISWHITE VARIABLE
+      gameResult.setText("YOU WIN!! :)");
     } else {
       gameResult.setText("YOU LOSE  :(");
     }

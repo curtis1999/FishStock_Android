@@ -157,14 +157,13 @@
     <include
         android:id="@+id/game_over_layout"
         layout="@layout/dialog_game_over"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="376dp"
+        android:layout_height="354dp"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="@+id/draw"
-        app:layout_constraintEnd_toEndOf="@+id/checkStatusBlack"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/welcomeMessage"
-        app:layout_constraintVertical_bias="0.15" />
+        app:layout_constraintEnd_toEndOf="@+id/gridlayout"
+        app:layout_constraintStart_toStartOf="@+id/gridlayout"
+        app:layout_constraintTop_toTopOf="@+id/welcomeMessage" />
 
     <GridLayout
         android:id="@+id/gridlayout"

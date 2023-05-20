@@ -385,6 +385,12 @@ public class GameService {
                 break;
               }
             }
+            for (Coordinate coord : checkingAve2){
+              if (mv.toCoord.rank == coord.rank && mv.toCoord.file == coord.file) {
+                inCheckingAve = true;
+                break;
+              }
+            }
             if (!inCheckingAve) {
               possibleMovesCheck.add(mv);
             }

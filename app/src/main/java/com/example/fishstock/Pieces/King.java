@@ -6,6 +6,7 @@ import com.example.fishstock.Coordinate;
 import com.example.fishstock.Move;
 import com.example.fishstock.Status;
 import java.util.ArrayList;
+import java.util.List;
 
 public class King implements Piece {
   Coordinate coord;
@@ -331,6 +332,9 @@ public class King implements Piece {
     this.possibleMoves=possibleMoves;
     return possibleMoves;
   }
+  public double evaluateSafety(Board board) {
+    return 0.0;
+  }
 
   public boolean getColor() {
     return this.isWhite;
@@ -483,12 +487,24 @@ public class King implements Piece {
   }
 
   public double evaluate(Board board) {
-    return 0;
+    if (isDoubleChecked) {
+      return -5.0;
+    } else if (isChecked) {
+      return -2.5;
+    } else {
+      return 0.0;
+    }
   }
 
   @Override
   public double evaluateSimple(Board board) {
-    return 0;
+    if (isDoubleChecked) {
+      return -5.0;
+    } else if (isChecked) {
+      return -2.5;
+    } else {
+      return 0.0;
+    }
   }
 
   public ArrayList<Coordinate> getCheckingAve2() {

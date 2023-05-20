@@ -3,6 +3,7 @@ package com.example.fishstock.Agents;
 import com.example.fishstock.Board;
 import com.example.fishstock.Cell;
 import com.example.fishstock.Coordinate;
+import com.example.fishstock.Game;
 import com.example.fishstock.GameService;
 import com.example.fishstock.Move;
 import com.example.fishstock.Pieces.*;
@@ -84,6 +85,18 @@ public class Simple extends Agent {
         isCheck = true;
       }
     }
+    /* TODO: ADD MATE IN 1 CHECK.
+    for (Move move : theirNextMoves) {
+      if (move.isCheck) {
+        Board copyBoard = GameService.copyBoard(board);
+        GameService.makeMove(copyBoard, move, isWhite);
+        GameService.updateBoardMeta(copyBoard);
+        ArrayList<Move> possibleMoves = GameService.generateMoves(board, isWhite);
+        if (GameService.generateMovesCheck(board, possibleMoves, isWhite).size() == 0);
+      }
+    }
+
+     */
 
     double ourPieceQuality = 0.0;
     List<Piece> ourPieces =  getPiecesFromBoard(board.board, isWhite);
@@ -122,19 +135,18 @@ public class Simple extends Agent {
     return Pieces;
   }
   public double evaluateKingSafety(Board board, boolean isWhite) {
-    return 1.0;
+    King king;
+    if (isWhite) {
+      king = (King)board.whitePieces.get(0);
+    } else {
+      king = (King)board.blackPieces.get(0);
+    }
+    return king.evaluateSafety(board);
   }
   public double evaluatePawnStructure(Board board, boolean isWhite) {
     return 1.0;
   }
 
-  public static boolean isOutPost(Piece p, Cell[][] board) {
-    return false;
-  }
-
-  public static boolean isLongDiagonal(Piece p) {
-    return false;
-  }
 
   public String getName() {
     return "Simple";

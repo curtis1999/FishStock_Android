@@ -110,6 +110,7 @@ public class TestGameService {
     board = new Board(whitePieces, blackPieces);
     game = new Game(board, AgentType.RANDY, AgentType.RANDY);
   }
+
   public void initCheck() {
     whiteKing = new King(new Coordinate(0,0), true);
     whitePawn1 = new Pawn(new Coordinate(0,1), true);
@@ -130,7 +131,22 @@ public class TestGameService {
     board = new Board(whitePieces, blackPieces);
     game = new Game(board, AgentType.RANDY, AgentType.RANDY);
   }
+  public void initDoubleCheck(){
+    whiteKing = new King(new Coordinate(0,0), true);
+    whiteBishop1 = new Bishop(new Coordinate(4, 3), true);
+    whitePieces.add(whiteKing);
+    whitePieces.add(whiteBishop1);
 
+    //BLACK PIECES
+    blackKing = new King(new Coordinate(3,7), false);
+    blackRook1 = new Rook (new Coordinate(2, 2), false);
+    blackBishop1 = new Bishop (new Coordinate(4, 4), false);
+    blackPieces.add(blackKing);
+    blackPieces.add(blackBishop1);
+    blackPieces.add(blackRook1);
+    board = new Board(whitePieces, blackPieces);
+    game = new Game(board, AgentType.RANDY, AgentType.RANDY);
+  }
   public void initOpposition() {
     whiteKing = new King(new Coordinate(3, 3), true);
     whiteRook1 = new Rook(new Coordinate(7, 5), true);
@@ -188,23 +204,6 @@ public class TestGameService {
     board = new Board(whitePieces, blackPieces);
     game = new Game(board, AgentType.RANDY, AgentType.RANDY);
   }
-  @Test
-  public void testCastle3(){
-    initCastle2();
-    GameService.updateBoardMeta(board);
-    Board.printBoard(board, true);
-    List<Move> kingMoves = board.blackPieces.get(0).generateMoves(board.blackPieces.get(0).getPos(), board.board);
-    assertEquals(5, kingMoves.size());
-
-    Move rookMove = new Move(whiteRook1.getPos(), new Coordinate(0,7), "Rook", false, true);
-    GameService.makeMove(board, rookMove, true);
-    GameService.updateBoardMeta(board);
-    ArrayList<Move> rawKingMoves = board.blackPieces.get(0).generateMoves(board.blackPieces.get(0).getPos(), board.board);
-    kingMoves = GameService.generateMovesDoubleCheck(board, rawKingMoves, false);
-    Board.printBoard(board, true);
-    assertEquals(3, kingMoves.size());
-  }
-
 
   @Test
   public void testChecks() throws CloneNotSupportedException {
@@ -222,7 +221,22 @@ public class TestGameService {
     List<Move> whitesMoves = GameService.generateMoves(board, true);
     whitesMoves = GameService.generateMovesCheck(board, (ArrayList<Move>) whitesMoves, true);
     assertEquals(1, whitesMoves.size());
+  }
 
+  @Test
+  public void testDoubleCheck() throws CloneNotSupportedException {
+    initDoubleCheck();
+    GameService.updateBoardMeta(board);
+    Board.printBoard(board, true);
+    assertEquals(false, ((King)board.whitePieces.get(0)).isDoubleChecked);
+    //Test 1: Giving a check with ROok
+    Move move1 = new Move(blackRook1.getPos(), new Coordinate(2,0), "Rook", false, false);
+    GameService.makeMove(board, move1, false);
+    GameService.updateBoardMeta(board);
+    assertEquals(true, whiteKing.isDoubleChecked);
+    List<Move> whitesMoves = GameService.generateMoves(board, true);
+    whitesMoves = GameService.generateMovesDoubleCheck(board, (ArrayList<Move>) whitesMoves, true);
+    assertEquals(1, whitesMoves.size());
   }
   @Test
   public void testPromotion() throws CloneNotSupportedException {
@@ -356,6 +370,23 @@ public class TestGameService {
   }
 
   @Test
+  public void testCastle3(){
+    initCastle2();
+    GameService.updateBoardMeta(board);
+    Board.printBoard(board, true);
+    List<Move> kingMoves = board.blackPieces.get(0).generateMoves(board.blackPieces.get(0).getPos(), board.board);
+    assertEquals(5, kingMoves.size());
+
+    Move rookMove = new Move(whiteRook1.getPos(), new Coordinate(0,7), "Rook", false, true);
+    GameService.makeMove(board, rookMove, true);
+    GameService.updateBoardMeta(board);
+    ArrayList<Move> rawKingMoves = board.blackPieces.get(0).generateMoves(board.blackPieces.get(0).getPos(), board.board);
+    kingMoves = GameService.generateMovesDoubleCheck(board, rawKingMoves, false);
+    Board.printBoard(board, true);
+    assertEquals(3, kingMoves.size());
+  }
+
+  @Test
   public void testEnPassant() throws CloneNotSupportedException {
     init2();
     Board.printBoard(board, true);
@@ -432,7 +463,6 @@ public class TestGameService {
     blacksMoves = GameService.generateMovesCheck(board, blacksMoves, false);
     assertEquals(1, blacksMoves.size());
     Board.printBoard(board, true); System.out.println("|||||||||||||||||||||||||");
-
 
   }
 @Test
@@ -646,7 +676,6 @@ public class TestGameService {
     assertEquals(true, GameService.isDeadPosition(board.whitePieces, board.blackPieces));
   }
 
-  //TODO:
   @Test
   public void testDrawByRepetition() {
     List<Board> boardStates = new ArrayList<>();
@@ -704,9 +733,7 @@ public class TestGameService {
     GameService.updateBoardMeta(board);
     boardStates.add(GameService.copyBoard(board));
     Board.printBoard(board, true); System.out.println("|||||||||||||||||||||||||");
-    //TODO: FIX THIS!
-    //assertEquals(true, GameService.isRepetition(boardStates, board));
-
+    assertEquals(true, GameService.isRepetition(boardStates, board));
   }
 
 }
