@@ -31,6 +31,7 @@ public class King implements Piece {
   ArrayList<Coordinate> checkAve2 = new ArrayList<>();
   boolean isPinnedToQueen;
   boolean isRevealQueenChecker;
+  public ArrayList<Piece> xRayingPieces = new ArrayList<>();
 
 
 
@@ -334,8 +335,13 @@ public class King implements Piece {
     return possibleMoves;
   }
   public double evaluateSafety(Board board) {
+    double a = 1;
+    double b = 1;
+    double c = 1;
+    double openFactor;
+    double moveFactor;
+    double xRayFactor;
     boolean isOnOpenFile = false;
-    boolean isOnSemiOpenFile = false;
     boolean isOnOpenDiagonalUp = false;
     boolean isOnOpenDiagonalDown = false;
     if (Board.countAlongFile(board.board, "Pawn", isWhite, coord.rank, coord.file, isWhite) == 0) {
@@ -347,39 +353,30 @@ public class King implements Piece {
     if (Board.countAlongDiagonal(board.board, "Pawn", coord, false, isWhite) == 0) {
       isOnOpenDiagonalDown = true;
     }
-    int numMoves = GameService.filterMoves(possibleMoves).size();
-    if (!isOnOpenFile && !isOnOpenDiagonalDown && !isOnOpenDiagonalUp && numMoves > 2) {
-      return 1; //Maximally 'safe'.
+    if (!isOnOpenFile && !isOnOpenDiagonalDown && !isOnOpenDiagonalUp) {
+      openFactor = 1;
     }
-    else if (numMoves < 2) {
-      if (!isOnOpenFile && !isOnOpenDiagonalDown && !isOnOpenDiagonalUp) {
-        return 0.5;
-      }
-      if (isOnOpenFile && isOnOpenDiagonalDown && isOnOpenDiagonalUp) {
-        if (numMoves == 0) {
-          return -1;
-        } else {
-          return -0.8;
-        }
-      }
-      if (isOnOpenDiagonalDown && isOnOpenDiagonalUp) {
-        if (numMoves == 0) {
-          return -8;
-        } else {
-          return -0.6;
-        }
-      }
+    else if (isOnOpenFile && isOnOpenDiagonalDown && isOnOpenDiagonalUp) {
+      openFactor = -1;
+    }
+    else if (!isOnOpenFile) {
+      openFactor = 0;
     } else {
-      if (isOnOpenFile && isOnOpenDiagonalDown && isOnOpenDiagonalUp) {
-        return -0.75;
-      }
-      else if (!isOnOpenFile) {
-        return -0.25;
-      } else {
-        return -0.5;
-      }
+      openFactor = -0.5;
     }
-    return 0.0;
+
+    int numMoves = GameService.filterMoves(possibleMoves).size();
+    if (numMoves < 2) {
+      moveFactor = -1;
+    } else {
+      moveFactor = 1;
+    }
+    if (xRayingPieces.size() == 0) {
+      xRayFactor = 1;
+    } else {
+      xRayFactor = -0.5 * (xRayingPieces.size());
+    }
+    return (a * openFactor) + (b * moveFactor) + (c * xRayFactor);
   }
 
   public boolean getColor() {
@@ -505,6 +502,7 @@ public class King implements Piece {
     this.isRevealChecker = false;
     this.revealAve = null;
     this.revealCheckerLoc = new Coordinate(-1, -1);
+    this.xRayingPieces = new ArrayList<>();
   }
   public void setProtectors(ArrayList<Piece> protectors){
     this.protectors = protectors;
@@ -574,5 +572,8 @@ public class King implements Piece {
   }
   public boolean isPinnedToQueen() {
     return this.isPinnedToQueen;
+  }
+  public void setXRay(Piece piece) {
+    this.xRayingPieces.add(piece);
   }
 }

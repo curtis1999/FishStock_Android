@@ -151,6 +151,7 @@ public class TestEvaluate {
     double whiteKingSafety = whiteKing.evaluateSafety(board);
     double blackKingSafety = blackKing.evaluateSafety(board);
     assertEquals(true, whiteKingSafety > blackKingSafety);
+    assertEquals(true, blackKing.xRayingPieces.size() == 1);
   }
 
 

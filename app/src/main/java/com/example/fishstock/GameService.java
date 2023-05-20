@@ -697,6 +697,7 @@ public class GameService {
           if (mv.isPin) {
             int pinnedIndex = Board.getIndex(ChessBoard.blackPieces, mv.getPinLoc());
             ChessBoard.blackPieces.get(pinnedIndex).setPin(mv.pinAvenue, mv.piece.getPos());
+            ((King)ChessBoard.blackPieces.get(0)).setXRay(piece);
           }
           if (mv.isPinQueen) {
             int pinnedIndex = Board.getIndex(ChessBoard.blackPieces, mv.getQueenPinLoc());
@@ -732,6 +733,7 @@ public class GameService {
           if (mv.isPin) {
             int pinnedIndex = Board.getIndex(ChessBoard.whitePieces, mv.getPinLoc());
             ChessBoard.whitePieces.get(pinnedIndex).setPin(mv.pinAvenue, mv.piece.getPos());
+            ((King)ChessBoard.whitePieces.get(0)).setXRay(piece);
           }
           //3: Otherwise (Not in contact with a piece, add an attacker to this square.
         }else {
