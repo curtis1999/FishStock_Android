@@ -504,7 +504,7 @@ public class Pawn implements Piece {
       eval *= 1.25;
     }
     //EVAL 1: REMOVES 0.2 if doubled and 0.4 if trippled.
-    eval -= 0.2 * (Board.countAlongFile(board.board, "Pawn", 1, curPos.file, isWhite) - 1);
+    eval -= 0.2 * (Board.countAlongFile(board.board, "Pawn", isWhite, 1, curPos.file, isWhite) - 1);
 
     //EVAL 2: Checks if it is passed
     if (isPassed(board.board)) {
@@ -521,18 +521,18 @@ public class Pawn implements Piece {
 
   public boolean isPassed(Cell[][] board) {
     if (curPos.file > 0 && curPos.file < 7) {
-      if (Board.countAlongFile(board, "Pawn", curPos.rank, curPos.file, !isWhite) == 0
-          && Board.countAlongFile(board, "Pawn",curPos.rank, curPos.file + 1, !isWhite) == 0
-          && Board.countAlongFile(board, "Pawn", curPos.rank, curPos.file - 1, !isWhite) == 0) {
+      if (Board.countAlongFile(board, "Pawn", !isWhite, curPos.rank, curPos.file, isWhite) == 0
+          && Board.countAlongFile(board, "Pawn", !isWhite, curPos.rank, curPos.file + 1, isWhite) == 0
+          && Board.countAlongFile(board, "Pawn", !isWhite, curPos.rank, curPos.file - 1, isWhite) == 0) {
         return true;
       } else if (curPos.file == 0) {
-        if (Board.countAlongFile(board, "Pawn", curPos.rank, curPos.file, !isWhite) == 0
-            && Board.countAlongFile(board, "Pawn",curPos.rank, curPos.file + 1, !isWhite) == 0) {
+        if (Board.countAlongFile(board, "Pawn",  !isWhite, curPos.rank, curPos.file, isWhite) == 0
+            && Board.countAlongFile(board, "Pawn", !isWhite, curPos.rank, curPos.file + 1, isWhite) == 0) {
           return true;
         }
       } else if (curPos.file == 7) {
-        if (Board.countAlongFile(board, "Pawn", curPos.rank, curPos.file, !isWhite) == 0
-            && Board.countAlongFile(board, "Pawn", curPos.rank,curPos.file - 1, !isWhite) == 0) {
+        if (Board.countAlongFile(board, "Pawn", !isWhite, curPos.rank, curPos.file, isWhite) == 0
+            && Board.countAlongFile(board, "Pawn", !isWhite, curPos.rank,curPos.file - 1, isWhite) == 0) {
           return true;
         }
       }

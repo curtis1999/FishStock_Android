@@ -254,27 +254,99 @@ public class Board implements Serializable {
    * @param file
    * @return
    */
-  public static int countAlongFile(Cell[][] board, String pieceName, int startingRow, int file, boolean isWhite) {
+  public static int countAlongFile(Cell[][] board, String pieceName, boolean lookingForWhite, int startingRow, int file, boolean upRow) {
     int numInFile = 0;
     if (file < 0 || file > 7 || startingRow < 0 || startingRow > 7) {
       return 0;
     }
-    if (!isWhite) {
+    if (!lookingForWhite && upRow) {
     for (int row = startingRow; row < 8; row++) {
       if (!board[row][file].PieceStatus.equals(Status.EMPTY)) {
-        if (board[row][file].piece.getName().equals(pieceName) && board[row][file].piece.getColor() == isWhite) {
+        if (board[row][file].piece.getName().equals(pieceName) && !board[row][file].piece.getColor()) {
           numInFile++;
         }
       }
     }
     }
-    else {
-      for (int row = startingRow; row > 0; row--) {
+    else if (!lookingForWhite && !upRow) {
+      for (int row = startingRow; row >= 0; row--) {
         if (!board[row][file].PieceStatus.equals(Status.EMPTY)) {
-          if (board[row][file].piece.getName().equals(pieceName) && board[row][file].piece.getColor() == isWhite) {
+          if (board[row][file].piece.getName().equals(pieceName) && !board[row][file].piece.getColor()) {
             numInFile++;
           }
         }
+      }
+    } else if (lookingForWhite && upRow) {
+      for (int row = startingRow; row < 8; row++) {
+        if (!board[row][file].PieceStatus.equals(Status.EMPTY)) {
+          if (board[row][file].piece.getName().equals(pieceName) && board[row][file].piece.getColor()) {
+            numInFile++;
+          }
+        }
+      }
+    } else {
+      for (int row = startingRow; row >= 0; row--) {
+        if (!board[row][file].PieceStatus.equals(Status.EMPTY)) {
+          if (board[row][file].piece.getName().equals(pieceName) && board[row][file].piece.getColor()) {
+            numInFile++;
+          }
+        }
+      }
+    }
+    return numInFile;
+  }
+  /**
+   * Returns the number of a specific piece along a diagonal
+   *
+   * @Param: upFile checks diagonal up/down the file depending on this value.
+   */
+  public static int countAlongDiagonal(Cell[][] board, String pieceName, Coordinate coord, boolean upFile, boolean isWhite) {
+    int curRow = coord.rank;
+    int curFile = coord.file;
+    int numInFile = 0;
+    if (curFile < 0 || curFile > 7 || curRow < 0 || curRow > 7) {
+      return 0;
+    }
+    if (!isWhite && upFile) {
+      while (curRow >= 0 && curFile < 8) {
+        if (!board[curRow][curFile].PieceStatus.equals(Status.EMPTY)) {
+          if (board[curRow][curFile].piece.getName().equals(pieceName) && !board[curRow][curFile].piece.getColor()) {
+            numInFile++;
+          }
+        }
+        curRow --;
+        curFile++;
+      }
+    }
+    else if (isWhite && upFile) {
+      while (curRow < 8 && curFile < 8) {
+        if (!board[curRow][curFile].PieceStatus.equals(Status.EMPTY)) {
+          if (board[curRow][curFile].piece.getName().equals(pieceName) && board[curRow][curFile].piece.getColor()) {
+            numInFile++;
+          }
+        }
+        curRow ++;
+        curFile++;
+      }
+    } else if(!isWhite) {
+      while (curRow >= 0 && curFile >= 0) {
+        if (!board[curRow][curFile].PieceStatus.equals(Status.EMPTY)) {
+          if (board[curRow][curFile].piece.getName().equals(pieceName) && !board[curRow][curFile].piece.getColor()) {
+            numInFile++;
+          }
+        }
+        curRow --;
+        curFile--;
+      }
+    } else {
+      while (curRow < 8 && curFile >= 0) {
+        if (!board[curRow][curFile].PieceStatus.equals(Status.EMPTY)) {
+          if (board[curRow][curFile].piece.getName().equals(pieceName) && board[curRow][curFile].piece.getColor()) {
+            numInFile++;
+          }
+        }
+        curRow ++;
+        curFile--;
       }
     }
     return numInFile;

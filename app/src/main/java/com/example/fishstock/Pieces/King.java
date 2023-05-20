@@ -3,6 +3,7 @@ package com.example.fishstock.Pieces;
 import com.example.fishstock.Board;
 import com.example.fishstock.Cell;
 import com.example.fishstock.Coordinate;
+import com.example.fishstock.GameService;
 import com.example.fishstock.Move;
 import com.example.fishstock.Status;
 import java.util.ArrayList;
@@ -333,6 +334,51 @@ public class King implements Piece {
     return possibleMoves;
   }
   public double evaluateSafety(Board board) {
+    boolean isOnOpenFile = false;
+    boolean isOnSemiOpenFile = false;
+    boolean isOnOpenDiagonalUp = false;
+    boolean isOnOpenDiagonalDown = false;
+    if (Board.countAlongFile(board.board, "Pawn", isWhite, coord.rank, coord.file, isWhite) == 0) {
+      isOnOpenFile = true;
+    }
+    if (Board.countAlongDiagonal(board.board, "Pawn", coord, true, isWhite) == 0) {
+      isOnOpenDiagonalUp = true;
+    }
+    if (Board.countAlongDiagonal(board.board, "Pawn", coord, false, isWhite) == 0) {
+      isOnOpenDiagonalDown = true;
+    }
+    int numMoves = GameService.filterMoves(possibleMoves).size();
+    if (!isOnOpenFile && !isOnOpenDiagonalDown && !isOnOpenDiagonalUp && numMoves > 2) {
+      return 1; //Maximally 'safe'.
+    }
+    else if (numMoves < 2) {
+      if (!isOnOpenFile && !isOnOpenDiagonalDown && !isOnOpenDiagonalUp) {
+        return 0.5;
+      }
+      if (isOnOpenFile && isOnOpenDiagonalDown && isOnOpenDiagonalUp) {
+        if (numMoves == 0) {
+          return -1;
+        } else {
+          return -0.8;
+        }
+      }
+      if (isOnOpenDiagonalDown && isOnOpenDiagonalUp) {
+        if (numMoves == 0) {
+          return -8;
+        } else {
+          return -0.6;
+        }
+      }
+    } else {
+      if (isOnOpenFile && isOnOpenDiagonalDown && isOnOpenDiagonalUp) {
+        return -0.75;
+      }
+      else if (!isOnOpenFile) {
+        return -0.25;
+      } else {
+        return -0.5;
+      }
+    }
     return 0.0;
   }
 

@@ -125,6 +125,35 @@ public class TestEvaluate {
       game = new Game(board, AgentType.RANDY, AgentType.RANDY);
     }
 
+  public void initKingSafety() {
+    whiteKing = new King(new Coordinate(1,0), true);
+    whiteQueen = new Queen(new Coordinate(7, 5), true);
+    whiteRook1 = new Rook(new Coordinate(3,1), true);
+    whiteBishop1 = new Bishop (new Coordinate(7,1), true);
+    whitePawn1 = new Pawn(new Coordinate(0,1), true);
+    whitePawn2 = new Pawn(new Coordinate(1, 2), true); whitePawn2.growUp();
+    whitePawn3 = new Pawn (new Coordinate(2, 1), true);
+    whitePieces.add(whiteKing); whitePieces.add(whiteRook1); whitePieces.add(whiteBishop1); whitePieces.add(whiteQueen);
+    whitePieces.add(whitePawn1); whitePieces.add(whitePawn2); whitePieces.add(whitePawn3);
+
+    blackKing = new King(new Coordinate(3,7), false);
+    blackQueen = new Queen (new Coordinate (3, 5), false);
+    blackPieces.add(blackKing); blackPieces.add(blackQueen);
+    board = new Board(whitePieces, blackPieces);
+    game = new Game(board, AgentType.RANDY, AgentType.RANDY);
+  }
+
+  @Test
+  public void testKingSafety() {
+    initKingSafety();
+    Board.printBoard(board, true);
+    GameService.updateBoardMeta(board);
+    double whiteKingSafety = whiteKing.evaluateSafety(board);
+    double blackKingSafety = blackKing.evaluateSafety(board);
+    assertEquals(true, whiteKingSafety > blackKingSafety);
+  }
+
+
     @Test
     public void testRevealQueen() {
       initReveal();

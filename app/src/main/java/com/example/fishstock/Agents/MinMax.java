@@ -151,6 +151,7 @@ public class MinMax extends Agent{
   public double evaluateKingSafety(Board board, boolean isWhite) {
     return 1.0;
   }
+
   public double evaluatePawnStructure(Board board, boolean isWhite) {
     return 1.0;
   }

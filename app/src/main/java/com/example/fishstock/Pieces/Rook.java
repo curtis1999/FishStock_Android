@@ -423,7 +423,7 @@ public class Rook implements Piece {
     double numMoves = GameService.filterMoves(possibleMoves).size();
     eval += (numMoves/14.0) - (5.0/14.0);
     //Eval 1: DOUBLED ROOK.
-    if (Board.countAlongFile(board.board, "Rook", 0, curPos.file, isWhite) == 2) {
+    if (Board.countAlongFile(board.board, "Rook", isWhite, 0, curPos.file, isWhite) == 2) {
       eval += 1;
     }
     if ((isWhite && curPos.rank == 6) || (!isWhite && curPos.rank == 1)) {
@@ -450,7 +450,7 @@ public class Rook implements Piece {
     double numMoves = GameService.filterMoves(possibleMoves).size();
     eval += (numMoves/14.0) - (5.0/14.0);
     //Eval 1: DOUBLED ROOK.
-    if (Board.countAlongFile(board.board, "Rook", 0, curPos.file, isWhite) == 2) {
+    if (Board.countAlongFile(board.board, "Rook", isWhite, 0, curPos.file, isWhite) == 2) {
       eval += 1;
     }
     if ((isWhite && curPos.rank == 6) || (!isWhite && curPos.rank == 1)) {

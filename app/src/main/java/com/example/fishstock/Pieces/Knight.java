@@ -260,15 +260,15 @@ public class Knight implements Piece {
       return false;
     }
     if (isWhite) {
-      if (Board.countAlongFile(board, "Pawn", curPos.rank + 1, curPos.file + 1, false) == 0
-          && Board.countAlongFile(board, "Pawn", curPos.rank + 1, curPos.file - 1, false) == 0) {
+      if (Board.countAlongFile(board, "Pawn", false, curPos.rank + 1, curPos.file + 1, true) == 0
+          && Board.countAlongFile(board, "Pawn", false, curPos.rank + 1, curPos.file - 1, true) == 0) {
         return true;
       } else {
         return false;
       }
     } else {
-      if (Board.countAlongFile(board, "Pawn", curPos.rank - 1, curPos.file + 1, true) == 0
-          && Board.countAlongFile(board, "Pawn", curPos.rank - 1, curPos.file - 1, true) == 0) {
+      if (Board.countAlongFile(board, "Pawn", true, curPos.rank - 1, curPos.file + 1, false) == 0
+          && Board.countAlongFile(board, "Pawn", true, curPos.rank - 1, curPos.file - 1, false) == 0) {
         return true;
       } else {
         return false;
