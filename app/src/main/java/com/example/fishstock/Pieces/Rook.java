@@ -486,7 +486,7 @@ public class Rook implements Piece {
       }
     }
     //If it can be captured by a minor piece -> somewhat bad eval.
-    if (countByType(attackers, "Knight") > 0) {
+    if (countByType(attackers, "Knight") + countByType(attackers, "Bishop") > 0) {
       if (attackers.size() > protectors.size()) {
         return 0.6;
       } else {

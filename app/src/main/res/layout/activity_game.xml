@@ -1219,4 +1219,30 @@
         app:layout_constraintTop_toBottomOf="@+id/gridlayout"
         app:layout_constraintVertical_bias="1.0" />
 
+    <TextView
+        android:id="@+id/whiteScore"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="0"
+        android:textSize="20dp"
+        app:layout_constraintBottom_toTopOf="@+id/gridlayout"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.372"
+        app:layout_constraintStart_toStartOf="@+id/imageView"
+        app:layout_constraintTop_toTopOf="@+id/welcomeMessage"
+        app:layout_constraintVertical_bias="0.72" />
+
+    <TextView
+        android:id="@+id/blackScore"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="0"
+        android:textSize="20dp"
+        app:layout_constraintBottom_toBottomOf="@+id/draw"
+        app:layout_constraintEnd_toEndOf="@+id/checkStatusBlack"
+        app:layout_constraintHorizontal_bias="0.397"
+        app:layout_constraintStart_toStartOf="@+id/imageView"
+        app:layout_constraintTop_toBottomOf="@+id/gridlayout"
+        app:layout_constraintVertical_bias="0.319" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
