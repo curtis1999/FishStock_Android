@@ -140,6 +140,22 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
         updateBoard(board, isWhite);
       }
     });
+    TextView finalWhiteScore1 = whiteScore;
+    TextView finalBlackScore1 = blackScore;
+    draw.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View v) {
+        if (isWhite && Integer.valueOf((String) finalWhiteScore1.getText()) >= 0
+        || !isWhite && Integer.valueOf((String) finalBlackScore1.getText()) >=0 ) {
+          message.setText("DECLINED");
+        } else {
+          message.setText("ACCEPT");
+          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 0, isWhite, adversary.getName());
+          ggDialog.setOnGameOverListener(GameManager.this);
+          ggDialog.show();
+        }
+      }
+    });
     //Manually make the first move if the player is black.
     if (!isWhite) {
       try {

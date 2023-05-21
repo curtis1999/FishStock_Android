@@ -84,18 +84,27 @@ public class Simple extends Agent {
         isCheck = true;
       }
     }
-    /* TODO: ADD MATE IN 1 CHECK.
+    /*TODO: MATE IN 1 CHECK.
     for (Move move : theirNextMoves) {
+      Board copyBoard = GameService.copyBoard(board);
+      GameService.makeMove(copyBoard, move, !isWhite);
+      GameService.updateBoardMeta(copyBoard);
+      ArrayList<Move> possibleMoves = GameService.generateMoves(board, isWhite);
       if (move.isCheck) {
-        Board copyBoard = GameService.copyBoard(board);
-        GameService.makeMove(copyBoard, move, isWhite);
-        GameService.updateBoardMeta(copyBoard);
-        ArrayList<Move> possibleMoves = GameService.generateMoves(board, isWhite);
-        if (GameService.generateMovesCheck(board, possibleMoves, isWhite).size() == 0);
+        if (GameService.generateMovesCheck(board, possibleMoves, isWhite).size() == 0){
+          return -9999; //WE GET CHECK-MATED.
+        }
+      } else if (move.isDoubleCheck) {
+        if (GameService.generateMovesDoubleCheck(board, possibleMoves, isWhite).size() == 0){
+          return -9999; //WE GET CHECK-MATED.
+        }
+      } else if (possibleMoves.size() == 0) {
+        return 0; //StaleMate.
       }
     }
 
      */
+
 
     double ourPieceQuality = 0.0;
     List<Piece> ourPieces =  getPiecesFromBoard(board.board, isWhite);
