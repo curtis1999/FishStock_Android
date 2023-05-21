@@ -8,7 +8,9 @@ import com.example.fishstock.Move;
 import com.example.fishstock.Status;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class Bishop implements Piece {
   Coordinate fromPos;
@@ -30,6 +32,8 @@ public class Bishop implements Piece {
   public  List<Piece> criticallyDefending = new ArrayList<>();
   public List<Integer> criticallyAttackingValues = new ArrayList<>();
   public List<Integer> criticallyDefendingValues = new ArrayList<>();
+  public int forkingValue = 0;
+  public int overLoadingValue = 0;
 
   public Bishop (Coordinate curPos, boolean isWhite) {
     this.fromPos= curPos;
@@ -423,6 +427,11 @@ public class Bishop implements Piece {
     int numMoves = GameService.filterMoves(possibleMoves).size();
     eval += (numMoves/12.0) - (4.0/14.0);
     eval *= evaluateSafety(curCell);
+
+    //Add the forking value.
+    eval += forkingValue;
+    //Subtract the OverLoadingValue
+    eval -= overLoadingValue;
     return eval;
   }
 
@@ -641,14 +650,51 @@ public class Bishop implements Piece {
   public char getSymbol() {
     return 'B';
   }
+
   public void addCriticalAttack(Piece piece) {
     this.criticallyAttacking.add(piece);
-  }
-  public void addCriticalDefenence(Piece piece) {
-    this.criticallyDefending.add(piece);
-    addForkValue(piece.getValue());
+    if (criticallyAttacking.size() > 1) {
+      forkingValue = GameService.getSecondHighestValue(criticallyAttacking);
+    }
   }
 
+  //TODO: UPDATE THE overLoadingValue
+  public void addCriticalDefenence(Piece piece) {
+    this.criticallyDefending.add(piece);
+    if (criticallyDefending.size() > 1 && !onSameDiagonal(criticallyDefending)) {
+      overLoadingValue = GameService.getSecondHighestValue(criticallyDefending);
+    }
+  }
+
+  public boolean onSameDiagonal(List<Piece> pieces) {
+      if (pieces.isEmpty()) {
+        return false;
+      }
+
+      Coordinate firstPiecePos = pieces.get(0).getPos();
+      int rankDiff = 0;
+      int fileDiff = 0;
+
+      for (Piece piece : pieces) {
+        Coordinate piecePos = piece.getPos();
+        int currentRankDiff = Math.abs(piecePos.rank - firstPiecePos.rank);
+        int currentFileDiff = Math.abs(piecePos.file - firstPiecePos.file);
+
+        if (currentRankDiff != currentFileDiff) {
+          return false;
+        }
+
+        if (rankDiff == 0 && fileDiff == 0) {
+          rankDiff = currentRankDiff;
+          fileDiff = currentFileDiff;
+        }
+
+        if (currentRankDiff != rankDiff || currentFileDiff != fileDiff) {
+          return false;
+        }
+      }
+      return true;
+  }
   @Override
   public void addOverloadValue(int value) {
     this.criticallyDefendingValues.add(value);

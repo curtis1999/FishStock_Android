@@ -37,7 +37,8 @@ public class King implements Piece {
   public ArrayList<Piece> criticallyDefending = new ArrayList<>();
   public List<Integer> criticallyAttackingValues = new ArrayList<>();
   public List<Integer> criticallyDefendingValues = new ArrayList<>();
-
+  public int forkingValue = 0;
+  public int overLoadingValue = 0;
 
   public King(Coordinate crd, boolean isWhite) {
     this.curPos =crd;
@@ -546,6 +547,7 @@ public class King implements Piece {
     } else {
       return 0.0;
     }
+
   }
 
   @Override
@@ -586,9 +588,16 @@ public class King implements Piece {
   }
   public void addCriticalAttack(Piece piece) {
     this.criticallyAttacking.add(piece);
+    if (criticallyAttacking.size() > 1) {
+      forkingValue = GameService.getSecondHighestValue(criticallyAttacking);
+    }
   }
   public void addCriticalDefenence(Piece piece) {
     this.criticallyDefending.add(piece);
+    //TODO: Add case where the two protecting pieces are beside each other.
+    if (criticallyDefending.size() > 1) {
+      overLoadingValue = GameService.getSecondHighestValue(criticallyDefending);
+    }
   }
 
   @Override

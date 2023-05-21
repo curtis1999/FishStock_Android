@@ -32,6 +32,8 @@ public class Rook implements Piece {
   public ArrayList<Piece> criticallyDefending = new ArrayList<>();
   public List<Integer> criticallyAttackingValues = new ArrayList<>();
   public List<Integer> criticallyDefendingValues = new ArrayList<>();
+  int forkingValue = 0;
+  int overLoadingValue = 0;
 
   public Rook (Coordinate curPos, boolean isWhite) {
     this.fromPos = curPos;
@@ -434,6 +436,10 @@ public class Rook implements Piece {
     if ((isWhite && curPos.rank == 6) || (!isWhite && curPos.rank == 1)) {
       eval += 0.5;
     }
+    //Add the forking value.
+    eval += forkingValue;
+    //Subtract the OverLoadingValue
+    eval -= overLoadingValue;
     return eval;
   }
 
@@ -684,11 +690,39 @@ public class Rook implements Piece {
   }
   public void addCriticalAttack(Piece piece) {
     this.criticallyAttacking.add(piece);
+    if (criticallyAttacking.size() > 1) {
+      forkingValue = GameService.getSecondHighestValue(criticallyAttacking);
+    }
   }
   public void addCriticalDefenence(Piece piece) {
     this.criticallyDefending.add(piece);
+    if (criticallyDefending.size() > 1 && !isOnSameLine(criticallyDefending)) {
+      overLoadingValue = GameService.getSecondHighestValue(criticallyDefending);
+    }
   }
 
+  //TODO:
+  public boolean isOnSameLine(List<Piece> pieces) {
+    if (pieces.isEmpty()) {
+      return false;
+    }
+
+    Coordinate firstPiecePos = pieces.get(0).getPos();
+    int rank = firstPiecePos.rank;
+    int file = firstPiecePos.file;
+
+    for (Piece piece : pieces) {
+      Coordinate piecePos = piece.getPos();
+      int pieceRank = piecePos.rank;
+      int pieceFile = piecePos.file;
+
+      if (pieceRank != rank && pieceFile != file) {
+        return false;
+      }
+    }
+
+    return true;
+  }
   @Override
   public void addOverloadValue(int value) {
     this.criticallyDefendingValues.add(value);

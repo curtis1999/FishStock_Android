@@ -3,6 +3,7 @@ package com.example.fishstock.Pieces;
 import com.example.fishstock.Board;
 import com.example.fishstock.Cell;
 import com.example.fishstock.Coordinate;
+import com.example.fishstock.GameService;
 import com.example.fishstock.Move;
 import com.example.fishstock.Status;
 
@@ -31,6 +32,8 @@ public class Queen implements Piece {
   public ArrayList<Piece> criticallyDefending = new ArrayList<>();
   public List<Integer> criticallyAttackingValues = new ArrayList<>();
   public List<Integer> criticallyDefendingValues = new ArrayList<>();
+  public int forkingValue = 0;
+  public int overLoadingValue = 0;
 
   public Queen(Coordinate curPos, boolean isWhite) {
     this.fromPos=curPos;
@@ -644,6 +647,10 @@ public class Queen implements Piece {
       eval *= 1.25;
     }
     eval *= evaluateSafety(curCell);
+    //Add the forking value.
+    eval += forkingValue;
+    //Subtract the OverLoadingValue
+    eval -= overLoadingValue;
     return eval;
   }
 
@@ -847,9 +854,68 @@ public class Queen implements Piece {
   }
   public void addCriticalAttack(Piece piece) {
     this.criticallyAttacking.add(piece);
+    if (criticallyAttacking.size() > 1) {
+      forkingValue = GameService.getSecondHighestValue(criticallyAttacking);
+    }
   }
   public void addCriticalDefenence(Piece piece) {
     this.criticallyDefending.add(piece);
+    if (criticallyDefending.size() > 1 && !areOnSameLineOrDiagonal(criticallyDefending)) {
+      overLoadingValue = GameService.getSecondHighestValue(criticallyDefending);
+    }
+  }
+  public boolean areOnSameLineOrDiagonal(List<Piece> pieces) {
+    return onSameDiagonal(pieces) || isOnSameLine(pieces);
+  }
+  public boolean isOnSameLine(List<Piece> pieces) {
+    if (pieces.isEmpty()) {
+      return false;
+    }
+
+    Coordinate firstPiecePos = pieces.get(0).getPos();
+    int rank = firstPiecePos.rank;
+    int file = firstPiecePos.file;
+
+    for (Piece piece : pieces) {
+      Coordinate piecePos = piece.getPos();
+      int pieceRank = piecePos.rank;
+      int pieceFile = piecePos.file;
+
+      if (pieceRank != rank && pieceFile != file) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+  public boolean onSameDiagonal(List<Piece> pieces) {
+    if (pieces.isEmpty()) {
+      return false;
+    }
+
+    Coordinate firstPiecePos = pieces.get(0).getPos();
+    int rankDiff = 0;
+    int fileDiff = 0;
+
+    for (Piece piece : pieces) {
+      Coordinate piecePos = piece.getPos();
+      int currentRankDiff = Math.abs(piecePos.rank - firstPiecePos.rank);
+      int currentFileDiff = Math.abs(piecePos.file - firstPiecePos.file);
+
+      if (currentRankDiff != currentFileDiff) {
+        return false;
+      }
+
+      if (rankDiff == 0 && fileDiff == 0) {
+        rankDiff = currentRankDiff;
+        fileDiff = currentFileDiff;
+      }
+
+      if (currentRankDiff != rankDiff || currentFileDiff != fileDiff) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override

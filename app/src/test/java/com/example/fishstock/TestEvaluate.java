@@ -169,12 +169,12 @@ public class TestEvaluate {
     //blackPawn2 = new Pawn (new Coordinate(4, 5), false);blackPawn2.growUp();
     blackKnight1 = new Knight(new Coordinate(3, 4), false);
     //blackKnight2 = new Knight (new Coordinate(3, 4), false);
-    blackBishop1 = new Bishop (new Coordinate(1, 6), false);
+    //blackBishop1 = new Bishop (new Coordinate(1, 6), false);
     blackBishop2 = new Bishop (new Coordinate(5, 5), false);
     blackRook1 = new Rook (new Coordinate(0, 3), false);
     blackRook2 = new Rook (new Coordinate(5, 1), false);
     blackPieces.add(blackKing);
-    blackPieces.add(blackBishop1); blackPieces.add(blackBishop2);
+    blackPieces.add(blackBishop2);
     blackPieces.add(blackKnight1);//blackPieces.add(blackKnight2);
     blackPieces.add(blackRook1); blackPieces.add(blackRook2);
     blackPieces.add(blackPawn1); //blackPieces.add(blackPawn2);
@@ -183,17 +183,42 @@ public class TestEvaluate {
     game = new Game(board, AgentType.RANDY, AgentType.RANDY);
   }
 
+  public void initRoyalFork() {
+    whiteKing = new King(new Coordinate(3,0), true);
+    whiteQueen = new Queen(new Coordinate(3, 2), true);
+    whiteRook1 = new Rook(new Coordinate(7, 0), true);
+    whitePieces.add(whiteKing); whitePieces.add(whiteQueen); whitePieces.add(whiteRook1);
+
+    blackKing = new King(new Coordinate(3,7), false);
+    blackKnight1 = new Knight(new Coordinate(5, 1), false);
+    blackPieces.add(blackKing);
+    blackPieces.add(blackKnight1);
+    board = new Board(whitePieces, blackPieces);
+    game = new Game(board, AgentType.RANDY, AgentType.RANDY);
+  }
+  public void initOverLoadedQueen() {
+    whiteKing = new King(new Coordinate(3,0), true);
+    whiteQueen = new Queen(new Coordinate(3, 2), true);
+    whiteRook1 = new Rook(new Coordinate(7, 0), true);
+  }
+
+  @Test
+  public void testRoyalFork() {
+    initRoyalFork();
+    Board.printBoard(board, true);
+    GameService.updateBoardMeta(board);
+    Simple.updatePieces(board);
+    assertEquals(9, blackKnight1.forkingValue);
+  }
   @Test
   public void testUpdatePiece() {
     initTactics();
     Board.printBoard(board, true);
     GameService.updateBoardMeta(board);
     Simple.updatePieces(board);
-    assertEquals(1, blackBishop1.criticallyAttacking.size());
     assertEquals(1, blackRook1.criticallyAttacking.size());
-    assertEquals(1, whiteKnight1.criticallyAttacking.size());
+    assertEquals(2, whiteKnight1.criticallyAttacking.size());
     assertEquals(1, whiteQueen.criticallyAttacking.size());
-    assertEquals(1, blackBishop1.criticallyDefending.size());
     assertEquals(1, blackPawn1.criticallyAttacking.size());
 
   }

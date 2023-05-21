@@ -33,6 +33,8 @@ public class Pawn implements Piece {
   public ArrayList<Piece> criticallyDefending = new ArrayList<>();
   public List<Integer> criticallyAttackingValues = new ArrayList<>();
   public List<Integer> criticallyDefendingValues = new ArrayList<>();
+  public int forkingValue = 0;
+  public int overLoadingValue = 0;
 
   public Pawn(Coordinate pos, boolean isWhite) {
     this.isWhite = isWhite;
@@ -522,6 +524,10 @@ public class Pawn implements Piece {
     }
     //EVAL 4: Check it's safety
     eval *= evaluateSafety(curCell);
+    //Add the forking value.
+    eval += forkingValue;
+    //Subtract the OverLoadingValue
+    eval -= overLoadingValue;
     return eval;
   }
 
@@ -823,9 +829,15 @@ public class Pawn implements Piece {
   }
   public void addCriticalAttack(Piece piece) {
     this.criticallyAttacking.add(piece);
+    if (criticallyAttacking.size() > 1) {
+      forkingValue = GameService.getSecondHighestValue(criticallyAttacking);
+    }
   }
   public void addCriticalDefenence(Piece piece) {
     this.criticallyDefending.add(piece);
+    if (criticallyDefending.size() > 1) {
+      overLoadingValue = GameService.getSecondHighestValue(criticallyDefending);
+    }
   }
 
   @Override

@@ -31,6 +31,8 @@ public class Knight implements Piece {
   public ArrayList<Piece> criticallyDefending = new ArrayList<>();
   public List<Integer> criticallyAttackingValues = new ArrayList<>();
   public List<Integer> criticallyDefendingValues = new ArrayList<>();
+  public int forkingValue = 0;
+  public int overLoadingValue = 0;
   public Knight (Coordinate curPos, boolean isWhite) {
     this.fromPos =curPos;
     this.curPos = curPos;
@@ -254,8 +256,10 @@ public class Knight implements Piece {
 
     //EVAL 4: Piece safety.
     eval *= evaluateSafety(curCell);
-    //NOTE: SET AN UPPER LIMIT TO AVOID UNNECESSARY PIECE SACRIFICES.
-    if (eval > 5) { eval = 5; }
+    //Add the forking value.
+    eval += forkingValue;
+    //Subtract the OverLoadingValue
+    eval -= overLoadingValue;
     return eval;
   }
 
@@ -490,9 +494,15 @@ public class Knight implements Piece {
   }
   public void addCriticalAttack(Piece piece) {
     this.criticallyAttacking.add(piece);
+    if (criticallyAttacking.size() > 1) {
+      forkingValue = GameService.getSecondHighestValue(criticallyAttacking);
+    }
   }
   public void addCriticalDefenence(Piece piece) {
     this.criticallyDefending.add(piece);
+    if (criticallyDefending.size() > 1) {
+      overLoadingValue = GameService.getSecondHighestValue(criticallyDefending);
+    }
   }
 
   @Override

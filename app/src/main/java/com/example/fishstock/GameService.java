@@ -7,7 +7,10 @@ import com.example.fishstock.Agents.Human;
 import com.example.fishstock.Agents.Randy;
 import com.example.fishstock.Pieces.*;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class GameService {
   //Game game;
@@ -893,5 +896,21 @@ public class GameService {
         return 1;
     }
     return count;
+  }
+  public static int getSecondHighestValue(List<Piece> pieces) {
+    List<Piece> sortedPieces = new ArrayList<>();
+    Collections.sort(pieces, new Comparator<Piece>() {
+      @Override
+      public int compare(Piece p1, Piece p2) {
+        return Integer.compare(p2.getValue(), p1.getValue());
+      }
+    });
+    sortedPieces = pieces;
+
+    if (sortedPieces.size() >= 2) {
+      return sortedPieces.get(1).getValue();
+    } else {
+      return 0;
+    }
   }
 }
