@@ -26,6 +26,10 @@ public class Bishop implements Piece {
   ArrayList<Coordinate> pinAve = new ArrayList<>();
   private Coordinate revealCheckerLoc;
   private ArrayList<Coordinate> revealAve;
+  public List<Piece> criticallyAttacking = new ArrayList<>();
+  public  List<Piece> criticallyDefending = new ArrayList<>();
+  public List<Integer> criticallyAttackingValues = new ArrayList<>();
+  public List<Integer> criticallyDefendingValues = new ArrayList<>();
 
   public Bishop (Coordinate curPos, boolean isWhite) {
     this.fromPos= curPos;
@@ -38,7 +42,7 @@ public class Bishop implements Piece {
     }
   }
   public Bishop(Coordinate fromPos,Coordinate coord, boolean isWhite) {
-    this.fromPos= coord;
+    this.fromPos= fromPos;
     this.curPos=coord;
     this.isWhite=isWhite;
     if (isWhite) {
@@ -507,12 +511,18 @@ public class Bishop implements Piece {
     return this.curPos;
   }
 
+  @Override
+  public Coordinate getFromPos() {
+    return this.fromPos;
+  }
+
   public boolean getColor() {
     // TODO Auto-generated method stub
     return this.isWhite;
   }
 
   public void setPos(Coordinate coord) {
+    this.fromPos = curPos;
     this.curPos=coord;
   }
   public void addAttacker(Piece p) {
@@ -605,6 +615,8 @@ public class Bishop implements Piece {
     this.isRevealChecker = false;
     this.revealAve = null;
     this.revealCheckerLoc = new Coordinate(-1, -1);
+    this.criticallyAttacking = new ArrayList<>();
+    this.criticallyDefending = new ArrayList<>();
   }
   public void setProtectors(ArrayList<Piece> protectors){
     this.protectors = protectors;
@@ -629,5 +641,25 @@ public class Bishop implements Piece {
   public char getSymbol() {
     return 'B';
   }
+  public void addCriticalAttack(Piece piece) {
+    this.criticallyAttacking.add(piece);
+  }
+  public void addCriticalDefenence(Piece piece) {
+    this.criticallyDefending.add(piece);
+    addForkValue(piece.getValue());
+  }
 
+  @Override
+  public void addOverloadValue(int value) {
+    this.criticallyDefendingValues.add(value);
+  }
+
+  @Override
+  public void addForkValue(int value) {
+    this.criticallyAttackingValues.add(value);
+  }
+
+  public int getValue() {
+    return 3;
+  }
 }

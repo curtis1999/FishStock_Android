@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Knight implements Piece {
-  Coordinate fromCoord;
+  Coordinate fromPos;
   Coordinate curPos;
   boolean isWhite;
   ArrayList<Move> legalMoves;
@@ -27,8 +27,12 @@ public class Knight implements Piece {
   ArrayList<Move>possibleMoves = new ArrayList<>();
   boolean isPinnedToQueen;
   boolean isRevealQueenChecker;
+  public ArrayList<Piece> criticallyAttacking = new ArrayList<>();
+  public ArrayList<Piece> criticallyDefending = new ArrayList<>();
+  public List<Integer> criticallyAttackingValues = new ArrayList<>();
+  public List<Integer> criticallyDefendingValues = new ArrayList<>();
   public Knight (Coordinate curPos, boolean isWhite) {
-    this.fromCoord=curPos;
+    this.fromPos =curPos;
     this.curPos = curPos;
     this.isWhite=isWhite;
     if (isWhite) {
@@ -38,7 +42,7 @@ public class Knight implements Piece {
     }
   }
   public Knight(Coordinate fromCoord,Coordinate pos, boolean isWhite) {
-    this.fromCoord=fromCoord;
+    this.fromPos =fromCoord;
     this.curPos = pos;
     this.isWhite=isWhite;
     if (isWhite) {
@@ -372,8 +376,8 @@ public class Knight implements Piece {
   }
 
   public void setPos(Coordinate coord) {
+    this.fromPos = curPos;
     this.curPos=coord;
-
   }
   public void addAttacker(Piece p) {
     this.attackers.add(p);
@@ -457,6 +461,8 @@ public class Knight implements Piece {
     this.isRevealChecker = false;
     this.revealAve = null;
     this.revealCheckerLoc = new Coordinate(-1, -1);
+    this.criticallyAttacking = new ArrayList<>();
+    this.criticallyDefending = new ArrayList<>();
   }
   public void setProtectors(ArrayList<Piece> protectors){
     this.protectors = protectors;
@@ -482,4 +488,29 @@ public class Knight implements Piece {
   public char getSymbol() {
     return 'N';
   }
+  public void addCriticalAttack(Piece piece) {
+    this.criticallyAttacking.add(piece);
+  }
+  public void addCriticalDefenence(Piece piece) {
+    this.criticallyDefending.add(piece);
+  }
+
+  @Override
+  public void addOverloadValue(int value) {
+    this.criticallyDefendingValues.add(value);
+  }
+
+  @Override
+  public void addForkValue(int value) {
+    this.criticallyAttackingValues.add(value);
+  }
+
+  public int getValue() {
+    return 3;
+  }
+  @Override
+  public Coordinate getFromPos() {
+    return this.fromPos;
+  }
+
 }

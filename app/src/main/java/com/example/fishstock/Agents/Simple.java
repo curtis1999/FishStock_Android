@@ -2,8 +2,6 @@ package com.example.fishstock.Agents;
 
 import com.example.fishstock.Board;
 import com.example.fishstock.Cell;
-import com.example.fishstock.Coordinate;
-import com.example.fishstock.Game;
 import com.example.fishstock.GameService;
 import com.example.fishstock.Move;
 import com.example.fishstock.Pieces.*;
@@ -27,6 +25,7 @@ public class Simple extends Agent {
       Board board = GameService.copyBoard(ChessBoard);
       GameService.makeMove(board, move, isWhite);
       GameService.updateBoardMeta(board);
+      updatePieces(board);
       double curEval = evaluate(board);
       if (curEval > maxEval) {
         maxEval = curEval;
@@ -147,8 +146,160 @@ public class Simple extends Agent {
     return 1.0;
   }
 
+  //Iterates and identifies all pieces threatening to win material or needed for defense (removing the piece would result in a loss of material.)
+  public static void updatePieces(Board board) {
+    for (Piece piece : board.whitePieces) {
+      List<Piece> protectors = piece.getProtectors();
+      List<Piece> attackers = piece.getAttackers();
+      labelCriticalPieces(board, piece, protectors, attackers);
+    }
+    for (Piece piece : board.blackPieces) {
+      List<Piece> protectors = piece.getProtectors();
+      List<Piece> attackers = piece.getAttackers();
+      labelCriticalPieces(board, piece, protectors, attackers);
+    }
+  }
+
+  public static void labelCriticalPieces(Board board, Piece piece, List<Piece> protectors, List<Piece> attackers) {
+    if (protectors.size() == 0 && attackers.size() > 0) {
+      // CASE 1: No defenders, each attack is critical.
+      for (Piece attacker : attackers) {
+        attacker.addCriticalAttack(piece);
+        board.board[attacker.getFromPos().rank][attacker.getFromPos().file].piece.addCriticalAttack(piece);
+      }
+
+    }else if (protectors.size() > 0 && attackers.size() == 0) {
+      return;
+    }
+    // CASE 2: One defender and one attacker. Critical defense and potential critical attack.
+    else if (protectors.size() == 1 && attackers.size() == 1) {
+       protectors.get(0).addCriticalDefenence(piece);
+       board.board[protectors.get(0).getFromPos().rank][protectors.get(0).getFromPos().file].piece.addCriticalDefenence(piece);
+       if (attackers.get(0).getValue() < piece.getValue()) {
+         attackers.get(0).addCriticalAttack(piece);
+         board.board[attackers.get(0).getFromPos().rank][attackers.get(0).getFromPos().file].piece.addCriticalAttack(piece);
+       }
+
+      // CASE 3: One defender and multiple attackers
+    } else if (protectors.size() == 1 && attackers.size() > 1) {
+      protectors.get(0).addCriticalDefenence(getLowestPiece(attackers)); //Adds an overloadingvalue
+      board.board[protectors.get(0).getFromPos().rank][protectors.get(0).getFromPos().file].piece.addCriticalDefenence(getLowestPiece(attackers));
+      for (Piece attacker : attackers) {
+        if (attacker.getValue() < piece.getValue()) {
+          attacker.addCriticalAttack(piece);
+          board.board[attacker.getFromPos().rank][attacker.getFromPos().file].piece.addCriticalAttack(piece);
+        }
+      }
+      //CASE 4: Multiple protectors, 1 attacker:
+    } else if (protectors.size() > 1 && attackers.size() == 1) {
+      if (attackers.get(0).getValue() < piece.getValue()) {
+        attackers.get(0).addCriticalAttack(piece);
+        board.board[attackers.get(0).getFromPos().rank][attackers.get(0).getFromPos().file].piece.addCriticalAttack(piece);
+      }
+      //Many attackers and defenders.
+    } else {
+      // CASE 5: Multiple defenders and attackers
+
+      //5.1 Get the unique list of defenders.
+      List<Piece> copyProtectors = new ArrayList<>();
+      List<Piece> copyAttackers = new ArrayList<>();
+      for (Piece p : protectors) {
+        copyProtectors.add(p);
+      }
+      for (Piece p : attackers) {
+        copyAttackers.add(p);
+      }
+      for (Piece attacker : attackers) {
+        if (attacker.getName().equals("Pawn")) {
+          removeByName(copyAttackers, "Pawn");
+          removeByName(copyProtectors, "Pawn");
+        } else if (attacker.getName().equals("Knight") || attacker.getName().equals("Bishop")) {
+          removeByName(copyProtectors, "Knight");
+          removeByName(copyAttackers, "Knight");
+        } else if (attacker.getName().equals("Rook")) {
+          removeByName(copyProtectors, "Rook");
+          removeByName(copyAttackers, "Rook");
+        } else if (attacker.getName().equals("Queen")) {
+          removeByName(copyProtectors, "Queen");
+          removeByName(copyAttackers, "Queen");
+        } else {
+          removeByName(copyProtectors, "King");
+          removeByName(copyAttackers, "King");
+        }
+        if (copyProtectors.size() == 0 || copyAttackers.size() == 0) {
+          break;
+        }
+      }
+      //5.1: Balanced tension: Set all protectors to critical.
+      if (copyProtectors.size() == 0 && copyAttackers.size() == 0) {
+        for (Piece protector : protectors) {
+          protector.addCriticalDefenence(piece);
+          board.board[protector.getFromPos().rank][protector.getFromPos().file].piece.addCriticalDefenence(piece);
+        }
+      } else if (copyProtectors.size() == 0) {
+        for (Piece attacker : attackers) {
+          attacker.addCriticalAttack(piece);
+          board.board[attacker.getFromPos().rank][attacker.getFromPos().file].piece.addCriticalAttack(piece);
+        }
+        //More defenders than attackers, no critical attacks or defenses.
+      } else if (copyAttackers.size() == 0) {
+        return;
+      } else {
+        //5.2 if The attacker threatens to win material right away.
+        for (Piece attacker : attackers) {
+          if (attacker.getValue() < piece.getValue()) {
+            attacker.addCriticalAttack(piece);
+            board.board[attacker.getFromPos().rank][attacker.getFromPos().file].piece.addCriticalAttack(piece);
+          }
+        }
+        //5.3: A piece threatens to win material after an initial trade.
+        //TODO: CONFIRM THIS LOGIC.
+        if (getLowestPiece(copyAttackers).getValue() < getLowestPiece(copyProtectors).getValue()
+            && attackers.size() > protectors.size()) {
+          getLowestPiece(copyAttackers).addCriticalAttack(getLowestPiece(protectors));
+          board.board[getLowestPiece(copyAttackers).getFromPos().rank][getLowestPiece(copyAttackers).getFromPos().file].piece.addCriticalAttack(getLowestPiece(protectors));
+        }
+      }
+    }
+  }
+  public static Piece getLowestPiece(List<Piece> pieces) {
+    int lowestValue = 999;
+    Piece lowestPiece = null;
+    for (Piece piece : pieces) {
+      int pieceValue = piece.getValue();
+      if (pieceValue == 1) {
+        return piece;
+      }
+      if (pieceValue < lowestValue) {
+        lowestValue = pieceValue;
+        lowestPiece = piece;
+      }
+    }
+    return lowestPiece;
+  }
+
+  //NOTE: pieceName of Knight for both Bishops and knights.
+  public static boolean removeByName(List<Piece> pieces, String pieceName) {
+    for (Piece piece: pieces) {
+      if (piece.getName().equals(pieceName) || piece.getName().equals("Bishop") && pieceName.equals("Knight")) {
+        pieces.remove(piece);
+        return true;
+      }
+    }
+    return false;
+  }
 
   public String getName() {
     return "Simple";
+  }
+
+  public static int countByType(ArrayList<Piece> pieces, String pieceName) {
+    int num = 0;
+    for (Piece piece : pieces) {
+      if (piece.getName().equals(pieceName)) {
+        num++;
+      }
+    }
+    return num;
   }
 }

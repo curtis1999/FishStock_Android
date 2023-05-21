@@ -11,8 +11,8 @@ import java.util.List;
 
 
 public class Queen implements Piece {
-  Coordinate fromCoord;
-  Coordinate coord;
+  Coordinate fromPos;
+  Coordinate curPos;
   boolean isWhite;
   Status stat;
   public ArrayList<Move> legalMoves= new ArrayList<>();
@@ -27,9 +27,14 @@ public class Queen implements Piece {
   ArrayList<Move>possibleMoves = new ArrayList<>();
   boolean isPinnedToQueen;
   boolean isRevealQueenChecker;
+  public ArrayList<Piece> criticallyAttacking = new ArrayList<>();
+  public ArrayList<Piece> criticallyDefending = new ArrayList<>();
+  public List<Integer> criticallyAttackingValues = new ArrayList<>();
+  public List<Integer> criticallyDefendingValues = new ArrayList<>();
+
   public Queen(Coordinate curPos, boolean isWhite) {
-    this.fromCoord=curPos;
-    this.coord=curPos;
+    this.fromPos=curPos;
+    this.curPos=curPos;
     this.isWhite=isWhite;
     if (this.isWhite) {
       this.stat = Status.WHITE;
@@ -38,8 +43,8 @@ public class Queen implements Piece {
     }
   }
   public Queen(Coordinate fromCoord,Coordinate coord, boolean isWhite) {
-    this.fromCoord=fromCoord;
-    this.coord=coord;
+    this.fromPos=fromCoord;
+    this.curPos=coord;
     this.isWhite=isWhite;
     if (this.isWhite) {
       this.stat = Status.WHITE;
@@ -54,7 +59,7 @@ public class Queen implements Piece {
   }
   @Override
   public Coordinate getPos() {
-    return this.coord;
+    return this.curPos;
   }
   @Override
   public ArrayList<Move> generateMoves(Coordinate pos, Cell[][] board) {
@@ -623,7 +628,7 @@ public class Queen implements Piece {
   }
 
   public double evaluate(Board board) {
-    Cell curCell = board.board[coord.rank][coord.file];
+    Cell curCell = board.board[curPos.rank][curPos.file];
     double eval = 9.5;
     if (isPinned) {
       eval *= 0.5;
@@ -738,7 +743,8 @@ public class Queen implements Piece {
 
   @Override
   public void setPos(Coordinate coord) {
-    this.coord=coord;
+    this.fromPos = curPos;
+    this.curPos=coord;
   }
   public void addAttacker(Piece p) {
     this.attackers.add(p);
@@ -815,6 +821,8 @@ public class Queen implements Piece {
     this.isRevealChecker = false;
     this.revealAve = null;
     this.revealCheckerLoc = new Coordinate(-1, -1);
+    this.criticallyAttacking = new ArrayList<>();
+    this.criticallyDefending = new ArrayList<>();
   }
   public void setProtectors(ArrayList<Piece> protectors){
     this.protectors = protectors;
@@ -824,7 +832,7 @@ public class Queen implements Piece {
   }
   @Override
   public Piece copyPiece() {
-    Queen copyPiece = new Queen(this.coord, this.isWhite);
+    Queen copyPiece = new Queen(this.curPos, this.isWhite);
     copyPiece.setPossibleMoves(this.possibleMoves);
     copyPiece.setProtectors(this.protectors);
     copyPiece.setAttackers(this.attackers);
@@ -836,5 +844,29 @@ public class Queen implements Piece {
     copyPiece.revealCheckerLoc = this.revealCheckerLoc;
     copyPiece.revealAve = this.revealAve;
     return copyPiece;
+  }
+  public void addCriticalAttack(Piece piece) {
+    this.criticallyAttacking.add(piece);
+  }
+  public void addCriticalDefenence(Piece piece) {
+    this.criticallyDefending.add(piece);
+  }
+
+  @Override
+  public void addOverloadValue(int value) {
+    this.criticallyDefendingValues.add(value);
+  }
+
+  @Override
+  public void addForkValue(int value) {
+    this.criticallyAttackingValues.add(value);
+  }
+
+  public int getValue() {
+    return 9;
+  }
+  @Override
+  public Coordinate getFromPos() {
+    return this.fromPos;
   }
 }

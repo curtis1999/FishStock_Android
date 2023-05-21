@@ -1,4 +1,6 @@
 package com.example.fishstock.Pieces;
+import androidx.collection.ArraySet;
+
 import com.example.fishstock.Board;
 import com.example.fishstock.Cell;
 import com.example.fishstock.Coordinate;
@@ -27,6 +29,10 @@ public class Pawn implements Piece {
   private Coordinate revealCheckerLoc;
   private ArrayList<Coordinate> revealAve;
   ArrayList<Move> possibleMoves = new ArrayList<>();
+  public ArrayList<Piece> criticallyAttacking;
+  public ArrayList<Piece> criticallyDefending;
+  public List<Integer> criticallyAttackingValues = new ArrayList<>();
+  public List<Integer> criticallyDefendingValues = new ArrayList<>();
 
   public Pawn(Coordinate pos, boolean isWhite) {
     this.isWhite = isWhite;
@@ -646,11 +652,17 @@ public class Pawn implements Piece {
     return this.curPos;
   }
 
+  @Override
+  public Coordinate getFromPos() {
+    return this.fromPos;
+  }
+
   public boolean getColor() {
     return this.isWhite;
   }
 
   public void setPos(Coordinate coord) {
+    this.fromPos = curPos;
     this.curPos = coord;
   }
 
@@ -777,6 +789,8 @@ public class Pawn implements Piece {
     this.isRevealChecker = false;
     this.revealAve = null;
     this.revealCheckerLoc = new Coordinate(-1, -1);
+    this.criticallyAttacking = new ArrayList<>();
+    this.criticallyDefending = new ArrayList<>();
   }
 
   public void setProtectors(ArrayList<Piece> protectors) {
@@ -807,4 +821,25 @@ public class Pawn implements Piece {
   public char getSymbol() {
     return 'P';
   }
+  public void addCriticalAttack(Piece piece) {
+    this.criticallyAttacking.add(piece);
+  }
+  public void addCriticalDefenence(Piece piece) {
+    this.criticallyDefending.add(piece);
+  }
+
+  @Override
+  public void addOverloadValue(int value) {
+    this.criticallyDefendingValues.add(value);
+  }
+
+  @Override
+  public void addForkValue(int value) {
+    this.criticallyAttackingValues.add(value);
+  }
+
+  public int getValue() {
+    return 1;
+  }
+
 }

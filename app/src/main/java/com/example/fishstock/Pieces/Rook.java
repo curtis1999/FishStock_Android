@@ -10,7 +10,7 @@ import com.example.fishstock.Status;
 import java.util.*;
 
 public class Rook implements Piece {
-  Coordinate fromCoord;
+  Coordinate fromPos;
   Coordinate curPos;
   boolean isWhite;
   ArrayList<Move> legalMoves = new ArrayList<>();
@@ -28,8 +28,13 @@ public class Rook implements Piece {
   public boolean isConnected; //True if the rooks are connected
   boolean isPinnedToQueen;
   boolean isRevealQueenChecker;
+  public ArrayList<Piece> criticallyAttacking = new ArrayList<>();
+  public ArrayList<Piece> criticallyDefending = new ArrayList<>();
+  public List<Integer> criticallyAttackingValues = new ArrayList<>();
+  public List<Integer> criticallyDefendingValues = new ArrayList<>();
+
   public Rook (Coordinate curPos, boolean isWhite) {
-    this.fromCoord = curPos;
+    this.fromPos = curPos;
     this.curPos = curPos;
     this.isWhite=isWhite;
     this.hasMoved = false;
@@ -41,7 +46,7 @@ public class Rook implements Piece {
     }
   }
   public Rook(Coordinate fromCoord,Coordinate p, boolean isWhite) {
-    this.fromCoord = fromCoord;
+    this.fromPos = fromCoord;
     this.curPos = p;
     this.isWhite=isWhite;
     this.hasMoved = false;
@@ -432,6 +437,11 @@ public class Rook implements Piece {
     return eval;
   }
 
+  @Override
+  public int getValue() {
+    return 5;
+  }
+
   public double evaluate(Board board) {
     Cell curCell = board.board[curPos.rank][curPos.file];
     double eval = 5.63;
@@ -555,6 +565,7 @@ public class Rook implements Piece {
 
 
   public void setPos(Coordinate coord) {
+    this.fromPos = curPos;
     this.curPos=coord;
   }
   public void addAttacker(Piece p) {
@@ -642,6 +653,8 @@ public class Rook implements Piece {
     this.isRevealChecker = false;
     this.revealAve = null;
     this.revealCheckerLoc = new Coordinate(-1, -1);
+    this.criticallyAttacking = new ArrayList<>();
+    this.criticallyDefending = new ArrayList<>();
 
   }
   public void setProtectors(ArrayList<Piece> protectors){
@@ -668,5 +681,25 @@ public class Rook implements Piece {
   }
   public char getSymbol() {
     return 'R';
+  }
+  public void addCriticalAttack(Piece piece) {
+    this.criticallyAttacking.add(piece);
+  }
+  public void addCriticalDefenence(Piece piece) {
+    this.criticallyDefending.add(piece);
+  }
+
+  @Override
+  public void addOverloadValue(int value) {
+    this.criticallyDefendingValues.add(value);
+  }
+
+  @Override
+  public void addForkValue(int value) {
+    this.criticallyAttackingValues.add(value);
+  }
+  @Override
+  public Coordinate getFromPos() {
+    return this.fromPos;
   }
 }

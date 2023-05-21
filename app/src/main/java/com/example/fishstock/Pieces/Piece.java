@@ -9,6 +9,7 @@ import java.util.*;
 
 public interface Piece {
   public Coordinate getPos();
+  public Coordinate getFromPos();
   public String getName();
   public ArrayList<Move> generateMoves(Coordinate coord2, Cell[][] board);
   public boolean getColor();
@@ -35,7 +36,11 @@ public interface Piece {
   public void reset();
   public Piece copyPiece();
   public char getSymbol();
-
+  public void addCriticalAttack(Piece piece);
+  public void addCriticalDefenence(Piece piece);
+  public void addOverloadValue(int value);
+  public void addForkValue(int value);
   double evaluate(Board board);
   double evaluateSimple(Board board);
+  int getValue();
 }

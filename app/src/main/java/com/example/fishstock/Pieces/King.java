@@ -10,7 +10,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class King implements Piece {
-  Coordinate coord;
+  Coordinate curPos;
+  Coordinate fromPos;
   public boolean isWhite;
   public boolean isChecked;
   public boolean isDoubleChecked;
@@ -32,11 +33,15 @@ public class King implements Piece {
   boolean isPinnedToQueen;
   boolean isRevealQueenChecker;
   public ArrayList<Piece> xRayingPieces = new ArrayList<>();
-
+  public ArrayList<Piece> criticallyAttacking = new ArrayList<>();
+  public ArrayList<Piece> criticallyDefending = new ArrayList<>();
+  public List<Integer> criticallyAttackingValues = new ArrayList<>();
+  public List<Integer> criticallyDefendingValues = new ArrayList<>();
 
 
   public King(Coordinate crd, boolean isWhite) {
-    this.coord=crd;
+    this.curPos =crd;
+    this.fromPos = crd;
     this.isWhite=isWhite;
     this.isChecked =false;
     this.isDoubleChecked = false;
@@ -54,7 +59,7 @@ public class King implements Piece {
   }
   @Override
   public Coordinate getPos() {
-    return this.coord;
+    return this.curPos;
   }
   @Override
   public ArrayList<Move> generateMoves(Coordinate pos, Cell[][] board) {
@@ -288,7 +293,7 @@ public class King implements Piece {
           //Check 2: No Pieces or black attackers within the castling lane.
           if (board[0][2].blackAttackers.size() == 0 && board[0][2].PieceStatus == Status.EMPTY &&
               board[0][1].blackAttackers.size() == 0 && board[0][1].PieceStatus == Status.EMPTY) {
-            Move shortcastleMove = new Move(this.coord, new Coordinate(1, 0), "King", false, true);
+            Move shortcastleMove = new Move(this.curPos, new Coordinate(1, 0), "King", false, true);
             shortcastleMove.setCastle();
             possibleMoves.add(shortcastleMove);
           }
@@ -300,7 +305,7 @@ public class King implements Piece {
           if (board[0][4].blackAttackers.size() == 0 && board[0][4].PieceStatus == Status.EMPTY
               && board[0][5].blackAttackers.size() == 0 && board[0][5].PieceStatus == Status.EMPTY
               && board[0][6].PieceStatus.equals(Status.EMPTY)) {
-            Move longCastleMove = new Move(this.coord, new Coordinate(5, 0), "King", false, true);
+            Move longCastleMove = new Move(this.curPos, new Coordinate(5, 0), "King", false, true);
             longCastleMove.setCastle();
             possibleMoves.add(longCastleMove);
           }
@@ -313,7 +318,7 @@ public class King implements Piece {
           //Check 2: No black attackers within the castling lane.
           if (board[7][2].whiteAttackers.size() == 0 && board[7][2].PieceStatus == Status.EMPTY
               && board[7][1].whiteAttackers.size() == 0 && board[7][2].PieceStatus == Status.EMPTY) {
-            Move shortcastleMove = new Move(this.coord, new Coordinate(1, 7), "King", false, false);
+            Move shortcastleMove = new Move(this.curPos, new Coordinate(1, 7), "King", false, false);
             shortcastleMove.setCastle();
             possibleMoves.add(shortcastleMove);
           }
@@ -324,7 +329,7 @@ public class King implements Piece {
           if (board[7][4].whiteAttackers.size() == 0 && board[7][4].PieceStatus == Status.EMPTY
               && board[7][5].whiteAttackers.size() == 0 && board[7][5].PieceStatus == Status.EMPTY
               && board[7][6].PieceStatus.equals(Status.EMPTY)) {
-            Move longCastleMove = new Move(this.coord, new Coordinate(5, 7), "King", false, false);
+            Move longCastleMove = new Move(this.curPos, new Coordinate(5, 7), "King", false, false);
             longCastleMove.setCastle();
             possibleMoves.add(longCastleMove);
           }
@@ -344,13 +349,13 @@ public class King implements Piece {
     boolean isOnOpenFile = false;
     boolean isOnOpenDiagonalUp = false;
     boolean isOnOpenDiagonalDown = false;
-    if (Board.countAlongFile(board.board, "Pawn", isWhite, coord.rank, coord.file, isWhite) == 0) {
+    if (Board.countAlongFile(board.board, "Pawn", isWhite, curPos.rank, curPos.file, isWhite) == 0) {
       isOnOpenFile = true;
     }
-    if (Board.countAlongDiagonal(board.board, "Pawn", coord, true, isWhite) == 0) {
+    if (Board.countAlongDiagonal(board.board, "Pawn", curPos, true, isWhite) == 0) {
       isOnOpenDiagonalUp = true;
     }
-    if (Board.countAlongDiagonal(board.board, "Pawn", coord, false, isWhite) == 0) {
+    if (Board.countAlongDiagonal(board.board, "Pawn", curPos, false, isWhite) == 0) {
       isOnOpenDiagonalDown = true;
     }
     if (!isOnOpenFile && !isOnOpenDiagonalDown && !isOnOpenDiagonalUp) {
@@ -384,7 +389,8 @@ public class King implements Piece {
   }
 
   public void setPos(Coordinate coord) {
-    this.coord=coord;
+    this.fromPos = coord;
+    this.curPos =coord;
   }
 
 
@@ -503,6 +509,8 @@ public class King implements Piece {
     this.revealAve = null;
     this.revealCheckerLoc = new Coordinate(-1, -1);
     this.xRayingPieces = new ArrayList<>();
+    this.criticallyAttacking = new ArrayList<>();
+    this.criticallyDefending = new ArrayList<>();
   }
   public void setProtectors(ArrayList<Piece> protectors){
     this.protectors = protectors;
@@ -512,7 +520,7 @@ public class King implements Piece {
   }
   @Override
   public Piece copyPiece() {
-    King copyPiece = new King(this.coord, this.isWhite);
+    King copyPiece = new King(this.curPos, this.isWhite);
     copyPiece.setPossibleMoves(this.possibleMoves);
     copyPiece.setProtectors(this.protectors);
     copyPiece.setAttackers(this.attackers);
@@ -575,5 +583,29 @@ public class King implements Piece {
   }
   public void setXRay(Piece piece) {
     this.xRayingPieces.add(piece);
+  }
+  public void addCriticalAttack(Piece piece) {
+    this.criticallyAttacking.add(piece);
+  }
+  public void addCriticalDefenence(Piece piece) {
+    this.criticallyDefending.add(piece);
+  }
+
+  @Override
+  public void addOverloadValue(int value) {
+    this.criticallyDefendingValues.add(value);
+  }
+
+  @Override
+  public void addForkValue(int value) {
+    this.criticallyAttackingValues.add(value);
+  }
+
+  public int getValue() {
+    return 999;
+  }
+  @Override
+  public Coordinate getFromPos() {
+    return this.fromPos;
   }
 }

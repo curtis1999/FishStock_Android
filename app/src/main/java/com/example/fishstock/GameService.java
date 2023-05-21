@@ -623,7 +623,7 @@ public class GameService {
           }
         }
       }
-      //Same Diagonal //TODO: EXTEND THE CHECKING AVENUE BY ONE.
+      //Same Diagonal
       else if((checkerLoc.file+checkerLoc.rank)==kingLoc.file+kingLoc.rank) {
         if (checkerLoc.rank>kingLoc.rank) {
           Coordinate temp = new Coordinate(checkerLoc.file+1, checkerLoc.rank-1);

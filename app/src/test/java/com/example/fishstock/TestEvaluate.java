@@ -3,6 +3,7 @@ package com.example.fishstock;
 import static org.junit.Assert.assertEquals;
 
 import com.example.fishstock.Agents.AgentType;
+import com.example.fishstock.Agents.Simple;
 import com.example.fishstock.Pieces.Bishop;
 import com.example.fishstock.Pieces.King;
 import com.example.fishstock.Pieces.Knight;
@@ -141,6 +142,59 @@ public class TestEvaluate {
     blackPieces.add(blackKing); blackPieces.add(blackQueen);
     board = new Board(whitePieces, blackPieces);
     game = new Game(board, AgentType.RANDY, AgentType.RANDY);
+  }
+  public void initTactics() {
+    //WHITE PIECES
+    whiteKing = new King(new Coordinate(3,0), true);
+    whiteQueen = new Queen(new Coordinate(4, 0), true);
+    whitePawn1 = new Pawn(new Coordinate(0,1), true);
+    whitePawn2 = new Pawn (new Coordinate( 1, 1), true); whitePawn2.growUp();
+    whitePawn3 = new Pawn (new Coordinate( 2, 1), true);
+    whitePawn4 = new Pawn(new Coordinate(6,1), true);
+    whiteKnight1 = new Knight(new Coordinate(2, 2), true);
+    whiteKnight2 = new Knight(new Coordinate(4, 3), true);
+    whiteRook1 = new Rook(new Coordinate(4, 2), true);
+    whiteRook2 = new Rook(new Coordinate(0, 7), true);
+    //whiteBishop1 = new Bishop (new Coordinate(1, 1), true);
+    //whiteBishop2 = new Bishop (new Coordinate(5, 0), true);
+    whitePieces.add(whiteKing); whitePieces.add(whiteQueen);
+    whitePieces.add(whitePawn1); whitePieces.add(whitePawn2); whitePieces.add(whitePawn3); whitePieces.add(whitePawn4);
+    whitePieces.add(whiteKnight1); whitePieces.add(whiteKnight2);
+    whitePieces.add(whiteRook1); whitePieces.add(whiteRook2);
+    //whitePieces.add(whiteBishop1); whitePieces.add(whiteBishop2);
+
+    //BLACK PIECES
+    blackKing = new King(new Coordinate(3,7), false);
+    blackPawn1 = new Pawn (new Coordinate(1, 3), false); blackPawn1.growUp();
+    //blackPawn2 = new Pawn (new Coordinate(4, 5), false);blackPawn2.growUp();
+    blackKnight1 = new Knight(new Coordinate(3, 4), false);
+    //blackKnight2 = new Knight (new Coordinate(3, 4), false);
+    blackBishop1 = new Bishop (new Coordinate(1, 6), false);
+    blackBishop2 = new Bishop (new Coordinate(5, 5), false);
+    blackRook1 = new Rook (new Coordinate(0, 3), false);
+    blackRook2 = new Rook (new Coordinate(5, 1), false);
+    blackPieces.add(blackKing);
+    blackPieces.add(blackBishop1); blackPieces.add(blackBishop2);
+    blackPieces.add(blackKnight1);//blackPieces.add(blackKnight2);
+    blackPieces.add(blackRook1); blackPieces.add(blackRook2);
+    blackPieces.add(blackPawn1); //blackPieces.add(blackPawn2);
+
+    board = new Board(whitePieces, blackPieces);
+    game = new Game(board, AgentType.RANDY, AgentType.RANDY);
+  }
+
+  @Test
+  public void testUpdatePiece() {
+    initTactics();
+    Board.printBoard(board, true);
+    GameService.updateBoardMeta(board);
+    Simple.updatePieces(board);
+    assertEquals(1, blackBishop1.criticallyAttacking.size());
+    assertEquals(1, blackRook1.criticallyAttacking.size());
+    assertEquals(1, whiteKnight1.criticallyAttacking.size());
+    assertEquals(1, whiteQueen.criticallyAttacking.size());
+    assertEquals(1, blackBishop1.criticallyDefending.size());
+
   }
 
   @Test
