@@ -211,20 +211,31 @@ public class Simple extends Agent {
       }
       for (Piece attacker : attackers) {
         if (attacker.getName().equals("Pawn")) {
-          removeByName(copyAttackers, "Pawn");
-          removeByName(copyProtectors, "Pawn");
+          if (countByType((ArrayList<Piece>) copyProtectors, "Pawn") > 0) {
+            removeByName(copyAttackers, "Pawn");
+            removeByName(copyProtectors, "Pawn");
+          }
         } else if (attacker.getName().equals("Knight") || attacker.getName().equals("Bishop")) {
-          removeByName(copyProtectors, "Knight");
-          removeByName(copyAttackers, "Knight");
+          if (countByType((ArrayList<Piece>) copyProtectors, "Knight") > 0
+              || countByType((ArrayList<Piece>) copyProtectors, "Bishop") > 0) {
+            removeByName(copyProtectors, "Knight");
+            removeByName(copyAttackers, "Knight");
+          }
         } else if (attacker.getName().equals("Rook")) {
-          removeByName(copyProtectors, "Rook");
-          removeByName(copyAttackers, "Rook");
+          if (countByType((ArrayList<Piece>) copyProtectors, "Rook") > 0) {
+            removeByName(copyProtectors, "Rook");
+            removeByName(copyAttackers, "Rook");
+          }
         } else if (attacker.getName().equals("Queen")) {
-          removeByName(copyProtectors, "Queen");
-          removeByName(copyAttackers, "Queen");
+          if (countByType((ArrayList<Piece>) copyProtectors, "Queen") > 0) {
+            removeByName(copyProtectors, "Queen");
+            removeByName(copyAttackers, "Queen");
+          }
         } else {
-          removeByName(copyProtectors, "King");
-          removeByName(copyAttackers, "King");
+          if (countByType((ArrayList<Piece>) copyProtectors, "King") > 0) {
+            removeByName(copyProtectors, "King");
+            removeByName(copyAttackers, "King");
+          }
         }
         if (copyProtectors.size() == 0 || copyAttackers.size() == 0) {
           break;

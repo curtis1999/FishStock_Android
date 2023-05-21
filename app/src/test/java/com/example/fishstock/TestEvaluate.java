@@ -194,6 +194,7 @@ public class TestEvaluate {
     assertEquals(1, whiteKnight1.criticallyAttacking.size());
     assertEquals(1, whiteQueen.criticallyAttacking.size());
     assertEquals(1, blackBishop1.criticallyDefending.size());
+    assertEquals(1, blackPawn1.criticallyAttacking.size());
 
   }
 

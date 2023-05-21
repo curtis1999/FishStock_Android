@@ -29,8 +29,8 @@ public class Pawn implements Piece {
   private Coordinate revealCheckerLoc;
   private ArrayList<Coordinate> revealAve;
   ArrayList<Move> possibleMoves = new ArrayList<>();
-  public ArrayList<Piece> criticallyAttacking;
-  public ArrayList<Piece> criticallyDefending;
+  public ArrayList<Piece> criticallyAttacking = new ArrayList<>();
+  public ArrayList<Piece> criticallyDefending = new ArrayList<>();
   public List<Integer> criticallyAttackingValues = new ArrayList<>();
   public List<Integer> criticallyDefendingValues = new ArrayList<>();
 
