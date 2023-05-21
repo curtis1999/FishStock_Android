@@ -375,7 +375,7 @@ public class GameService {
       checkingAve2 = ((King)chessBoard.whitePieces.get(0)).getCheckingAve2();
     } else {
       checkingAve1 = ((King)chessBoard.blackPieces.get(0)).getCheckingAve();
-      checkingAve2 = ((King)chessBoard.whitePieces.get(0)).getCheckingAve2();
+      checkingAve2 = ((King)chessBoard.blackPieces.get(0)).getCheckingAve2();
     }
     boolean inCheckingAve = false;
     for (Move mv : possibleMoves) {
@@ -436,10 +436,13 @@ public class GameService {
     Coordinate checkerLoc;
     Piece checkingPiece;
     Coordinate kingLoc;
+    ArrayList<Coordinate> checkingAve = new ArrayList<>();
+    boolean inCheckingAve = false;
     //PART 1: GET CHECKING INFO
     if (isWhite) {
       checkerLoc = ((King)chessBoard.whitePieces.get(0)).checkerLoc;
       checkingPiece = chessBoard.board[checkerLoc.rank][checkerLoc.file].piece;
+      checkingAve = ((King)chessBoard.whitePieces.get(0)).getCheckingAve();
       if (checkingPiece == null) {
         checkingPiece = chessBoard.board[checkerLoc.rank][checkerLoc.file].piece;
       }
@@ -448,6 +451,7 @@ public class GameService {
       checkerLoc = ((King)chessBoard.blackPieces.get(0)).checkerLoc;
       checkingPiece = chessBoard.board[checkerLoc.rank][checkerLoc.file].piece;
       kingLoc = new Coordinate(chessBoard.blackPieces.get(0).getPos().file, chessBoard.blackPieces.get(0).getPos().rank);
+      checkingAve = ((King)chessBoard.blackPieces.get(0)).getCheckingAve();
     }
     ArrayList<Move> possibleMovesCheck = new ArrayList<Move>();
     ArrayList<Coordinate> CheckingAvenue = getCheckingAvenue(checkingPiece,checkerLoc, kingLoc);
@@ -596,7 +600,7 @@ public class GameService {
       if (checkerLoc.file==kingLoc.file) {
         if (checkerLoc.rank>kingLoc.rank) {
           Coordinate tempLoc = new Coordinate(checkerLoc.file,checkerLoc.rank-1);
-          while (tempLoc.rank > 0 && tempLoc.rank >= kingLoc.rank-1) {
+          while (tempLoc.rank >= 0 && tempLoc.rank >= kingLoc.rank-1) {
             checkingAvenue.add(tempLoc);
             tempLoc = new Coordinate(tempLoc.file,tempLoc.rank-1);
           }
@@ -613,7 +617,7 @@ public class GameService {
         //2.1 down the file
         if (checkerLoc.file>kingLoc.file) {
           Coordinate tempLoc = new Coordinate(checkerLoc.file-1,checkerLoc.rank);
-          while (tempLoc.file > 0 && tempLoc.file >= kingLoc.file - 1) {
+          while (tempLoc.file >= 0 && tempLoc.file >= kingLoc.file - 1) {
             checkingAvenue.add(tempLoc);
             tempLoc = new Coordinate(tempLoc.file-1,tempLoc.rank);
           }
@@ -630,7 +634,7 @@ public class GameService {
       else if((checkerLoc.file+checkerLoc.rank)==kingLoc.file+kingLoc.rank) {
         if (checkerLoc.rank>kingLoc.rank) {
           Coordinate temp = new Coordinate(checkerLoc.file+1, checkerLoc.rank-1);
-          while (temp.rank > 0 && temp.rank >= kingLoc.rank - 1) {
+          while (temp.rank >= 0 && temp.rank >= kingLoc.rank - 1) {
             checkingAvenue.add(temp);
             temp = new Coordinate(temp.file+1,temp.rank-1);
           }
@@ -645,7 +649,7 @@ public class GameService {
       else if((checkerLoc.file-checkerLoc.rank)==kingLoc.file-kingLoc.rank) {
         if (checkerLoc.rank>kingLoc.rank) {
           Coordinate temp = new Coordinate(checkerLoc.file-1, checkerLoc.rank-1);
-          while (temp.rank > 0 && temp.rank >= kingLoc.rank - 1) {
+          while (temp.rank >= 0 && temp.rank >= kingLoc.rank - 1) {
             checkingAvenue.add(temp);
             temp = new Coordinate(temp.file-1,temp.rank-1);
           }
