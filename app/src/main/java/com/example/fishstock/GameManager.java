@@ -561,6 +561,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
     return move;
   }
 
+  //Checks if the game is over.
   public boolean postMoveChecks(Board board, boolean whiteMoved, TextView checkStatusBlack, TextView checkStatusWhite, TextView message) {
 
     //CHECK 1: Dead position.
@@ -658,10 +659,29 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
         }
       }
     }
+    if (!game.isEndGame && isEndGame(board)) {
+      game.isEndGame = true;
+    }
     return false;
   }
 
-
+  public static boolean isEndGame(Board board) {
+    for (Piece piece : board.whitePieces) {
+      if (piece.getName().equals("Queen")) {
+        return false;
+      }
+    }
+    for (Piece piece : board.blackPieces) {
+      if (piece.getName().equals("Queen")) {
+        return false;
+      }
+    }
+    if (board.whitePieces.size() < 9 && board.blackPieces.size() < 9) {
+      return true;
+    } else {
+      return false;
+    }
+  }
   public static Agent initializeAgent(String agentName, boolean isWhite) {
     Agent agent;
     switch (agentName) {

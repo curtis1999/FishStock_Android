@@ -136,6 +136,9 @@ public class Board implements Serializable {
       board[curPosition.rank][curPosition.file].Symbol = piece.getSymbol();
     }
     for (Piece piece : blackPieces) {
+      if (piece == null) {
+        continue;
+      }
       Cell cur = new Cell(true);
       this.blackPieces.add(piece);
       Coordinate curPosition = piece.getPos();

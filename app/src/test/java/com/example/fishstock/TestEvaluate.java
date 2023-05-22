@@ -198,10 +198,38 @@ public class TestEvaluate {
   }
   public void initOverLoadedQueen() {
     whiteKing = new King(new Coordinate(3,0), true);
-    whiteQueen = new Queen(new Coordinate(3, 2), true);
-    whiteRook1 = new Rook(new Coordinate(7, 0), true);
+    whiteQueen = new Queen(new Coordinate(3, 3), true);
+    whiteRook1 = new Rook(new Coordinate(0, 0), true);
+    whiteRook2 = new Rook(new Coordinate(6, 0), true);
+    whiteBishop1 = new Bishop (new Coordinate(2, 3), true);
+    whiteKnight1 = new Knight(new Coordinate(7, 3), true);
+    whitePawn1 = new Pawn(new Coordinate(1, 5), true);
+    whitePawn2 = new Pawn(new Coordinate(5, 5), true);
+    whitePieces.add(whiteKing);  whitePieces.add(whiteQueen); whitePieces.add(whiteRook1); whitePieces.add(whiteRook2);
+    whitePieces.add(whiteBishop1); whitePieces.add(whiteKnight1); whitePieces.add(whitePawn1); whitePieces.add(whitePawn2);
+
+    blackKing = new King(new Coordinate(3, 7), false);
+    blackRook1 = new Rook(new Coordinate(0, 2), false);
+    blackRook2 = new Rook(new Coordinate(6, 2), false);
+    blackBishop1 = new Bishop(new Coordinate(3, 4), false);
+    blackBishop2 = new Bishop(new Coordinate(6, 4), false);
+    blackPawn1 = new Pawn(new Coordinate(0, 6), false);
+    blackPawn2 = new Pawn(new Coordinate(4, 6), false);
+    blackPieces.add(blackKing); blackPieces.add(blackRook1); blackPieces.add(blackRook2);
+    blackPieces.add(blackBishop1); blackPieces.add(blackBishop2); blackPieces.add(blackPawn1); blackPieces.add(blackPawn2);
+    board = new Board(whitePieces, blackPieces);
+    game = new Game(board, AgentType.RANDY, AgentType.RANDY);
   }
 
+  @Test
+  public void testOverloadedQueen() {
+    initOverLoadedQueen();
+    Board.printBoard(board, true);
+    GameService.updateBoardMeta(board);
+    Simple.updatePieces(board);
+    assertEquals(true, whiteQueen.criticallyDefending.size()==6);
+    assertEquals(5, whiteQueen.overLoadingValue);
+  }
   @Test
   public void testRoyalFork() {
     initRoyalFork();

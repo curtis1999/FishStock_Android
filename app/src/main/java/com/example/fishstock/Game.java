@@ -8,6 +8,7 @@ public class Game {
   int moveNum;
   boolean isWhite;
   boolean isGameOver=false;
+  boolean isEndGame;
   AgentType whitePlayer;
   AgentType blackPlayer;
   ArrayList<Move> whitesMovesLog = new ArrayList<>();
@@ -21,6 +22,7 @@ public class Game {
     this.isGameOver = false;
     this.whitePlayer = whitePlayer;
     this.blackPlayer = blackPlayer;
+    this.isEndGame = false;
   }
 
   public Board getPreviousBoard() {
