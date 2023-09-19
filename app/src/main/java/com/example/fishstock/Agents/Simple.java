@@ -2,6 +2,7 @@ package com.example.fishstock.Agents;
 
 import com.example.fishstock.Board;
 import com.example.fishstock.Cell;
+import com.example.fishstock.GameManager;
 import com.example.fishstock.GameService;
 import com.example.fishstock.Move;
 import com.example.fishstock.Pieces.*;
@@ -26,7 +27,13 @@ public class Simple extends Agent {
       GameService.makeMove(board, move, isWhite);
       GameService.updateBoardMeta(board);
       updatePieces(board);
-      double curEval = evaluate(board);
+      double curEval = 0.0;
+      if (GameManager.isEndGame(board)) {
+        curEval = evaluateEndGame(board);
+      }
+      else {
+        curEval = evaluate(board);
+      }
       if (curEval > maxEval) {
         maxEval = curEval;
         maxIndex = counter;
@@ -36,6 +43,9 @@ public class Simple extends Agent {
     return possibleMoves.get(maxIndex);
   }
 
+  public double evaluateEndGame(Board board) throws CloneNotSupportedException {
+    return 0.0;
+  }
   /**
    * Evaluates a board position.
    *
@@ -122,8 +132,15 @@ public class Simple extends Agent {
     double theirPawnStructure = evaluatePawnStructure(board, !isWhite);
     double ourKingSafety = evaluateKingSafety(board, isWhite);
     double theirKingSafety = evaluateKingSafety(board, !isWhite);
-    return a * (ourPieceQuality - theirPieceQuality) + b * (ourPawnStructure - theirPawnStructure) + c * (ourKingSafety - theirKingSafety);
 
+    double baseEval =  a * (ourPieceQuality - theirPieceQuality) + b * (ourPawnStructure - theirPawnStructure) + c * (ourKingSafety - theirKingSafety);
+    if (isDoubleCheck) {
+      baseEval += 1.0;
+    }
+    if (isCheck) {
+      baseEval += 0.5;
+    }
+    return baseEval;
   }
 
   public List<Piece> getPiecesFromBoard(Cell[][] board, boolean isWhite) {

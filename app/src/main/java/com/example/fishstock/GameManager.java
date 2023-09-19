@@ -48,7 +48,6 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
     } catch (CloneNotSupportedException e) {
       e.printStackTrace();
     }
-
     this.isWhite = getIntent().getBooleanExtra("isWhite", false);
     this.adversary = initializeAgent(getIntent().getStringExtra("agentType"), isWhite);
     this.player1 = new Human(AgentType.HUMAN, true);
@@ -63,7 +62,11 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
 
     //2. Initialize the texts and buttons.
     TextView adversaryName = findViewById(R.id.player2);
-    adversaryName.setText(adversary.getName());
+    if (adversary.getName().equals("Human")) {
+      adversaryName.setText("Player2");
+    } else {
+      adversaryName.setText(adversary.getName());
+    }
     Button resign = findViewById(R.id.resign);
     Button undo = findViewById(R.id.undo);
     Button draw = findViewById(R.id.draw);
@@ -157,7 +160,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
       }
     });
     //Manually make the first move if the player is black.
-    if (!isWhite) {
+    if (!isWhite && !adversary.getName().equals("Human")) {
       try {
         Move adversaryMove = adversary.getMove(board, whitesPotentialMoves, blacksPotentialMoves);
         if (adversaryMove.isCapture) {
@@ -175,7 +178,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
       }
     }
 
-    //3. Set the buttons.
+    //3. Set the Cell Buttons!! (Makes the moves)
     for (int row = 0; row < 8; row++) {
       for (int col = 0; col < 8; col++) {
         ImageButton button = (ImageButton) getButonFromCoord(new Coordinate(col, row), isWhite);
@@ -225,96 +228,102 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
                   } else {
                     message.setText("WHITE TO MOVE");
                   }
-                  try {
-                    ArrayList<Move> playersMoves = GameService.generateMoves(board, isWhite);
-                    Move adversaryMove;
-                    if (isWhite) {
-                      adversaryMove = adversary.getMove(board, blacksPotentialMoves, playersMoves);
-                    } else {
-                      adversaryMove = adversary.getMove(board, whitesPotentialMoves, playersMoves);
-                    }
-                    if (adversaryMove.isCapture) {
+                  if (!adversary.getName().equals("Human")) {
+                    try {
+                      ArrayList<Move> playersMoves = GameService.generateMoves(board, isWhite);
+                      Move adversaryMove;
+
                       if (isWhite) {
-                        capturedPiecesWhite.add(adversaryMove.capturablePiece);
-                        switch(adversaryMove.capturablePiece.getName()) {
-                          case "Pawn":
-                            finalNumCapturedWhitePawns.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedWhitePawns.getText()) + 1));
-                            finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 1));
-                            finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 1));
-                            break;
-                          case "Rook":
-                            finalNumCapturedWhiteRooks.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedWhiteRooks.getText()) + 1));
-                            finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 5));
-                            finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 5));
-                            break;
-                          case "Knight":
-                            finalNumCapturedWhiteKnights.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedWhiteKnights.getText()) + 1));
-                            finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 3));
-                            finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 3));
-                            break;
-                          case "Bishop":
-                            finalNumCapturedWhiteBishops.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedWhiteBishops.getText()) + 1));
-                            finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 3));
-                            finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 3));
-                            break;
-                          case "Queen":
-                            finalNumCapturedWhiteQueens.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedWhiteQueens.getText()) + 1));
-                            finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 9));
-                            finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 9));
-                            break;
-                        }
+                        adversaryMove = adversary.getMove(board, blacksPotentialMoves, playersMoves);
                       } else {
-                        capturedPiecesBlack.add(adversaryMove.capturablePiece);
-                        switch(adversaryMove.capturablePiece.getName()) {
-                          case "Pawn":
-                            finalNumCapturedBlackPawns.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedBlackPawns.getText()) + 1));
-                            finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 1));
-                            finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 1));
-                            break;
-                          case "Rook":
-                            finalNumCapturedBlackRooks.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedBlackRooks.getText()) + 1));
-                            finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 5));
-                            finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 5));
-                            break;
-                          case "Knight":
-                            finalNumCapturedBlackKnights.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedBlackKnights.getText()) + 1));
-                            finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 3));
-                            finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 3));
-                            break;
-                          case "Bishop":
-                            finalNumCapturedBlackBishops.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedBlackBishops.getText()) + 1));
-                            finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 3));
-                            finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 3));
-                            break;
-                          case "Queen":
-                            finalNumCapturedBlackQueens.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedBlackQueens.getText()) + 1));
-                            finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 9));
-                            finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 9));
-                            break;
+                        adversaryMove = adversary.getMove(board, whitesPotentialMoves, playersMoves);
+                      }
+                      if (adversaryMove.isCapture) {
+                        if (isWhite) {
+                          capturedPiecesWhite.add(adversaryMove.capturablePiece);
+                          switch (adversaryMove.capturablePiece.getName()) {
+                            case "Pawn":
+                              finalNumCapturedWhitePawns.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedWhitePawns.getText()) + 1));
+                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 1));
+                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 1));
+                              break;
+                            case "Rook":
+                              finalNumCapturedWhiteRooks.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedWhiteRooks.getText()) + 1));
+                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 5));
+                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 5));
+                              break;
+                            case "Knight":
+                              finalNumCapturedWhiteKnights.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedWhiteKnights.getText()) + 1));
+                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 3));
+                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 3));
+                              break;
+                            case "Bishop":
+                              finalNumCapturedWhiteBishops.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedWhiteBishops.getText()) + 1));
+                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 3));
+                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 3));
+                              break;
+                            case "Queen":
+                              finalNumCapturedWhiteQueens.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedWhiteQueens.getText()) + 1));
+                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 9));
+                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 9));
+                              break;
+                          }
+                        } else {
+                          capturedPiecesBlack.add(adversaryMove.capturablePiece);
+                          switch (adversaryMove.capturablePiece.getName()) {
+                            case "Pawn":
+                              finalNumCapturedBlackPawns.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedBlackPawns.getText()) + 1));
+                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 1));
+                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 1));
+                              break;
+                            case "Rook":
+                              finalNumCapturedBlackRooks.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedBlackRooks.getText()) + 1));
+                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 5));
+                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 5));
+                              break;
+                            case "Knight":
+                              finalNumCapturedBlackKnights.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedBlackKnights.getText()) + 1));
+                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 3));
+                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 3));
+                              break;
+                            case "Bishop":
+                              finalNumCapturedBlackBishops.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedBlackBishops.getText()) + 1));
+                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 3));
+                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 3));
+                              break;
+                            case "Queen":
+                              finalNumCapturedBlackQueens.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedBlackQueens.getText()) + 1));
+                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 9));
+                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 9));
+                              break;
+                          }
                         }
                       }
+                      GameService.makeMove(board, adversaryMove, !isWhite);
+                      GameService.updateBoardMeta(board);
+                      if (isWhite) {
+                        game.blacksMovesLog.add(adversaryMove);
+                      } else {
+                        game.whitesMovesLog.add(adversaryMove);
+                      }
+                      game.boardStates.add(GameService.copyBoard(board));
+                      updateBoard(board, isWhite);
+                      postMoveChecks(board, !isWhite, finalCheckStatusBlack, finalCheckStatusWhite, message);
+                      if (isWhite) {
+                        message.setText("WHITE TO MOVE");
+                      } else {
+                        message.setText("BLACK TO MOVE");
+                      }
+                    } catch (CloneNotSupportedException e) {
+                      e.printStackTrace();
                     }
-                    GameService.makeMove(board, adversaryMove, !isWhite);
-                    GameService.updateBoardMeta(board);
-                    if (isWhite) {
-                      game.blacksMovesLog.add(adversaryMove);
-                    } else {
-                      game.whitesMovesLog.add(adversaryMove);
-                    }
-                    game.boardStates.add(GameService.copyBoard(board));
-                    updateBoard(board, isWhite);
-                    postMoveChecks(board, !isWhite, finalCheckStatusBlack, finalCheckStatusWhite, message);
-                    if (isWhite) {
-                      message.setText("WHITE TO MOVE");
-                    } else {
-                      message.setText("BLACK TO MOVE");
-                    }
-                  } catch (CloneNotSupportedException e) {
-                    e.printStackTrace();
+                    //If the opponent is Human. Simply switch the player.
+                  } else {
+                    isWhite = !isWhite;
                   }
                 }
               }
-              // CASE 2: Making a capturing move. (Clicked on an adversary piece with a piece selected.
+            // CASE 2: Making a capturing move. (Clicked on an adversary piece with a piece selected.
             } else if ((cell.PieceStatus == Status.BLACK && isWhite) || cell.PieceStatus == Status.WHITE && !isWhite) {
               if (selectedPiece != null && isLegalMove(coord, board)) {
                 Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), true, isWhite);
@@ -400,91 +409,98 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
                   } else {
                     message.setText("WHITE TO MOVE");
                   }
-                  try {
-                    ArrayList<Move> playersMoves = GameService.generateMoves(board, isWhite);
-                    Move adversaryMove;
-                    if (isWhite) {
-                      adversaryMove = adversary.getMove(board, blacksPotentialMoves, playersMoves);
-                    } else {
-                      adversaryMove = adversary.getMove(board, whitesPotentialMoves, playersMoves);
-                    } if (adversaryMove.isCapture) {
+                  //Adversary Move
+                  if (!adversary.getName().equals("Human")) {
+                    try {
+                      ArrayList<Move> playersMoves = GameService.generateMoves(board, isWhite);
+                      Move adversaryMove;
                       if (isWhite) {
-                        capturedPiecesWhite.add(adversaryMove.capturablePiece);
-                        switch(board.board[coord.rank][coord.file].piece.getName()) {
-                          case "Pawn":
-                            finalNumCapturedWhitePawns.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedWhitePawns.getText()) + 1));
-                            finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 1));
-                            finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 1));
-                            break;
-                          case "Rook":
-                            finalNumCapturedWhiteRooks.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedWhiteRooks.getText()) + 1));
-                            finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 5));
-                            finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 5));
-                            break;
-                          case "Knight":
-                            finalNumCapturedWhiteKnights.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedWhiteKnights.getText()) + 1));
-                            finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 3));
-                            finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 3));
-                            break;
-                          case "Bishop":
-                            finalNumCapturedWhiteBishops.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedWhiteBishops.getText()) + 1));
-                            finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 3));
-                            finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 3));
-                            break;
-                          case "Queen":
-                            finalNumCapturedWhiteQueens.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedWhiteQueens.getText()) + 1));
-                            finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 9));
-                            finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 9));
-                            break;
-                        }
+                        adversaryMove = adversary.getMove(board, blacksPotentialMoves, playersMoves);
                       } else {
-                        capturedPiecesBlack.add(adversaryMove.capturablePiece);
-                        switch(board.board[coord.rank][coord.file].piece.getName()) {
-                          case "Pawn":
-                            finalNumCapturedBlackPawns.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedBlackPawns.getText()) + 1));
-                            finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 1));
-                            finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 1));
-                            break;
-                          case "Rook":
-                            finalNumCapturedBlackRooks.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedBlackRooks.getText()) + 1));
-                            finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 5));
-                            finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 5));
-                            break;
-                          case "Knight":
-                            finalNumCapturedBlackKnights.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedBlackKnights.getText()) + 1));
-                            finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 3));
-                            finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 3));
-                            break;
-                          case "Bishop":
-                            finalNumCapturedBlackBishops.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedBlackBishops.getText()) + 1));
-                            finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 3));
-                            finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 3));
-                            break;
-                          case "Queen":
-                            finalNumCapturedBlackQueens.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedBlackQueens.getText()) + 1));
-                            finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 9));
-                            finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 9));
-                            break;
+                        adversaryMove = adversary.getMove(board, whitesPotentialMoves, playersMoves);
+                      }
+                      if (adversaryMove.isCapture) {
+                        if (isWhite) {
+                          capturedPiecesWhite.add(adversaryMove.capturablePiece);
+                          switch (board.board[coord.rank][coord.file].piece.getName()) {
+                            case "Pawn":
+                              finalNumCapturedWhitePawns.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedWhitePawns.getText()) + 1));
+                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 1));
+                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 1));
+                              break;
+                            case "Rook":
+                              finalNumCapturedWhiteRooks.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedWhiteRooks.getText()) + 1));
+                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 5));
+                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 5));
+                              break;
+                            case "Knight":
+                              finalNumCapturedWhiteKnights.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedWhiteKnights.getText()) + 1));
+                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 3));
+                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 3));
+                              break;
+                            case "Bishop":
+                              finalNumCapturedWhiteBishops.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedWhiteBishops.getText()) + 1));
+                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 3));
+                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 3));
+                              break;
+                            case "Queen":
+                              finalNumCapturedWhiteQueens.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedWhiteQueens.getText()) + 1));
+                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 9));
+                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 9));
+                              break;
+                          }
+                        } else {
+                          capturedPiecesBlack.add(adversaryMove.capturablePiece);
+                          switch (board.board[coord.rank][coord.file].piece.getName()) {
+                            case "Pawn":
+                              finalNumCapturedBlackPawns.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedBlackPawns.getText()) + 1));
+                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 1));
+                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 1));
+                              break;
+                            case "Rook":
+                              finalNumCapturedBlackRooks.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedBlackRooks.getText()) + 1));
+                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 5));
+                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 5));
+                              break;
+                            case "Knight":
+                              finalNumCapturedBlackKnights.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedBlackKnights.getText()) + 1));
+                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 3));
+                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 3));
+                              break;
+                            case "Bishop":
+                              finalNumCapturedBlackBishops.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedBlackBishops.getText()) + 1));
+                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 3));
+                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 3));
+                              break;
+                            case "Queen":
+                              finalNumCapturedBlackQueens.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedBlackQueens.getText()) + 1));
+                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 9));
+                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 9));
+                              break;
+                          }
                         }
                       }
+                      GameService.makeMove(board, adversaryMove, !isWhite);
+                      GameService.updateBoardMeta(board);
+                      if (isWhite) {
+                        game.blacksMovesLog.add(adversaryMove);
+                      } else {
+                        game.whitesMovesLog.add(adversaryMove);
+                      }
+                      game.boardStates.add(GameService.copyBoard(board));
+                      updateBoard(board, isWhite);
+                      postMoveChecks(board, !isWhite, finalCheckStatusBlack, finalCheckStatusWhite, message);
+                      if (isWhite) {
+                        message.setText("WHITE TO MOVE");
+                      } else {
+                        message.setText("BLACK TO MOVE");
+                      }
+                    } catch (CloneNotSupportedException e) {
+                      e.printStackTrace();
                     }
-                    GameService.makeMove(board, adversaryMove, !isWhite);
-                    GameService.updateBoardMeta(board);
-                    if (isWhite) {
-                      game.blacksMovesLog.add(adversaryMove);
-                    } else {
-                      game.whitesMovesLog.add(adversaryMove);
-                    }
-                    game.boardStates.add(GameService.copyBoard(board));
-                    updateBoard(board, isWhite);
-                    postMoveChecks(board, !isWhite, finalCheckStatusBlack, finalCheckStatusWhite, message);
-                    if (isWhite) {
-                      message.setText("WHITE TO MOVE");
-                    } else {
-                      message.setText("BLACK TO MOVE");
-                    }
-                  } catch (CloneNotSupportedException e) {
-                    e.printStackTrace();
+                    //Adversary is a Human.
+                  } else {
+                    isWhite = !isWhite;
                   }
                 }
               }
@@ -676,7 +692,10 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
         return false;
       }
     }
-    if (board.whitePieces.size() < 9 && board.blackPieces.size() < 9) {
+    if (Simple.countByType(board.whitePieces, "Rook") + Simple.countByType(board.whitePieces, "Bishop") +
+        Simple.countByType(board.whitePieces, "Knight") < 5 ||
+        Simple.countByType(board.blackPieces, "Rook") + Simple.countByType(board.blackPieces, "Bishop") +
+            Simple.countByType(board.blackPieces, "Knight") < 5) {
       return true;
     } else {
       return false;
@@ -694,8 +713,11 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
       case "MinMax":
         agent = new MinMax(AgentType.MINMAX, !isWhite);
         break;
-      default:
+      case "FishStock":
         agent = new FishStock(AgentType.FISHSTOCK, !isWhite);
+        break;
+      default:
+        agent = new Human(AgentType.HUMAN, !isWhite);
     }
     return agent;
   }

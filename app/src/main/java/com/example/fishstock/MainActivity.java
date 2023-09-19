@@ -23,6 +23,7 @@ public class MainActivity extends AppCompatActivity {
     Button playRandy = findViewById(R.id.PlayRandy);
     Button playSimple = findViewById(R.id.playSimple);
     Button playMinMax = findViewById(R.id.playMinMax);
+    Button playHuman = findViewById(R.id.playHuman);
     if (adversaryName != null) {
       switch (adversaryName) {
         case "Randy":
@@ -93,6 +94,15 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(MainActivity.this, GameManager.class);
         intent.putExtra("agentType", "MinMax");
         intent.putExtra("isWhite", isWhite);
+        startActivity(intent);
+      }
+    });
+    playHuman.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View v) {
+        Intent intent = new Intent(MainActivity.this, GameManager.class);
+        intent.putExtra("agentType", "Human");
+        intent.putExtra("isWhite", true);
         startActivity(intent);
       }
     });

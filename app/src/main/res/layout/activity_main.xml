@@ -23,13 +23,13 @@
         android:id="@+id/PlayRandy"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginStart="220dp"
         android:text="   RANDY    "
+
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.792"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.47" />
+        app:layout_constraintVertical_bias="0.402" />
 
     <Button
         android:id="@+id/playSimple"
@@ -38,10 +38,9 @@
         android:text="SIMPLE"
         app:layout_constraintBottom_toTopOf="@+id/PlayFishStock"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.558"
         app:layout_constraintStart_toEndOf="@+id/level2"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.796" />
+        app:layout_constraintVertical_bias="0.706" />
 
     <Button
         android:id="@+id/PlayFishStock"
@@ -62,10 +61,22 @@
         android:text="MIN-MAX"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.796"
+        app:layout_constraintHorizontal_bias="0.799"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/playSimple"
-        app:layout_constraintVertical_bias="0.02" />
+        app:layout_constraintVertical_bias="0.056" />
+
+    <Button
+        android:id="@+id/playHuman"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="HUMAN"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.478"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/playSimple"
+        app:layout_constraintVertical_bias="0.598" />
 
     <TextView
         android:id="@+id/textView6"
@@ -76,10 +87,10 @@
         android:textSize="20dp"
         app:layout_constraintBottom_toTopOf="@+id/PlayRandy"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.6"
+        app:layout_constraintHorizontal_bias="0.617"
         app:layout_constraintStart_toEndOf="@+id/textView5"
         app:layout_constraintTop_toBottomOf="@+id/textview_second"
-        app:layout_constraintVertical_bias="0.631" />
+        app:layout_constraintVertical_bias="0.094" />
 
     <TextView
         android:id="@+id/level3"
@@ -88,7 +99,7 @@
         android:text="Level3"
         android:textSize="20dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/PlayFishStock"
+        app:layout_constraintEnd_toStartOf="@+id/playMinMax"
         app:layout_constraintHorizontal_bias="0.508"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/level2"
@@ -148,7 +159,7 @@
         android:text="WHITE"
         app:layout_constraintBottom_toTopOf="@+id/textview_second"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.191"
+        app:layout_constraintHorizontal_bias="0.136"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/textview_first"
         app:layout_constraintVertical_bias="0.598" />
@@ -161,7 +172,7 @@
         android:textColor="#000000"
         app:layout_constraintBottom_toTopOf="@+id/textview_second"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.642"
+        app:layout_constraintHorizontal_bias="0.769"
         app:layout_constraintStart_toEndOf="@+id/WHITE"
         app:layout_constraintTop_toBottomOf="@+id/textview_first"
         app:layout_constraintVertical_bias="0.598"
