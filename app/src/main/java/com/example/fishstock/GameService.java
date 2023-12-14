@@ -71,7 +71,6 @@ public class GameService {
         }
       }
     }
-
     //3. Castle.
     if (curMove.isCastle) {
       //3.1 Short Castle

@@ -611,7 +611,7 @@ public class King implements Piece {
   }
 
   public int getValue() {
-    return 999;
+    return 998;
   }
   @Override
   public Coordinate getFromPos() {

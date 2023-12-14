@@ -64,6 +64,8 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
     TextView adversaryName = findViewById(R.id.player2);
     if (adversary.getName().equals("Human")) {
       adversaryName.setText("Player2");
+      TextView playerName = findViewById(R.id.player1);
+      playerName.setText("Player1");
     } else {
       adversaryName.setText(adversary.getName());
     }
@@ -89,6 +91,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
     TextView checkStatusBlack = findViewById(R.id.checkStatusTop);
     TextView checkStatusWhite = findViewById(R.id.checkStatusBottom);
 
+    //Note, the default is from white POV.
     if (!isWhite) {
       ImageView capturedBlackPawnView  = findViewById(R.id.topCapturedPawns);
       capturedBlackPawnView.setImageResource(R.drawable.black_pawn);
@@ -320,6 +323,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
                     //If the opponent is Human. Simply switch the player.
                   } else {
                     isWhite = !isWhite;
+                    switchViewSide();
                   }
                 }
               }
@@ -501,6 +505,7 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
                     //Adversary is a Human.
                   } else {
                     isWhite = !isWhite;
+                    switchViewSide();
                   }
                 }
               }
@@ -517,30 +522,45 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
                   } else if (board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.EMPTY) {
                     button.setImageResource(R.drawable.empty_dark);
                   } else if ((isWhite && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.BLACK) ||
-                      (!isWhite && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.WHITE)){
+                      (!isWhite && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.WHITE)) {
                     button.setColorFilter(null);
                   }
                 }
               }
-              if (!cell.piece.equals(selectedPiece)) {
-                selectedPiece = board.board[coord.rank][coord.file].piece;
-                ImageButton curPiece = (ImageButton) getButonFromCoord(selectedPiece.getPos(), isWhite);
-                curPiece.setColorFilter(Color.YELLOW, PorterDuff.Mode.OVERLAY);
-                ArrayList<Move> legalMoves = selectedPiece.generateMoves(coord, board.board);
-                for (Move move : GameService.filterMoves(legalMoves)) {
-                  if (isLegalMove(move.toCoord, board)) {
-                    ImageButton button = (ImageButton) getButonFromCoord(move.toCoord, isWhite);
-                  if (board.board[move.toCoord.rank][move.toCoord.file].isLight
-                      && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.EMPTY) {
-                    button.setImageResource(R.drawable.white_empty_selected);
-                  } else if (board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.EMPTY) {
-                    button.setImageResource(R.drawable.black_empty_selected);
-                  }
-                  else if ((isWhite && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.BLACK) ||
-                      (!isWhite && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.WHITE)){
-                    button.setColorFilter(Color.RED, PorterDuff.Mode.OVERLAY);
+              boolean isPinned = false;
+
+              //First selecting a piece
+              if (selectedPiece == null || !cell.piece.equals(selectedPiece)) {
+                if (isWhite) {
+                  int index = board.getIndex(board.whitePieces, new Coordinate(coord.file,coord.rank));
+                  selectedPiece = board.whitePieces.get(index);
+                  if (selectedPiece.isPinned()) {
+                    isPinned = true;
                   }
                 }
+                if (!isPinned) {
+                  selectedPiece = board.board[coord.rank][coord.file].piece;
+                  ImageButton curPiece = (ImageButton) getButonFromCoord(selectedPiece.getPos(), isWhite);
+                  curPiece.setColorFilter(Color.YELLOW, PorterDuff.Mode.OVERLAY);
+                  ArrayList<Move> legalMoves = selectedPiece.generateMoves(coord, board.board);
+                  for (Move move : GameService.filterMoves(legalMoves)) {
+                    if (isLegalMove(move.toCoord, board)) {
+                      ImageButton button = (ImageButton) getButonFromCoord(move.toCoord, isWhite);
+                      if (board.board[move.toCoord.rank][move.toCoord.file].isLight
+                          && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.EMPTY) {
+                        button.setImageResource(R.drawable.white_empty_selected);
+                      } else if (board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.EMPTY) {
+                        button.setImageResource(R.drawable.black_empty_selected);
+                      } else if ((isWhite && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.BLACK) ||
+                          (!isWhite && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.WHITE)) {
+                        button.setColorFilter(Color.RED, PorterDuff.Mode.OVERLAY);
+                      }
+                    }
+                  }
+                } else {
+                  ImageButton curPieceButton = (ImageButton) getButonFromCoord(selectedPiece.getPos(), isWhite);
+                  curPieceButton.setColorFilter(null);
+                  selectedPiece = null;
                 }
               } else {
                 ImageButton curPieceButton = (ImageButton) getButonFromCoord(selectedPiece.getPos(), isWhite);
@@ -548,6 +568,11 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
                 selectedPiece = null;
               }
             }
+          }
+
+          //Helper function which switches the view if the game is two humans on the same machine.
+          private void switchViewSide() {
+
           }
         });
       }
