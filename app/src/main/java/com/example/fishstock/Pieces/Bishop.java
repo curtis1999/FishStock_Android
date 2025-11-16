@@ -708,4 +708,11 @@ public class Bishop implements Piece {
   public int getValue() {
     return 3;
   }
+  @Override
+  public void clearCriticalLabels() {
+    criticallyAttacking.clear();
+    criticallyDefending.clear();
+    criticallyDefendingValues.clear();
+    criticallyAttackingValues.clear();
+  }
 }

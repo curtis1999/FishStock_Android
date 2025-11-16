@@ -8,59 +8,106 @@ import android.graphics.PorterDuff;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
-import android.widget.GridLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
+
 import com.example.fishstock.Agents.*;
 import com.example.fishstock.Pieces.*;
 
 import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
-public class GameManager extends AppCompatActivity implements PromotionDialog.OnPromotionMoveListener, GameOverDialog.OnGameOverMoveListener {
-  Game game;
-  Board board;
-  Agent player1;
-  Agent adversary;
-  Piece selectedPiece;
-  boolean isWhite = true;
-  ArrayList<Piece> capturedPiecesWhite = new ArrayList<>();
-  ArrayList<Piece> capturedPiecesBlack = new ArrayList<>();
-  ArrayList<Move> blacksPotentialMoves = new ArrayList<>();
-  ArrayList<Move> whitesPotentialMoves = new ArrayList<>();
+public class GameManager extends AppCompatActivity
+    implements PromotionDialog.OnPromotionMoveListener, GameOverDialog.OnGameOverMoveListener {
 
-  /**
-   * The Game Loop.  Initializes the board and the buttons.
-   *
-   * @param savedInstanceState
-   */
+  // Game state
+  private Game game;
+  private Board board;
+  private Agent player1;
+  private Agent adversary;
+  private Piece selectedPiece;
+  private boolean isWhite;
+
+  // Move tracking
+  private ArrayList<Piece> capturedPiecesWhite = new ArrayList<>();
+  private ArrayList<Piece> capturedPiecesBlack = new ArrayList<>();
+  private ArrayList<Move> blacksPotentialMoves = new ArrayList<>();
+  private ArrayList<Move> whitesPotentialMoves = new ArrayList<>();
+
+  // UI elements
+  private TextView messageText;
+  private TextView checkStatusBlack;
+  private TextView checkStatusWhite;
+  private TextView whiteScore;
+  private TextView blackScore;
+
+  // Captured piece counters
+  private Map<String, TextView> whiteCapturedCounters = new HashMap<>();
+  private Map<String, TextView> blackCapturedCounters = new HashMap<>();
+
+  // Piece values for scoring
+  private static final Map<String, Integer> PIECE_VALUES = new HashMap<String, Integer>() {{
+    put("Pawn", 1);
+    put("Knight", 3);
+    put("Bishop", 3);
+    put("Rook", 5);
+    put("Queen", 9);
+  }};
+
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_game);
-    //1. Initialize the board, agent and game
+
+    initializeGame();
+    initializeUI();
+    setupButtonListeners();
+
+    // If player is black and adversary is not human, adversary makes first move
+    if (!isWhite && !adversary.getName().equals("Human")) {
+      makeAdversaryMove();
+    }
+
+    setupBoardClickListeners();
+  }
+
+  /**
+   * Initializes the game board and agents.
+   */
+  private void initializeGame() {
     this.board = new Board();
     GameService.updateBoardMeta(board);
+
     try {
       whitesPotentialMoves = GameService.generateMoves(board, true);
       blacksPotentialMoves = GameService.generateMoves(board, false);
     } catch (CloneNotSupportedException e) {
       e.printStackTrace();
     }
+
     this.isWhite = getIntent().getBooleanExtra("isWhite", false);
-    this.adversary = initializeAgent(getIntent().getStringExtra("agentType"), isWhite);
-    this.player1 = new Human(AgentType.HUMAN, true);
+    this.adversary = initializeAgent(getIntent().getStringExtra("agentType"), !isWhite);
+    this.player1 = new Human(AgentType.HUMAN, isWhite);
 
     if (isWhite) {
       this.game = new Game(board, player1.type, adversary.type);
     } else {
       this.game = new Game(board, adversary.type, player1.type);
     }
+
     this.game.boardStates.add(GameService.copyBoard(this.board));
     updateBoard(board, isWhite);
+  }
 
-    //2. Initialize the texts and buttons.
+  /**
+   * Initializes all UI elements and sets up captured piece displays.
+   */
+  private void initializeUI() {
+    messageText = findViewById(R.id.welcomeMessage);
+
+    // Setup player names
     TextView adversaryName = findViewById(R.id.player2);
     if (adversary.getName().equals("Human")) {
       adversaryName.setText("Player2");
@@ -69,732 +116,667 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
     } else {
       adversaryName.setText(adversary.getName());
     }
+
+    // Setup score and check status displays based on perspective
+    setupPerspectiveBasedUI();
+
+    // Setup captured piece counters
+    setupCapturedPieceCounters();
+  }
+
+  /**
+   * Sets up UI elements based on player perspective (white or black).
+   */
+  private void setupPerspectiveBasedUI() {
+    if (isWhite) {
+      checkStatusBlack = findViewById(R.id.checkStatusTop);
+      checkStatusWhite = findViewById(R.id.checkStatusBottom);
+      whiteScore = findViewById(R.id.BottomScore);
+      blackScore = findViewById(R.id.topScore);
+    } else {
+      // Flip the perspective for black player
+      checkStatusBlack = findViewById(R.id.checkStatusBottom);
+      checkStatusWhite = findViewById(R.id.checkStatusTop);
+      whiteScore = findViewById(R.id.topScore);
+      blackScore = findViewById(R.id.BottomScore);
+
+      // Update captured piece images
+      updateCapturedPieceImages();
+    }
+  }
+
+  /**
+   * Updates captured piece icons when playing from black's perspective.
+   */
+  private void updateCapturedPieceImages() {
+    // Black pieces on top
+    ((ImageView) findViewById(R.id.topCapturedPawns)).setImageResource(R.drawable.black_pawn);
+    ((ImageView) findViewById(R.id.topCapturedBishops)).setImageResource(R.drawable.black_bishop);
+    ((ImageView) findViewById(R.id.topCapturedKnights)).setImageResource(R.drawable.black_knight);
+    ((ImageView) findViewById(R.id.topCapturedRooks)).setImageResource(R.drawable.black_rook);
+    ((ImageView) findViewById(R.id.topCapturedQueens)).setImageResource(R.drawable.black_queen);
+
+    // White pieces on bottom
+    ((ImageView) findViewById(R.id.bottomCapturedPawns)).setImageResource(R.drawable.white_pawn);
+    ((ImageView) findViewById(R.id.bottomCapturedBishops)).setImageResource(R.drawable.white_bishop);
+    ((ImageView) findViewById(R.id.bottomCapturedKnights)).setImageResource(R.drawable.white_knight);
+    ((ImageView) findViewById(R.id.bottomCapturedRooks)).setImageResource(R.drawable.whie_rook);
+    ((ImageView) findViewById(R.id.bottomCapturedQueens)).setImageResource(R.drawable.white_queen);
+  }
+
+  /**
+   * Sets up maps for captured piece counters based on perspective.
+   */
+  private void setupCapturedPieceCounters() {
+    String topPrefix = isWhite ? "numCapturedTop" : "numCapturedBottom";
+    String bottomPrefix = isWhite ? "numCapturedBottom" : "numCapturedTop";
+
+    // Black captured pieces (displayed on top for white, bottom for black)
+    blackCapturedCounters.put("Pawn", findViewById(getResources().getIdentifier(topPrefix + "Pawns", "id", getPackageName())));
+    blackCapturedCounters.put("Rook", findViewById(getResources().getIdentifier(topPrefix + "Rooks", "id", getPackageName())));
+    blackCapturedCounters.put("Knight", findViewById(getResources().getIdentifier(topPrefix + "Knights", "id", getPackageName())));
+    blackCapturedCounters.put("Bishop", findViewById(getResources().getIdentifier(topPrefix + "Bishops", "id", getPackageName())));
+    blackCapturedCounters.put("Queen", findViewById(getResources().getIdentifier(topPrefix + "Queens", "id", getPackageName())));
+
+    // White captured pieces
+    whiteCapturedCounters.put("Pawn", findViewById(getResources().getIdentifier(bottomPrefix + "Pawns", "id", getPackageName())));
+    whiteCapturedCounters.put("Rook", findViewById(getResources().getIdentifier(bottomPrefix + "Rooks", "id", getPackageName())));
+    whiteCapturedCounters.put("Knight", findViewById(getResources().getIdentifier(bottomPrefix + "Knights", "id", getPackageName())));
+    whiteCapturedCounters.put("Bishop", findViewById(getResources().getIdentifier(bottomPrefix + "Bishops", "id", getPackageName())));
+    whiteCapturedCounters.put("Queen", findViewById(getResources().getIdentifier(bottomPrefix + "Queens", "id", getPackageName())));
+  }
+
+  /**
+   * Sets up button click listeners for game controls.
+   */
+  private void setupButtonListeners() {
     Button resign = findViewById(R.id.resign);
     Button undo = findViewById(R.id.undo);
     Button draw = findViewById(R.id.draw);
-    ImageButton promotionQueen = findViewById(R.id.promotionQueen);
-    ImageButton promotionRook = findViewById(R.id.promotionRook);
-    ImageButton promotionBishop = findViewById(R.id.promotionBishop);
-    ImageButton promotionKnight = findViewById(R.id.promotionKnight);
-    TextView numCapturedBlackPawns = findViewById(R.id.numCapturedBottomPawns);
-    TextView numCapturedBlackRooks = findViewById(R.id.numCapturedBottomRooks);
-    TextView numCapturedBlackKnights = findViewById(R.id.numCapturedBottomKnights);
-    TextView numCapturedBlackBishops = findViewById(R.id.numCapturedBottomBishops);
-    TextView numCapturedBlackQueens = findViewById(R.id.numCapturedBottomQueens);
-    TextView numCapturedWhitePawns = findViewById(R.id.numCapturedTopPawns);
-    TextView numCapturedWhiteRooks = findViewById(R.id.numCapturedTopRooks);
-    TextView numCapturedWhiteKnights = findViewById(R.id.numCapturedTopKnights);
-    TextView numCapturedWhiteBishops = findViewById(R.id.numCapturedTopBishops);
-    TextView numCapturedWhiteQueens = findViewById(R.id.numCapturedTopQueens);
-    TextView whiteScore = findViewById(R.id.topScore);
-    TextView blackScore = findViewById(R.id.BottomScore);
-    TextView checkStatusBlack = findViewById(R.id.checkStatusTop);
-    TextView checkStatusWhite = findViewById(R.id.checkStatusBottom);
 
-    //Note, the default is from white POV.
-    if (!isWhite) {
-      ImageView capturedBlackPawnView  = findViewById(R.id.topCapturedPawns);
-      capturedBlackPawnView.setImageResource(R.drawable.black_pawn);
-      ImageView capturedBlackBishopView  = findViewById(R.id.topCapturedBishops);
-      capturedBlackBishopView.setImageResource(R.drawable.black_bishop);
-      ImageView capturedBlackKnightView  = findViewById(R.id.topCapturedKnights);
-      capturedBlackKnightView.setImageResource(R.drawable.black_knight);
-      ImageView capturedBlackRookView  = findViewById(R.id.topCapturedRooks);
-      capturedBlackRookView.setImageResource(R.drawable.black_rook);
-      ImageView capturedBlackQueenView  = findViewById(R.id.topCapturedQueens);
-      capturedBlackQueenView.setImageResource(R.drawable.black_queen);
+    resign.setOnClickListener(v -> {
+      Intent intent = new Intent(GameManager.this, MainActivity.class);
+      startActivity(intent);
+    });
 
-      ImageView capturedWhitePawnView = findViewById(R.id.bottomCapturedPawns);
-      capturedWhitePawnView.setImageResource(R.drawable.white_pawn);
-      ImageView capturedWhiteBishopView  = findViewById(R.id.bottomCapturedBishops);
-      capturedWhiteBishopView.setImageResource(R.drawable.white_bishop);
-      ImageView capturedWhiteKnightView  = findViewById(R.id.bottomCapturedKnights);
-      capturedWhiteKnightView.setImageResource(R.drawable.white_knight);
-      ImageView capturedWhiteRookView  = findViewById(R.id.bottomCapturedRooks);
-      capturedWhiteRookView.setImageResource(R.drawable.whie_rook);
-      ImageView capturedWhiteQueenView  = findViewById(R.id.bottomCapturedQueens);
-      capturedWhiteQueenView.setImageResource(R.drawable.white_queen);
+    undo.setOnClickListener(v -> {
+      board = game.getPreviousBoard();
+      GameService.updateBoardMeta(board);
+      updateBoard(board, isWhite);
+    });
 
-      numCapturedBlackPawns = findViewById(R.id.numCapturedTopPawns);
-      numCapturedBlackRooks = findViewById(R.id.numCapturedTopRooks);
-      numCapturedBlackKnights = findViewById(R.id.numCapturedTopKnights);
-      numCapturedBlackBishops = findViewById(R.id.numCapturedTopBishops);
-      numCapturedBlackQueens = findViewById(R.id.numCapturedTopQueens);
-      numCapturedWhitePawns = findViewById(R.id.numCapturedBottomPawns);
-      numCapturedWhiteRooks = findViewById(R.id.numCapturedBottomRooks);
-      numCapturedWhiteKnights = findViewById(R.id.numCapturedBottomKnights);
-      numCapturedWhiteBishops = findViewById(R.id.numCapturedBottomBishops);
-      numCapturedWhiteQueens = findViewById(R.id.numCapturedBottomQueens);
-      whiteScore = findViewById(R.id.BottomScore);
-      blackScore = findViewById(R.id.topScore);
-      checkStatusBlack = findViewById(R.id.checkStatusBottom);
-      checkStatusWhite = findViewById(R.id.checkStatusTop);
+    draw.setOnClickListener(v -> handleDrawOffer());
+  }
+
+  /**
+   * Handles draw offer logic.
+   */
+  private void handleDrawOffer() {
+    int playerScore = isWhite ?
+        Integer.parseInt(whiteScore.getText().toString()) :
+        Integer.parseInt(blackScore.getText().toString());
+
+    if (playerScore >= 0) {
+      messageText.setText("DECLINED");
+    } else {
+      messageText.setText("ACCEPTED");
+      GameOverDialog ggDialog = new GameOverDialog(this, 0, isWhite, adversary.getName());
+      ggDialog.setOnGameOverListener(this);
+      ggDialog.show();
     }
-    TextView message = findViewById(R.id.welcomeMessage);
-    resign.setOnClickListener(new View.OnClickListener() {
-      @Override
-      public void onClick(View v) {
-        Intent intent = new Intent(GameManager.this, MainActivity.class);
-        startActivity(intent);
-      }
-    });
-    undo.setOnClickListener(new View.OnClickListener() {
-      @Override
-      public void onClick(View v) {
-        board = game.getPreviousBoard();
-        GameService.updateBoardMeta(board);
-        updateBoard(board, isWhite);
-      }
-    });
-    TextView finalWhiteScore1 = whiteScore;
-    TextView finalBlackScore1 = blackScore;
-    draw.setOnClickListener(new View.OnClickListener() {
-      @Override
-      public void onClick(View v) {
-        if (isWhite && Integer.valueOf((String) finalWhiteScore1.getText()) >= 0
-        || !isWhite && Integer.valueOf((String) finalBlackScore1.getText()) >=0 ) {
-          message.setText("DECLINED");
-        } else {
-          message.setText("ACCEPT");
-          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 0, isWhite, adversary.getName());
-          ggDialog.setOnGameOverListener(GameManager.this);
-          ggDialog.show();
-        }
-      }
-    });
-    //Manually make the first move if the player is black.
-    if (!isWhite && !adversary.getName().equals("Human")) {
-      try {
-        Move adversaryMove = adversary.getMove(board, whitesPotentialMoves, blacksPotentialMoves);
-        if (adversaryMove.isCapture) {
-            capturedPiecesBlack.add(adversaryMove.capturablePiece);
-        }
-        GameService.makeMove(board, adversaryMove, true);
-        GameService.updateBoardMeta(board);
-        game.whitesMovesLog.add(adversaryMove);
-        game.boardStates.add(GameService.copyBoard(board));
-        updateBoard(board, false);
-        postMoveChecks(board, true, checkStatusBlack, checkStatusWhite, message);
-          message.setText("BLACK TO MOVE");
-      } catch (CloneNotSupportedException e) {
-        e.printStackTrace();
-      }
-    }
+  }
 
-    //3. Set the Cell Buttons!! (Makes the moves)
+  /**
+   * Sets up click listeners for all board squares.
+   */
+  private void setupBoardClickListeners() {
     for (int row = 0; row < 8; row++) {
       for (int col = 0; col < 8; col++) {
-        ImageButton button = (ImageButton) getButonFromCoord(new Coordinate(col, row), isWhite);
-        TextView finalCheckStatusBlack = checkStatusBlack;
-        TextView finalCheckStatusWhite = checkStatusWhite;
-        TextView finalNumCapturedWhitePawns = numCapturedWhitePawns;
-        TextView finalWhiteScore = whiteScore;
-        TextView finalBlackScore = blackScore;
-        TextView finalNumCapturedWhiteRooks = numCapturedWhiteRooks;
-        TextView finalNumCapturedWhiteKnights = numCapturedWhiteKnights;
-        TextView finalNumCapturedWhiteQueens = numCapturedWhiteQueens;
-        TextView finalNumCapturedBlackPawns = numCapturedBlackPawns;
-        TextView finalNumCapturedBlackRooks = numCapturedBlackRooks;
-        TextView finalNumCapturedBlackKnights = numCapturedBlackKnights;
-        TextView finalNumCapturedBlackBishops = numCapturedBlackBishops;
-        TextView finalNumCapturedBlackQueens = numCapturedBlackQueens;
-        TextView finalNumCapturedWhiteBishops = numCapturedWhiteBishops;
-        button.setOnClickListener(new View.OnClickListener() {
-
-          @Override
-          public void onClick(View v) {
-            Coordinate coord = getCoordFromButton(button, isWhite);
-            Cell cell = board.board[coord.rank][coord.file];
-            //CASE 1: Making a non-capturing move. (They clicked on an empty square with a selected piece.
-            if (cell.PieceStatus == Status.EMPTY) {
-              if (selectedPiece != null && isLegalMove(coord, board)) {
-                Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), false, isWhite);
-                move = updateMove(move);
-                if (move.isPromotion) {
-                  PromotionDialog promotionDialog = new PromotionDialog(GameManager.this, board, move, isWhite);
-                  promotionDialog.setOnPromotionMoveListener(GameManager.this);
-                  promotionDialog.show();
-                } else {
-                  GameService.makeMove(board, move, isWhite);
-                  if (isWhite) {
-                    game.whitesMovesLog.add(move);
-                  } else {
-                    game.blacksMovesLog.add(move);
-                  }
-                  GameService.updateBoardMeta(board);
-                  game.boardStates.add(GameService.copyBoard(board));
-                  if (postMoveChecks(board, isWhite, finalCheckStatusBlack, finalCheckStatusWhite, message)) {
-                    return;
-                  };
-                  if (isWhite) {
-                    message.setText("BLACK TO MOVE");
-                  } else {
-                    message.setText("WHITE TO MOVE");
-                  }
-                  if (!adversary.getName().equals("Human")) {
-                    try {
-                      ArrayList<Move> playersMoves = GameService.generateMoves(board, isWhite);
-                      Move adversaryMove;
-
-                      if (isWhite) {
-                        adversaryMove = adversary.getMove(board, blacksPotentialMoves, playersMoves);
-                      } else {
-                        adversaryMove = adversary.getMove(board, whitesPotentialMoves, playersMoves);
-                      }
-                      if (adversaryMove.isCapture) {
-                        if (isWhite) {
-                          capturedPiecesWhite.add(adversaryMove.capturablePiece);
-                          switch (adversaryMove.capturablePiece.getName()) {
-                            case "Pawn":
-                              finalNumCapturedWhitePawns.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedWhitePawns.getText()) + 1));
-                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 1));
-                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 1));
-                              break;
-                            case "Rook":
-                              finalNumCapturedWhiteRooks.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedWhiteRooks.getText()) + 1));
-                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 5));
-                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 5));
-                              break;
-                            case "Knight":
-                              finalNumCapturedWhiteKnights.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedWhiteKnights.getText()) + 1));
-                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 3));
-                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 3));
-                              break;
-                            case "Bishop":
-                              finalNumCapturedWhiteBishops.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedWhiteBishops.getText()) + 1));
-                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 3));
-                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 3));
-                              break;
-                            case "Queen":
-                              finalNumCapturedWhiteQueens.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedWhiteQueens.getText()) + 1));
-                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 9));
-                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 9));
-                              break;
-                          }
-                        } else {
-                          capturedPiecesBlack.add(adversaryMove.capturablePiece);
-                          switch (adversaryMove.capturablePiece.getName()) {
-                            case "Pawn":
-                              finalNumCapturedBlackPawns.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedBlackPawns.getText()) + 1));
-                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 1));
-                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 1));
-                              break;
-                            case "Rook":
-                              finalNumCapturedBlackRooks.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedBlackRooks.getText()) + 1));
-                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 5));
-                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 5));
-                              break;
-                            case "Knight":
-                              finalNumCapturedBlackKnights.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedBlackKnights.getText()) + 1));
-                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 3));
-                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 3));
-                              break;
-                            case "Bishop":
-                              finalNumCapturedBlackBishops.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedBlackBishops.getText()) + 1));
-                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 3));
-                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 3));
-                              break;
-                            case "Queen":
-                              finalNumCapturedBlackQueens.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedBlackQueens.getText()) + 1));
-                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 9));
-                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 9));
-                              break;
-                          }
-                        }
-                      }
-                      GameService.makeMove(board, adversaryMove, !isWhite);
-                      GameService.updateBoardMeta(board);
-                      if (isWhite) {
-                        game.blacksMovesLog.add(adversaryMove);
-                      } else {
-                        game.whitesMovesLog.add(adversaryMove);
-                      }
-                      game.boardStates.add(GameService.copyBoard(board));
-                      updateBoard(board, isWhite);
-                      postMoveChecks(board, !isWhite, finalCheckStatusBlack, finalCheckStatusWhite, message);
-                      if (isWhite) {
-                        message.setText("WHITE TO MOVE");
-                      } else {
-                        message.setText("BLACK TO MOVE");
-                      }
-                    } catch (CloneNotSupportedException e) {
-                      e.printStackTrace();
-                    }
-                    //If the opponent is Human. Simply switch the player.
-                  } else {
-                    isWhite = !isWhite;
-                    switchViewSide();
-                  }
-                }
-              }
-            // CASE 2: Making a capturing move. (Clicked on an adversary piece with a piece selected.
-            } else if ((cell.PieceStatus == Status.BLACK && isWhite) || cell.PieceStatus == Status.WHITE && !isWhite) {
-              if (selectedPiece != null && isLegalMove(coord, board)) {
-                Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), true, isWhite);
-                move = updateMove(move);
-                move.setCapture(board.board[coord.rank][coord.file].piece);
-                if (isWhite) {
-                  capturedPiecesBlack.add(board.board[coord.rank][coord.file].piece);
-                  switch(board.board[coord.rank][coord.file].piece.getName()) {
-                    case "Pawn":
-                      finalNumCapturedBlackPawns.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedBlackPawns.getText()) + 1));
-                      finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 1));
-                      finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 1));
-                      break;
-                    case "Rook":
-                      finalNumCapturedBlackRooks.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedBlackRooks.getText()) + 1));
-                      finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 5));
-                      finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 5));
-                      break;
-                    case "Knight":
-                      finalNumCapturedBlackKnights.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedBlackKnights.getText()) + 1));
-                      finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 3));
-                      finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 3));
-                      break;
-                    case "Bishop":
-                      finalNumCapturedBlackBishops.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedBlackBishops.getText()) + 1));
-                      finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 3));
-                      finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 3));
-                      break;
-                    case "Queen":
-                      finalNumCapturedBlackQueens.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedBlackQueens.getText()) + 1));
-                      finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 9));
-                      finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 9));
-                      break;
-                  }
-                } else {
-                  capturedPiecesWhite.add(board.board[coord.rank][coord.file].piece);
-                  switch(board.board[coord.rank][coord.file].piece.getName()) {
-                    case "Pawn":
-                      finalNumCapturedWhitePawns.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedWhitePawns.getText()) + 1));
-                      finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 1));
-                      finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 1));
-                      break;
-                    case "Rook":
-                      finalNumCapturedWhiteRooks.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedWhiteRooks.getText()) + 1));
-                      finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 5));
-                      finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 5));
-                      break;
-                    case "Knight":
-                      finalNumCapturedWhiteKnights.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedWhiteKnights.getText()) + 1));
-                      finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 3));
-                      finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 3));
-                      break;
-                    case "Bishop":
-                      finalNumCapturedWhiteBishops.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedWhiteBishops.getText()) + 1));
-                      finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 3));
-                      finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 3));
-                      break;
-                    case "Queen":
-                      finalNumCapturedWhiteQueens.setText( String.valueOf(Integer.valueOf((String) finalNumCapturedWhiteQueens.getText()) + 1));
-                      finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 9));
-                      finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 9));
-                      break;
-                  }
-                }
-                if (move.isPromotion) {
-                  PromotionDialog promotionDialog = new PromotionDialog(GameManager.this, board, move, isWhite);
-                  promotionDialog.setOnPromotionMoveListener(GameManager.this);
-                  promotionDialog.show();
-                } else {
-                  GameService.makeMove(board, move, isWhite);
-                  GameService.updateBoardMeta(board);
-                  if (isWhite) {
-                    game.whitesMovesLog.add(move);
-                  } else {
-                    game.blacksMovesLog.add(move);
-                  }
-                  game.boardStates.add(GameService.copyBoard(board));
-                  if (postMoveChecks(board, isWhite, finalCheckStatusBlack, finalCheckStatusWhite, message)) {
-                    return;
-                  }
-                  if (isWhite) {
-                    message.setText("BLACK TO MOVE");
-                  } else {
-                    message.setText("WHITE TO MOVE");
-                  }
-                  //Adversary Move
-                  if (!adversary.getName().equals("Human")) {
-                    try {
-                      ArrayList<Move> playersMoves = GameService.generateMoves(board, isWhite);
-                      Move adversaryMove;
-                      if (isWhite) {
-                        adversaryMove = adversary.getMove(board, blacksPotentialMoves, playersMoves);
-                      } else {
-                        adversaryMove = adversary.getMove(board, whitesPotentialMoves, playersMoves);
-                      }
-                      if (adversaryMove.isCapture) {
-                        if (isWhite) {
-                          capturedPiecesWhite.add(adversaryMove.capturablePiece);
-                          switch (board.board[coord.rank][coord.file].piece.getName()) {
-                            case "Pawn":
-                              finalNumCapturedWhitePawns.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedWhitePawns.getText()) + 1));
-                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 1));
-                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 1));
-                              break;
-                            case "Rook":
-                              finalNumCapturedWhiteRooks.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedWhiteRooks.getText()) + 1));
-                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 5));
-                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 5));
-                              break;
-                            case "Knight":
-                              finalNumCapturedWhiteKnights.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedWhiteKnights.getText()) + 1));
-                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 3));
-                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 3));
-                              break;
-                            case "Bishop":
-                              finalNumCapturedWhiteBishops.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedWhiteBishops.getText()) + 1));
-                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 3));
-                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 3));
-                              break;
-                            case "Queen":
-                              finalNumCapturedWhiteQueens.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedWhiteQueens.getText()) + 1));
-                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) + 9));
-                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) - 9));
-                              break;
-                          }
-                        } else {
-                          capturedPiecesBlack.add(adversaryMove.capturablePiece);
-                          switch (board.board[coord.rank][coord.file].piece.getName()) {
-                            case "Pawn":
-                              finalNumCapturedBlackPawns.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedBlackPawns.getText()) + 1));
-                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 1));
-                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 1));
-                              break;
-                            case "Rook":
-                              finalNumCapturedBlackRooks.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedBlackRooks.getText()) + 1));
-                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 5));
-                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 5));
-                              break;
-                            case "Knight":
-                              finalNumCapturedBlackKnights.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedBlackKnights.getText()) + 1));
-                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 3));
-                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 3));
-                              break;
-                            case "Bishop":
-                              finalNumCapturedBlackBishops.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedBlackBishops.getText()) + 1));
-                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 3));
-                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 3));
-                              break;
-                            case "Queen":
-                              finalNumCapturedBlackQueens.setText(String.valueOf(Integer.valueOf((String) finalNumCapturedBlackQueens.getText()) + 1));
-                              finalWhiteScore.setText(String.valueOf(Integer.valueOf((String) finalWhiteScore.getText()) - 9));
-                              finalBlackScore.setText(String.valueOf(Integer.valueOf((String) finalBlackScore.getText()) + 9));
-                              break;
-                          }
-                        }
-                      }
-                      GameService.makeMove(board, adversaryMove, !isWhite);
-                      GameService.updateBoardMeta(board);
-                      if (isWhite) {
-                        game.blacksMovesLog.add(adversaryMove);
-                      } else {
-                        game.whitesMovesLog.add(adversaryMove);
-                      }
-                      game.boardStates.add(GameService.copyBoard(board));
-                      updateBoard(board, isWhite);
-                      postMoveChecks(board, !isWhite, finalCheckStatusBlack, finalCheckStatusWhite, message);
-                      if (isWhite) {
-                        message.setText("WHITE TO MOVE");
-                      } else {
-                        message.setText("BLACK TO MOVE");
-                      }
-                    } catch (CloneNotSupportedException e) {
-                      e.printStackTrace();
-                    }
-                    //Adversary is a Human.
-                  } else {
-                    isWhite = !isWhite;
-                    switchViewSide();
-                  }
-                }
-              }
-              //CASE 3: The player clicked on one of their pieces.
-            } else {
-              if (selectedPiece != null) {
-                for (Move move : GameService.filterMoves(selectedPiece.generateMoves(selectedPiece.getPos(), board.board))) {
-                  ImageButton curPieceButton = (ImageButton) getButonFromCoord(selectedPiece.getPos(), isWhite);
-                  curPieceButton.setColorFilter(null);
-                  ImageButton button = (ImageButton) getButonFromCoord(move.toCoord, isWhite);
-                  if (board.board[move.toCoord.rank][move.toCoord.file].isLight
-                      && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.EMPTY) {
-                    button.setImageResource(R.drawable.empty_light);
-                  } else if (board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.EMPTY) {
-                    button.setImageResource(R.drawable.empty_dark);
-                  } else if ((isWhite && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.BLACK) ||
-                      (!isWhite && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.WHITE)) {
-                    button.setColorFilter(null);
-                  }
-                }
-              }
-              boolean isPinned = false;
-
-              //First selecting a piece
-              if (selectedPiece == null || !cell.piece.equals(selectedPiece)) {
-                if (isWhite) {
-                  int index = board.getIndex(board.whitePieces, new Coordinate(coord.file,coord.rank));
-                  selectedPiece = board.whitePieces.get(index);
-                  if (selectedPiece.isPinned()) {
-                    isPinned = true;
-                  }
-                }
-                if (!isPinned) {
-                  selectedPiece = board.board[coord.rank][coord.file].piece;
-                  ImageButton curPiece = (ImageButton) getButonFromCoord(selectedPiece.getPos(), isWhite);
-                  curPiece.setColorFilter(Color.YELLOW, PorterDuff.Mode.OVERLAY);
-                  ArrayList<Move> legalMoves = selectedPiece.generateMoves(coord, board.board);
-                  for (Move move : GameService.filterMoves(legalMoves)) {
-                    if (isLegalMove(move.toCoord, board)) {
-                      ImageButton button = (ImageButton) getButonFromCoord(move.toCoord, isWhite);
-                      if (board.board[move.toCoord.rank][move.toCoord.file].isLight
-                          && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.EMPTY) {
-                        button.setImageResource(R.drawable.white_empty_selected);
-                      } else if (board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.EMPTY) {
-                        button.setImageResource(R.drawable.black_empty_selected);
-                      } else if ((isWhite && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.BLACK) ||
-                          (!isWhite && board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.WHITE)) {
-                        button.setColorFilter(Color.RED, PorterDuff.Mode.OVERLAY);
-                      }
-                    }
-                  }
-                } else {
-                  ImageButton curPieceButton = (ImageButton) getButonFromCoord(selectedPiece.getPos(), isWhite);
-                  curPieceButton.setColorFilter(null);
-                  selectedPiece = null;
-                }
-              } else {
-                ImageButton curPieceButton = (ImageButton) getButonFromCoord(selectedPiece.getPos(), isWhite);
-                curPieceButton.setColorFilter(null);
-                selectedPiece = null;
-              }
-            }
-          }
-
-          //Helper function which switches the view if the game is two humans on the same machine.
-          private void switchViewSide() {
-
-          }
-        });
+        ImageButton button = (ImageButton) getButtonFromCoord(new Coordinate(col, row), isWhite);
+        button.setOnClickListener(v -> handleSquareClick(button));
       }
     }
   }
 
   /**
-   * Updates the move if it is is a castle, enPassant or Promotion.
-   *
-   * @param move
-   * @return
+   * Main handler for board square clicks.
    */
-  public Move updateMove(Move move) {
-    if (move.piece.getName().equals("King") && Math.abs(move.toCoord.file - move.fromCoord.file) == 2) {
-      move.setCastle();
-    } else if (move.piece.getName().equals("Pawn") && ((this.isWhite && move.toCoord.rank == 7) || (!this.isWhite && move.toCoord.rank == 0))) {
-      move.setPromotion(new Queen(move.toCoord, move.piece.getColor()));
-    } else if (move.piece.getName().equals("Pawn") && Math.abs(move.toCoord.file - move.fromCoord.file) == 1 &&
-        board.board[move.toCoord.rank][move.toCoord.file].PieceStatus.equals(Status.EMPTY)) {
-      move.setEnPassant();
-      if (isWhite) {
-        move.setCapture(board.board[move.toCoord.rank - 1][move.toCoord.file].piece);
-      } else {
-        move.setCapture(board.board[move.toCoord.rank + 1][move.toCoord.file].piece);
+  private void handleSquareClick(ImageButton button) {
+    Coordinate coord = getCoordFromButton(button, isWhite);
+    Cell cell = board.board[coord.rank][coord.file];
+
+    // Case 1: Empty square - making a non-capturing move
+    if (cell.PieceStatus == Status.EMPTY) {
+      handleEmptySquareClick(coord);
+    }
+    // Case 2: Opponent's piece - making a capturing move
+    else if ((cell.PieceStatus == Status.BLACK && isWhite) ||
+        (cell.PieceStatus == Status.WHITE && !isWhite)) {
+      handleCaptureSquareClick(coord);
+    }
+    // Case 3: Own piece - selecting/deselecting
+    else {
+      handleOwnPieceClick(coord, cell);
+    }
+  }
+
+  /**
+   * Handles clicking on an empty square.
+   */
+  private void handleEmptySquareClick(Coordinate coord) {
+    if (selectedPiece != null && isLegalMove(coord, board)) {
+      Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), false, isWhite);
+      executePlayerMove(move);
+    }
+  }
+
+  /**
+   * Handles clicking on an opponent's piece (capture).
+   */
+  private void handleCaptureSquareClick(Coordinate coord) {
+    if (selectedPiece != null && isLegalMove(coord, board)) {
+      Piece capturedPiece = board.board[coord.rank][coord.file].piece;
+      Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), true, isWhite);
+      move.setCapture(capturedPiece);
+
+      updateCaptureUI(capturedPiece, isWhite);
+      executePlayerMove(move);
+    }
+  }
+
+  /**
+   * Handles clicking on player's own piece (select/deselect).
+   */
+  private void handleOwnPieceClick(Coordinate coord, Cell cell) {
+    // Deselect previous piece
+    if (selectedPiece != null) {
+      clearPieceHighlights();
+    }
+
+    // Select new piece if different from current
+    if (selectedPiece == null || !cell.piece.equals(selectedPiece)) {
+      selectPiece(coord, cell);
+    } else {
+      selectedPiece = null;
+    }
+  }
+
+  /**
+   * Selects a piece and highlights its legal moves.
+   */
+  private void selectPiece(Coordinate coord, Cell cell) {
+    // Check if piece is pinned
+    if (isWhite) {
+      int index = Board.getIndex(board.whitePieces, coord);
+      if (index >= 0) {
+        Piece piece = board.whitePieces.get(index);
+        if (piece.isPinned()) {
+          return; // Can't select pinned piece
+        }
       }
     }
+
+    selectedPiece = cell.piece;
+
+    // Highlight selected piece
+    ImageButton pieceButton = (ImageButton) getButtonFromCoord(selectedPiece.getPos(), isWhite);
+    pieceButton.setColorFilter(Color.YELLOW, PorterDuff.Mode.OVERLAY);
+
+    // Highlight legal moves
+    ArrayList<Move> legalMoves = selectedPiece.generateMoves(coord, board.board);
+    for (Move move : GameService.filterMoves(legalMoves)) {
+      if (isLegalMove(move.toCoord, board)) {
+        highlightLegalMove(move);
+      }
+    }
+  }
+
+  /**
+   * Highlights a legal move destination square.
+   */
+  private void highlightLegalMove(Move move) {
+    ImageButton button = (ImageButton) getButtonFromCoord(move.toCoord, isWhite);
+    Cell targetCell = board.board[move.toCoord.rank][move.toCoord.file];
+
+    if (targetCell.PieceStatus == Status.EMPTY) {
+      // Highlight empty squares
+      if (targetCell.isLight) {
+        button.setImageResource(R.drawable.white_empty_selected);
+      } else {
+        button.setImageResource(R.drawable.black_empty_selected);
+      }
+    } else if ((isWhite && targetCell.PieceStatus == Status.BLACK) ||
+        (!isWhite && targetCell.PieceStatus == Status.WHITE)) {
+      // Highlight capturable pieces
+      button.setColorFilter(Color.RED, PorterDuff.Mode.OVERLAY);
+    }
+  }
+
+  /**
+   * Clears all piece and move highlights.
+   */
+  private void clearPieceHighlights() {
+    if (selectedPiece == null) return;
+
+    // Clear selected piece highlight
+    ImageButton pieceButton = (ImageButton) getButtonFromCoord(selectedPiece.getPos(), isWhite);
+    pieceButton.setColorFilter(null);
+
+    // Clear move highlights
+    for (Move move : GameService.filterMoves(selectedPiece.generateMoves(selectedPiece.getPos(), board.board))) {
+      ImageButton button = (ImageButton) getButtonFromCoord(move.toCoord, isWhite);
+      Cell cell = board.board[move.toCoord.rank][move.toCoord.file];
+
+      if (cell.PieceStatus == Status.EMPTY) {
+        button.setImageResource(cell.isLight ? R.drawable.empty_light : R.drawable.empty_dark);
+      } else {
+        button.setColorFilter(null);
+      }
+    }
+  }
+
+  /**
+   * Executes a player's move.
+   */
+  private void executePlayerMove(Move move) {
+    move = updateMove(move);
+
+    if (move.isPromotion) {
+      PromotionDialog promotionDialog = new PromotionDialog(this, board, move, isWhite);
+      promotionDialog.setOnPromotionMoveListener(this);
+      promotionDialog.show();
+    } else {
+      makeMoveAndContinue(move);
+    }
+  }
+
+  /**
+   * Makes a move and continues the game flow.
+   */
+  private void makeMoveAndContinue(Move move) {
+    GameService.makeMove(board, move, isWhite);
+    GameService.updateBoardMeta(board);
+
+    // Log move
+    if (isWhite) {
+      game.whitesMovesLog.add(move);
+    } else {
+      game.blacksMovesLog.add(move);
+    }
+
+    game.boardStates.add(GameService.copyBoard(board));
+
+    // Check for game over
+    if (postMoveChecks(board, isWhite)) {
+      return;
+    }
+
+    // Update turn message
+    messageText.setText(isWhite ? "BLACK TO MOVE" : "WHITE TO MOVE");
+
+    // Adversary's turn
+    if (!adversary.getName().equals("Human")) {
+      makeAdversaryMove();
+    } else {
+      // Switch perspective for human vs human
+      isWhite = !isWhite;
+      // TODO: Implement switchViewSide() if needed
+    }
+  }
+
+  /**
+   * Makes the adversary's move.
+   */
+  private void makeAdversaryMove() {
+    try {
+      ArrayList<Move> playersMoves = GameService.generateMoves(board, isWhite);
+      Move adversaryMove;
+
+      if (isWhite) {
+        adversaryMove = adversary.getMove(board, blacksPotentialMoves, playersMoves);
+      } else {
+        adversaryMove = adversary.getMove(board, whitesPotentialMoves, playersMoves);
+      }
+
+      // Handle capture
+      if (adversaryMove.isCapture) {
+        updateCaptureUI(adversaryMove.capturablePiece, !isWhite);
+      }
+
+      GameService.makeMove(board, adversaryMove, !isWhite);
+      GameService.updateBoardMeta(board);
+
+      // Log move
+      if (isWhite) {
+        game.blacksMovesLog.add(adversaryMove);
+      } else {
+        game.whitesMovesLog.add(adversaryMove);
+      }
+
+      game.boardStates.add(GameService.copyBoard(board));
+      updateBoard(board, isWhite);
+      postMoveChecks(board, !isWhite);
+
+      messageText.setText(isWhite ? "WHITE TO MOVE" : "BLACK TO MOVE");
+
+    } catch (CloneNotSupportedException e) {
+      e.printStackTrace();
+    }
+  }
+
+  /**
+   * Updates UI when a piece is captured.
+   */
+  private void updateCaptureUI(Piece capturedPiece, boolean capturedByWhite) {
+    String pieceName = capturedPiece.getName();
+    int pieceValue = 0;
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+      pieceValue = PIECE_VALUES.getOrDefault(pieceName, 0);
+    }
+
+    // Add to captured pieces list
+    if (capturedByWhite) {
+      capturedPiecesBlack.add(capturedPiece);
+      incrementCapturedCounter(blackCapturedCounters.get(pieceName));
+      updateScores(-pieceValue, pieceValue);
+    } else {
+      capturedPiecesWhite.add(capturedPiece);
+      incrementCapturedCounter(whiteCapturedCounters.get(pieceName));
+      updateScores(pieceValue, -pieceValue);
+    }
+  }
+
+  /**
+   * Increments a captured piece counter.
+   */
+  private void incrementCapturedCounter(TextView counter) {
+    if (counter != null) {
+      int currentCount = Integer.parseInt(counter.getText().toString());
+      counter.setText(String.valueOf(currentCount + 1));
+    }
+  }
+
+  /**
+   * Updates material score displays.
+   */
+  private void updateScores(int whiteChange, int blackChange) {
+    int currentWhiteScore = Integer.parseInt(whiteScore.getText().toString());
+    int currentBlackScore = Integer.parseInt(blackScore.getText().toString());
+
+    whiteScore.setText(String.valueOf(currentWhiteScore + whiteChange));
+    blackScore.setText(String.valueOf(currentBlackScore + blackChange));
+  }
+
+  /**
+   * Updates move metadata for special moves (castling, en passant, promotion).
+   */
+  private Move updateMove(Move move) {
+    // Castling
+    if (move.piece.getName().equals("King") &&
+        Math.abs(move.toCoord.file - move.fromCoord.file) == 2) {
+      move.setCastle();
+    }
+    // Promotion
+    else if (move.piece.getName().equals("Pawn") &&
+        ((isWhite && move.toCoord.rank == 7) || (!isWhite && move.toCoord.rank == 0))) {
+      move.setPromotion(new Queen(move.toCoord, move.piece.getColor()));
+    }
+    // En passant
+    else if (move.piece.getName().equals("Pawn") &&
+        Math.abs(move.toCoord.file - move.fromCoord.file) == 1 &&
+        board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.EMPTY) {
+      move.setEnPassant();
+      int captureRank = isWhite ? move.toCoord.rank - 1 : move.toCoord.rank + 1;
+      move.setCapture(board.board[captureRank][move.toCoord.file].piece);
+    }
+
     return move;
   }
 
-  //Checks if the game is over.
-  public boolean postMoveChecks(Board board, boolean whiteMoved, TextView checkStatusBlack, TextView checkStatusWhite, TextView message) {
-
-    //CHECK 1: Dead position.
+  /**
+   * Performs post-move checks for game-ending conditions.
+   * Returns true if game is over.
+   */
+  private boolean postMoveChecks(Board board, boolean whiteMoved) {
+    // Check 1: Insufficient material
     if (GameService.isDeadPosition(board.whitePieces, board.blackPieces)) {
-      message.setText("DRAW BY INSUFFICIENT MATERIAL");
-      GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 0, isWhite, this.adversary.getName());
-      ggDialog.setOnGameOverListener(GameManager.this);
-      ggDialog.show();
+      showGameOver("DRAW BY INSUFFICIENT MATERIAL", 0);
       return true;
     }
-    //CHeck 2: Repetition.
+
+    // Check 2: Threefold repetition
     if (GameService.isRepetition(game.boardStates, board)) {
-      message.setText("DRAW BY REPETITION");
-      GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 0, isWhite, adversary.getName());
-      ggDialog.setOnGameOverListener(GameManager.this);
-      ggDialog.show();
+      showGameOver("DRAW BY REPETITION", 0);
       return true;
     }
-    //Check 3: Checks, mates and stalemates.
+
+    // Check 3: Checkmate, stalemate
     if (whiteMoved) {
-      try {
-        blacksPotentialMoves = GameService.generateMoves(board, false);
-      } catch (CloneNotSupportedException e) {
-        e.printStackTrace();
+      return checkBlackStatus();
+    } else {
+      return checkWhiteStatus();
+    }
+  }
+
+  /**
+   * Checks black's status after white moves.
+   */
+  private boolean checkBlackStatus() {
+    try {
+      blacksPotentialMoves = GameService.generateMoves(board, false);
+    } catch (CloneNotSupportedException e) {
+      e.printStackTrace();
+    }
+
+    King blackKing = (King) board.blackPieces.get(0);
+
+    if (blackKing.isDoubleChecked) {
+      checkStatusBlack.setText("DOUBLE CHECK!!");
+      blacksPotentialMoves = GameService.generateMovesDoubleCheck(board, blacksPotentialMoves, false);
+      if (blacksPotentialMoves.isEmpty()) {
+        showGameOver("CHECKMATE!! PLAYER 1 WINS", 1);
+        return true;
       }
-      if (((King) board.blackPieces.get(0)).isDoubleChecked) {
-        checkStatusBlack.setText("DOUBLE CHECK!!");
-        blacksPotentialMoves = GameService.generateMovesDoubleCheck(board, blacksPotentialMoves, false);
-        if (blacksPotentialMoves.size() == 0) {
-          message.setText("CHECKMATE!! PLAYER 1 WINS");
-          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 1, isWhite, adversary.getName());
-          ggDialog.setOnGameOverListener(GameManager.this);
-          ggDialog.show();
-          return true;
-        }
-      } else if (((King) board.blackPieces.get(0)).isChecked) {
-        checkStatusBlack.setText("CHECK!");
-        blacksPotentialMoves = GameService.generateMovesCheck(board, blacksPotentialMoves, false);
-        if (blacksPotentialMoves.size() == 0) {
-          message.setText("CHECKMATE!! PLAYER 1 WINS");
-          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 1, isWhite, adversary.getName());
-          ggDialog.setOnGameOverListener(GameManager.this);
-          ggDialog.show();
-          return true;
-        }
-      } else {
-        if (blacksPotentialMoves.size() == 0) {
-          message.setText("STALEMATE. THE GAME ENDS IN A DRAW");
-          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 0, isWhite, adversary.getName());
-          ggDialog.setOnGameOverListener(GameManager.this);
-          ggDialog.show();
-          return true;
-        } else {
-          updateBoard(board, isWhite);
-          selectedPiece = null;
-          checkStatusWhite.setText("");
-        }
+    } else if (blackKing.isChecked) {
+      checkStatusBlack.setText("CHECK!");
+      blacksPotentialMoves = GameService.generateMovesCheck(board, blacksPotentialMoves, false);
+      if (blacksPotentialMoves.isEmpty()) {
+        showGameOver("CHECKMATE!! PLAYER 1 WINS", 1);
+        return true;
       }
     } else {
-      try {
-        whitesPotentialMoves = GameService.generateMoves(board, true);
-      } catch (CloneNotSupportedException e) {
-        e.printStackTrace();
+      checkStatusWhite.setText("");
+      if (blacksPotentialMoves.isEmpty()) {
+        showGameOver("STALEMATE. THE GAME ENDS IN A DRAW", 0);
+        return true;
       }
-      if (((King) board.whitePieces.get(0)).isDoubleChecked) {
-        checkStatusWhite.setText("DOUBLE CHECK!!");
-        whitesPotentialMoves = GameService.generateMovesDoubleCheck(board, whitesPotentialMoves, true);
-        if (whitesPotentialMoves.size() == 0) {
-          message.setText("CHECKMATE!! PLAYER 1 LOSES");
-          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, -1, isWhite, adversary.getName());
-          ggDialog.setOnGameOverListener(GameManager.this);
-          ggDialog.show();
-          return true;
-        }
-      } else if (((King) board.whitePieces.get(0)).isChecked) {
-        checkStatusWhite.setText("CHECK!");
-        whitesPotentialMoves = GameService.generateMovesCheck(board, whitesPotentialMoves, true);
-        if (whitesPotentialMoves.size() == 0) {
-          message.setText("CHECKMATE!! PLAYER 1 LOSES");
-          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, -1, isWhite, adversary.getName());
-          ggDialog.setOnGameOverListener(GameManager.this);
-          ggDialog.show();
-          return true;
-        }
-      } else {
-        if (whitesPotentialMoves.size() == 0) {
-          message.setText("STALEMATE. THE GAME ENDS IN A DRAW");
-          GameOverDialog ggDialog = new GameOverDialog(GameManager.this, 0, isWhite, adversary.getName());
-          ggDialog.setOnGameOverListener(GameManager.this);
-          ggDialog.show();
-          return true;
-        } else {
-          checkStatusBlack.setText("");
-          updateBoard(board, isWhite);
-        }
-      }
+      updateBoard(board, isWhite);
+      selectedPiece = null;
     }
+
+    updateEndgameStatus();
+    return false;
+  }
+
+  /**
+   * Checks white's status after black moves.
+   */
+  private boolean checkWhiteStatus() {
+    try {
+      whitesPotentialMoves = GameService.generateMoves(board, true);
+    } catch (CloneNotSupportedException e) {
+      e.printStackTrace();
+    }
+
+    King whiteKing = (King) board.whitePieces.get(0);
+
+    if (whiteKing.isDoubleChecked) {
+      checkStatusWhite.setText("DOUBLE CHECK!!");
+      whitesPotentialMoves = GameService.generateMovesDoubleCheck(board, whitesPotentialMoves, true);
+      if (whitesPotentialMoves.isEmpty()) {
+        showGameOver("CHECKMATE!! PLAYER 1 LOSES", -1);
+        return true;
+      }
+    } else if (whiteKing.isChecked) {
+      checkStatusWhite.setText("CHECK!");
+      whitesPotentialMoves = GameService.generateMovesCheck(board, whitesPotentialMoves, true);
+      if (whitesPotentialMoves.isEmpty()) {
+        showGameOver("CHECKMATE!! PLAYER 1 LOSES", -1);
+        return true;
+      }
+    } else {
+      checkStatusBlack.setText("");
+      if (whitesPotentialMoves.isEmpty()) {
+        showGameOver("STALEMATE. THE GAME ENDS IN A DRAW", 0);
+        return true;
+      }
+      updateBoard(board, isWhite);
+    }
+
+    updateEndgameStatus();
+    return false;
+  }
+
+  /**
+   * Shows game over dialog.
+   */
+  private void showGameOver(String message, int result) {
+    messageText.setText(message);
+    GameOverDialog dialog = new GameOverDialog(this, result, isWhite, adversary.getName());
+    dialog.setOnGameOverListener(this);
+    dialog.show();
+  }
+
+  /**
+   * Updates endgame flag if entering endgame.
+   */
+  private void updateEndgameStatus() {
     if (!game.isEndGame && isEndGame(board)) {
       game.isEndGame = true;
     }
-    return false;
   }
 
+  /**
+   * Determines if the position is an endgame.
+   */
   public static boolean isEndGame(Board board) {
+    // No queens = endgame
+    boolean hasWhiteQueen = false;
+    boolean hasBlackQueen = false;
+
     for (Piece piece : board.whitePieces) {
       if (piece.getName().equals("Queen")) {
-        return false;
+        hasWhiteQueen = true;
+        break;
       }
     }
+
     for (Piece piece : board.blackPieces) {
       if (piece.getName().equals("Queen")) {
-        return false;
+        hasBlackQueen = true;
+        break;
       }
     }
-    if (Simple.countByType(board.whitePieces, "Rook") + Simple.countByType(board.whitePieces, "Bishop") +
-        Simple.countByType(board.whitePieces, "Knight") < 5 ||
-        Simple.countByType(board.blackPieces, "Rook") + Simple.countByType(board.blackPieces, "Bishop") +
-            Simple.countByType(board.blackPieces, "Knight") < 5) {
+
+    if (!hasWhiteQueen && !hasBlackQueen) {
       return true;
-    } else {
-      return false;
     }
+
+    // Limited minor and major pieces = endgame
+    int whiteMinorMajor = Simple.countByType(board.whitePieces, "Rook")
+        + Simple.countByType(board.whitePieces, "Bishop")
+        + Simple.countByType(board.whitePieces, "Knight");
+
+    int blackMinorMajor = Simple.countByType(board.blackPieces, "Rook")
+        + Simple.countByType(board.blackPieces, "Bishop")
+        + Simple.countByType(board.blackPieces, "Knight");
+
+    return whiteMinorMajor < 5 || blackMinorMajor < 5;
   }
+
+  /**
+   * Creates an agent based on the agent type string.
+   */
   public static Agent initializeAgent(String agentName, boolean isWhite) {
-    Agent agent;
     switch (agentName) {
       case "Randy":
-        agent = new Randy(AgentType.RANDY, !isWhite);
-        break;
+        return new Randy(AgentType.RANDY, isWhite);
       case "Simple":
-        agent = new Simple(AgentType.SIMPLE, !isWhite);
-        break;
+        return new Simple(AgentType.SIMPLE, isWhite);
       case "MinMax":
-        agent = new MinMax(AgentType.MINMAX, !isWhite);
-        break;
+        return new MinMax(AgentType.MINMAX, isWhite);
       case "FishStock":
-        agent = new FishStock(AgentType.FISHSTOCK, !isWhite);
-        break;
+        return new FishStock(AgentType.FISHSTOCK, isWhite);
       default:
-        agent = new Human(AgentType.HUMAN, !isWhite);
+        return new Human(AgentType.HUMAN, isWhite);
     }
-    return agent;
   }
 
-
-  public boolean isLegalMove(Coordinate coord, Board board) {
+  /**
+   * Checks if a move to the given coordinate is legal.
+   */
+  private boolean isLegalMove(Coordinate coord, Board board) {
     if (selectedPiece == null) {
       return false;
     }
-    if ((isWhite && ((King)board.whitePieces.get(0)).isChecked)
-       || (!isWhite && ((King)board.blackPieces.get(0)).isChecked)) {
-      List<Move> checkMoves;
-      if (isWhite) {
-        checkMoves = GameService.generateMovesCheck(board, whitesPotentialMoves, true);
-      } else {
-        checkMoves = GameService.generateMovesCheck(board, blacksPotentialMoves, false);
-      }
-      for (Move move: checkMoves) {
-        if (Coordinate.compareCoords(move.toCoord, coord) && move.piece.getName().equals(selectedPiece.getName())) {
-          return true;
-        }
-      }
-      return false;
-    }
-    if (((King)board.whitePieces.get(0)).isDoubleChecked) {
-      List<Move> doubleCheckMoves;
-      if (isWhite) {
-        doubleCheckMoves = GameService.generateMovesDoubleCheck(board, whitesPotentialMoves, true);
-      } else {
-        doubleCheckMoves = GameService.generateMovesDoubleCheck(board, blacksPotentialMoves, false);
-      }
-      for (Move move: doubleCheckMoves) {
-        if (Coordinate.compareCoords(move.toCoord, coord) && move.piece.getName().equals(selectedPiece.getName())) {
-          return true;
-        }
-      }
-      return false;
+
+    King ourKing = isWhite ?
+        (King) board.whitePieces.get(0) :
+        (King) board.blackPieces.get(0);
+
+    ArrayList<Move> legalMoves;
+
+    // Handle check situations
+    if (ourKing.isDoubleChecked) {
+      legalMoves = isWhite ?
+          GameService.generateMovesDoubleCheck(board, whitesPotentialMoves, true) :
+          GameService.generateMovesDoubleCheck(board, blacksPotentialMoves, false);
+    } else if (ourKing.isChecked) {
+      legalMoves = isWhite ?
+          GameService.generateMovesCheck(board, whitesPotentialMoves, true) :
+          GameService.generateMovesCheck(board, blacksPotentialMoves, false);
+    } else {
+      legalMoves = GameService.filterMoves(selectedPiece.generateMoves(selectedPiece.getPos(), board.board));
     }
 
-    List<Move> moves = GameService.filterMoves(selectedPiece.generateMoves(selectedPiece.getPos(), board.board));
-    for (Move move : moves) {
-      if (move.toCoord.file == coord.file && move.toCoord.rank == coord.rank) {
+    // Check if the coordinate matches any legal move
+    for (Move move : legalMoves) {
+      if (Coordinate.compareCoords(move.toCoord, coord) &&
+          move.piece.getName().equals(selectedPiece.getName())) {
         return true;
       }
     }
+
     return false;
   }
 
-  public Coordinate getCoordFromButton(View button, boolean isWhite) {
+  /**
+   * Converts a coordinate to the corresponding button view.
+   */
+  private ImageView getButtonFromCoord(Coordinate coord, boolean isWhite) {
+    int resId;
+    if (isWhite) {
+      resId = getResources().getIdentifier(
+          "button" + (7 - coord.rank) + (7 - coord.file),
+          "id",
+          getPackageName());
+    } else {
+      resId = getResources().getIdentifier(
+          "button" + coord.rank + coord.file,
+          "id",
+          getPackageName());
+    }
+    return findViewById(resId);
+  }
+
+  /**
+   * Extracts coordinate from a button's resource ID.
+   */
+  private Coordinate getCoordFromButton(View button, boolean isWhite) {
     String buttonId = getResources().getResourceEntryName(button.getId());
     int rank;
     int file;
+
     if (isWhite) {
       rank = 7 - (buttonId.charAt(6) - '0');
       file = 7 - (buttonId.charAt(7) - '0');
@@ -802,174 +784,99 @@ public class GameManager extends AppCompatActivity implements PromotionDialog.On
       rank = buttonId.charAt(6) - '0';
       file = buttonId.charAt(7) - '0';
     }
+
     return new Coordinate(file, rank);
   }
 
-  public ImageView getButonFromCoord(Coordinate coord, boolean isWhite) {
-    int resId;
-    if (isWhite) {
-      resId = getResources().getIdentifier("button" + (7 - coord.rank) + (7 - coord.file), "id", this.getPackageName());
-    } else {
-      resId = getResources().getIdentifier("button" + (coord.rank) + (coord.file), "id", this.getPackageName());
-    }
-    return findViewById(resId);
-  }
-
-  public static void defaultView(ArrayList<ImageButton> squares) {
-  }
-
+  /**
+   * Updates the entire board display.
+   */
   public void updateBoard(Board board, boolean isWhite) {
-    GridLayout grid = findViewById(R.id.gridlayout);
     if (isWhite) {
-      for (int row = 0; row < 8; row++) {
-        for (int col = 0; col < 8; col++) {
-          Cell cell = board.board[row][col];
-          updateCellImage(cell, row, col);
-        }
-      }
-    }else {
-      for (int row = 7; row >= 0; row --) {
-        for (int col = 7; col >=0; col--) {
-          Cell cell = board.board[row][col];
-          updateCellImage(cell, row, col);
-        }
-      }
-    }
-  }
-
-
-  public void updateCellImage(Cell cell, int row, int col) {
-    ImageView cellImageView = getButonFromCoord(new Coordinate(col, row), isWhite);
-    if (cell.isEmpty) {
-      if (cell.isLight) {
-        cellImageView.setImageResource(R.drawable.empty_light);
-        cellImageView.setColorFilter(null);
-      } else {
-        cellImageView.setImageResource(R.drawable.empty_dark);
-        cellImageView.setColorFilter(null);
-      }
-    } else if (cell.isWhite) {
-      if (cell.isKing) {
-        if (cell.isLight) {
-          cellImageView.setImageResource(R.drawable.white_king_on_light);
-          cellImageView.setColorFilter(null);
-        } else {
-          cellImageView.setImageResource(R.drawable.white_king_on_dark);
-          cellImageView.setColorFilter(null);
-        }
-      } else if (cell.isQueen) {
-        if (cell.isLight) {
-          cellImageView.setImageResource(R.drawable.white_queen_on_light);
-          cellImageView.setColorFilter(null);
-        } else {
-          cellImageView.setImageResource(R.drawable.white_queen_on_dark);
-          cellImageView.setColorFilter(null);
-        }
-      } else if (cell.isBishop) {
-        if (cell.isLight) {
-          cellImageView.setImageResource(R.drawable.white_bishop_on_light);
-          cellImageView.setColorFilter(null);
-        } else {
-          cellImageView.setImageResource(R.drawable.white_bishop_on_dark);
-          cellImageView.setColorFilter(null);
-        }
-      } else if (cell.isKnight) {
-        if (cell.isLight) {
-          cellImageView.setImageResource(R.drawable.white_knight_on_light);
-          cellImageView.setColorFilter(null);
-        } else {
-          cellImageView.setImageResource(R.drawable.white_knight_on_dark);
-          cellImageView.setColorFilter(null);
-        }
-      } else if (cell.isRook) {
-        if (cell.isLight) {
-          cellImageView.setImageResource(R.drawable.white_rook_on_light);
-          cellImageView.setColorFilter(null);
-        } else {
-          cellImageView.setImageResource(R.drawable.white_rook_on_dark);
-          cellImageView.setColorFilter(null);
-        }
-      } else if (cell.isPawn) {
-        if (cell.isLight) {
-          cellImageView.setImageResource(R.drawable.white_pawn_on_light);
-          cellImageView.setColorFilter(null);
-        } else {
-          cellImageView.setImageResource(R.drawable.white_pawn_on_dark);
-          cellImageView.setColorFilter(null);
+      for (int rank = 0; rank < 8; rank++) {
+        for (int file = 0; file < 8; file++) {
+          updateCellImage(board.board[rank][file], rank, file);
         }
       }
     } else {
-      if (cell.isKing) {
-        if (cell.isLight) {
-          cellImageView.setImageResource(R.drawable.black_king_on_light);
-          cellImageView.setColorFilter(null);
-        } else {
-          cellImageView.setImageResource(R.drawable.black_king_on_dark);
-          cellImageView.setColorFilter(null);
-        }
-      } else if (cell.isQueen) {
-        if (cell.isLight) {
-          cellImageView.setImageResource(R.drawable.black_queen_on_light);
-          cellImageView.setColorFilter(null);
-        } else {
-          cellImageView.setImageResource(R.drawable.black_queen_on_dark);
-          cellImageView.setColorFilter(null);
-        }
-      } else if (cell.isBishop) {
-        if (cell.isLight) {
-          cellImageView.setImageResource(R.drawable.black_bishop_on_light);
-          cellImageView.setColorFilter(null);
-        } else {
-          cellImageView.setImageResource(R.drawable.black_bishop_on_dark);
-          cellImageView.setColorFilter(null);
-        }
-      } else if (cell.isKnight) {
-        if (cell.isLight) {
-          cellImageView.setImageResource(R.drawable.black_knight_on_light);
-          cellImageView.setColorFilter(null);
-        } else {
-          cellImageView.setImageResource(R.drawable.black_knight_on_dark);
-          cellImageView.setColorFilter(null);
-        }
-      } else if (cell.isRook) {
-        if (cell.isLight) {
-          cellImageView.setImageResource(R.drawable.black_rook_on_light);
-          cellImageView.setColorFilter(null);
-        } else {
-          cellImageView.setImageResource(R.drawable.black_rook_on_dark);
-          cellImageView.setColorFilter(null);
-        }
-      } else if (cell.isPawn) {
-        if (cell.isLight) {
-          cellImageView.setImageResource(R.drawable.black_pawn_on_light);
-          cellImageView.setColorFilter(null);
-        } else {
-          cellImageView.setImageResource(R.drawable.black_pawn_on_dark);
-          cellImageView.setColorFilter(null);
+      for (int rank = 7; rank >= 0; rank--) {
+        for (int file = 7; file >= 0; file--) {
+          updateCellImage(board.board[rank][file], rank, file);
         }
       }
     }
   }
+
+  /**
+   * Updates a single cell's image on the board.
+   */
+  private void updateCellImage(Cell cell, int rank, int file) {
+    ImageView cellImageView = getButtonFromCoord(new Coordinate(file, rank), isWhite);
+    cellImageView.setColorFilter(null);
+
+    if (cell.isEmpty) {
+      cellImageView.setImageResource(
+          cell.isLight ? R.drawable.empty_light : R.drawable.empty_dark);
+      return;
+    }
+
+    // Get appropriate piece image
+    int resourceId = getPieceImageResource(cell);
+    cellImageView.setImageResource(resourceId);
+  }
+
+  /**
+   * Gets the appropriate drawable resource for a piece on a cell.
+   */
+  private int getPieceImageResource(Cell cell) {
+    String color = cell.isWhite ? "white" : "black";
+    String square = cell.isLight ? "light" : "dark";
+    String piece = getPieceName(cell);
+
+    String resourceName = color + "_" + piece + "_on_" + square;
+    return getResources().getIdentifier(resourceName, "drawable", getPackageName());
+  }
+
+  /**
+   * Gets the piece name from a cell.
+   */
+  private String getPieceName(Cell cell) {
+    if (cell.isKing) return "king";
+    if (cell.isQueen) return "queen";
+    if (cell.isRook) return "rook";
+    if (cell.isBishop) return "bishop";
+    if (cell.isKnight) return "knight";
+    if (cell.isPawn) return "pawn";
+    return "";
+  }
+
+  // Promotion dialog callback
   @Override
   public void onPromotionMove() throws CloneNotSupportedException {
     updateBoard(board, isWhite);
-    ArrayList<Move> blacksPotentialMoves = GameService.generateMoves(board, false);
-    if (((King)board.blackPieces.get(0)).isDoubleChecked) {
-      blacksPotentialMoves = GameService.generateMovesDoubleCheck(board, blacksPotentialMoves, false);
-    } else if (((King)board.blackPieces.get(0)).isChecked) {
-      blacksPotentialMoves = GameService.generateMovesCheck(board, blacksPotentialMoves, false);
+
+    // Adversary responds to promotion
+    if (!adversary.getName().equals("Human")) {
+      ArrayList<Move> blackMoves = GameService.generateMoves(board, false);
+      King blackKing = (King) board.blackPieces.get(0);
+
+      if (blackKing.isDoubleChecked) {
+        blackMoves = GameService.generateMovesDoubleCheck(board, blackMoves, false);
+      } else if (blackKing.isChecked) {
+        blackMoves = GameService.generateMovesCheck(board, blackMoves, false);
+      }
+
+      Move adversaryMove = adversary.getMove(board, blackMoves, whitesPotentialMoves);
+      GameService.makeMove(board, adversaryMove, false);
+      GameService.updateBoardMeta(board);
+
+      postMoveChecks(board, false);
     }
-    Move adversaryMove = this.adversary.getMove(board, blacksPotentialMoves, whitesPotentialMoves);
-    GameService.makeMove(board, adversaryMove,false);
-    GameService.updateBoardMeta(board);
-    TextView checkStatusBlack = findViewById(R.id.checkStatusTop);
-    TextView checkStatusWhite = findViewById(R.id.checkStatusBottom);
-    TextView message = findViewById(R.id.welcomeMessage);
-    postMoveChecks(board, false, checkStatusBlack, checkStatusWhite, message);
   }
 
+  // Game over dialog callback
   @Override
   public void onGameOver() {
-
+    // Handle game over actions if needed
   }
 }

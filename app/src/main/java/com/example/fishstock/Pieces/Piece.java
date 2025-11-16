@@ -38,6 +38,7 @@ public interface Piece {
   public char getSymbol();
   public void addCriticalAttack(Piece piece);
   public void addCriticalDefenence(Piece piece);
+  public void clearCriticalLabels();
   public void addOverloadValue(int value);
   public void addForkValue(int value);
   double evaluate(Board board);

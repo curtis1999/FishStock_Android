@@ -736,4 +736,11 @@ public class Rook implements Piece {
   public Coordinate getFromPos() {
     return this.fromPos;
   }
+  @Override
+  public void clearCriticalLabels() {
+    criticallyAttacking = null;
+    criticallyDefending = null;
+    criticallyDefendingValues = null;
+    criticallyAttackingValues = null;
+  }
 }

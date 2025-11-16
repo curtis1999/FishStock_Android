@@ -935,4 +935,12 @@ public class Queen implements Piece {
   public Coordinate getFromPos() {
     return this.fromPos;
   }
+
+  @Override
+  public void clearCriticalLabels() {
+    criticallyAttacking.clear();
+    criticallyDefending.clear();
+    criticallyDefendingValues.clear();
+    criticallyAttackingValues.clear();
+  }
 }

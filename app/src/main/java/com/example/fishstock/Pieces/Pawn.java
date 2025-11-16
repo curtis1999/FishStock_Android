@@ -853,5 +853,12 @@ public class Pawn implements Piece {
   public int getValue() {
     return 1;
   }
+  @Override
+  public void clearCriticalLabels() {
+    criticallyAttacking.clear();
+    criticallyDefending.clear();
+    criticallyDefendingValues.clear();
+    criticallyAttackingValues.clear();
+  }
 
 }
