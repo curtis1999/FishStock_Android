@@ -1,96 +1,241 @@
 package com.example.fishstock;
 
-import static java.security.AccessController.getContext;
-
+import androidx.appcompat.app.AppCompatActivity;
 import android.content.Intent;
-import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.ProgressBar;
+import android.widget.Spinner;
 import android.widget.TextView;
 
-import androidx.appcompat.app.AppCompatActivity;
-
-import com.example.fishstock.Agents.Agent;
-import com.example.fishstock.Board;
-import com.example.fishstock.GameManager;
-import com.example.fishstock.GameService;
-import com.example.fishstock.Move;
+import com.example.fishstock.Agents.*;
 import com.example.fishstock.Pieces.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class TournamentActivity extends AppCompatActivity {
 
-  private static final int GAMES_PER_MATCHUP = 1; // Number of games per match
+  private Spinner agent1Spinner;
+  private Spinner agent2Spinner;
+  private Spinner numGamesSpinner;
+  private Button startButton;
+  private Button exitButton;
+  private ProgressBar progressBar;
+  private TextView progressText;
+  private TextView resultsText;
+  private Button exportButton;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_tournament);
 
-    Button startButton = findViewById(R.id.startTournament);
-    TextView resultsText = findViewById(R.id.results);
-    Button back = findViewById(R.id.back);
+    // Initialize UI elements
+    agent1Spinner = findViewById(R.id.agent1Spinner);
+    agent2Spinner = findViewById(R.id.agent2Spinner);
+    numGamesSpinner = findViewById(R.id.numGamesSpinner);
+    startButton = findViewById(R.id.startTournament);
+    exitButton = findViewById(R.id.exitButton);
+    progressBar = findViewById(R.id.progressBar);
+    progressText = findViewById(R.id.progressText);
+    resultsText = findViewById(R.id.results);
+    exportButton = findViewById(R.id.exportResults);
 
-    startButton.setOnClickListener(v -> {
-      runTournament(resultsText);
+    // Setup spinners
+    setupSpinners();
+
+    // Setup button listeners
+    startButton.setOnClickListener(v -> startTournament());
+    exitButton.setOnClickListener(v -> {
+      Intent intent = new Intent(TournamentActivity.this, MainActivity.class);
+      startActivity(intent);
+      finish();
     });
-    back.setOnClickListener(new View.OnClickListener() {
-      public void onClick(View v){
-        Intent intent = new Intent(TournamentActivity.this,MainActivity.class);
-        startActivity(intent);
+
+    exportButton.setOnClickListener(v -> exportResults());
+  }
+
+  /**
+   * Sets up the spinner dropdowns with agent names and game counts.
+   */
+  private void setupSpinners() {
+    // Agent options
+    String[] agents = {"Randy", "Simple", "MinMax", "FishStock"};
+    ArrayAdapter<String> agentAdapter = new ArrayAdapter<>(
+        this,
+        android.R.layout.simple_spinner_item,
+        agents
+    );
+    agentAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+
+    agent1Spinner.setAdapter(agentAdapter);
+    agent2Spinner.setAdapter(agentAdapter);
+    agent2Spinner.setSelection(1); // Default to second agent
+
+    // Number of games options
+    String[] gameOptions = {"10", "20", "50", "100", "200"};
+    ArrayAdapter<String> gamesAdapter = new ArrayAdapter<>(
+        this,
+        android.R.layout.simple_spinner_item,
+        gameOptions
+    );
+    gamesAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+    numGamesSpinner.setAdapter(gamesAdapter);
+    numGamesSpinner.setSelection(1); // Default to 20 games
+  }
+
+  /**
+   * Starts the tournament with selected agents and number of games.
+   */
+  private void startTournament() {
+    String agent1Name = agent1Spinner.getSelectedItem().toString();
+    String agent2Name = agent2Spinner.getSelectedItem().toString();
+    int numGames = Integer.parseInt(numGamesSpinner.getSelectedItem().toString());
+
+    // Check if same agent selected
+    if (agent1Name.equals(agent2Name)) {
+      resultsText.setText("Please select two different agents!");
+      resultsText.setTextColor(0xFFFF0000); // Red color
+      return;
+    }
+
+    // Disable controls during tournament
+    startButton.setEnabled(false);
+    agent1Spinner.setEnabled(false);
+    agent2Spinner.setEnabled(false);
+    numGamesSpinner.setEnabled(false);
+    exportButton.setVisibility(View.GONE);
+    progressBar.setVisibility(View.VISIBLE);
+    progressBar.setProgress(0);
+    resultsText.setText("Starting tournament...");
+    resultsText.setTextColor(0xFF000000); // Black color
+
+    // Run tournament in background thread
+    new Thread(() -> runTournament(agent1Name, agent2Name, numGames)).start();
+  }
+
+  /**
+   * Runs the tournament between two agents.
+   */
+  private void runTournament(String agent1Name, String agent2Name, int numGames) {
+    int agent1Wins = 0;
+    int agent2Wins = 0;
+    int draws = 0;
+
+    for (int game = 0; game < numGames; game++) {
+      boolean agent1White = (game % 2 == 0); // Alternate colors
+      int result = playGame(agent1Name, agent2Name, agent1White);
+
+      if (result == 1) {
+        agent1Wins++;
+      } else if (result == -1) {
+        agent2Wins++;
+      } else {
+        draws++;
       }
+
+      // Update progress
+      int finalGame = game + 1;
+      int finalAgent1Wins = agent1Wins;
+      int finalAgent2Wins = agent2Wins;
+      int finalDraws = draws;
+
+      runOnUiThread(() -> {
+        progressBar.setProgress((finalGame * 100) / numGames);
+        progressText.setText(String.format("Game %d/%d completed", finalGame, numGames));
+
+        // Show running results
+        displayRunningResults(agent1Name, agent2Name, finalAgent1Wins, finalAgent2Wins, finalDraws, finalGame);
+      });
+    }
+
+    // Calculate final ELO and display results
+    int finalAgent1Wins = agent1Wins;
+    int finalAgent2Wins = agent2Wins;
+    int finalDraws = draws;
+
+    runOnUiThread(() -> {
+      displayFinalResults(agent1Name, agent2Name, finalAgent1Wins, finalAgent2Wins, finalDraws, numGames);
+      progressBar.setVisibility(View.GONE);
+      progressText.setText("Tournament Complete!");
+      startButton.setEnabled(true);
+      agent1Spinner.setEnabled(true);
+      agent2Spinner.setEnabled(true);
+      numGamesSpinner.setEnabled(true);
+      exportButton.setVisibility(View.VISIBLE);
     });
   }
 
-  private void runTournament(TextView resultsText) {
-    String[] agents = {"Randy", "Simple"};
-    Map<String, Integer> wins = new HashMap<>();
-    Map<String, Integer> losses = new HashMap<>();
-    Map<String, Integer> draws = new HashMap<>();
+  /**
+   * Displays running results during the tournament.
+   */
+  private void displayRunningResults(String agent1, String agent2, int wins1, int wins2, int draws, int gamesPlayed) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("TOURNAMENT IN PROGRESS\n");
+    sb.append("======================\n\n");
+    sb.append(String.format("%s vs %s\n\n", agent1, agent2));
+    sb.append(String.format("Games Played: %d\n\n", gamesPlayed));
+    sb.append(String.format("%s: %d wins\n", agent1, wins1));
+    sb.append(String.format("%s: %d wins\n", agent2, wins2));
+    sb.append(String.format("Draws: %d\n", draws));
 
-    // Initialize counters
-    for (String agent : agents) {
-      wins.put(agent, 0);
-      losses.put(agent, 0);
-      draws.put(agent, 0);
+    resultsText.setText(sb.toString());
+    resultsText.setTextColor(0xFF000000); // Black color
+  }
+
+  /**
+   * Displays final tournament results with ELO ratings.
+   */
+  private void displayFinalResults(String agent1, String agent2, int wins1, int wins2, int draws, int totalGames) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("TOURNAMENT RESULTS\n");
+    sb.append("==================\n\n");
+    sb.append(String.format("%s vs %s\n", agent1, agent2));
+    sb.append(String.format("Total Games: %d\n\n", totalGames));
+
+    sb.append("SCORES:\n");
+    sb.append("-------\n");
+    sb.append(String.format("%s: %d wins, %d losses, %d draws\n",
+        agent1, wins1, wins2, draws));
+    sb.append(String.format("%s: %d wins, %d losses, %d draws\n\n",
+        agent2, wins2, wins1, draws));
+
+    // Calculate win percentages
+    double agent1Score = wins1 + 0.5 * draws;
+    double agent2Score = wins2 + 0.5 * draws;
+    double agent1WinRate = (agent1Score / totalGames) * 100;
+    double agent2WinRate = (agent2Score / totalGames) * 100;
+
+    sb.append("WIN RATES:\n");
+    sb.append("----------\n");
+    sb.append(String.format("%s: %.1f%%\n", agent1, agent1WinRate));
+    sb.append(String.format("%s: %.1f%%\n\n", agent2, agent2WinRate));
+
+    // Calculate ELO ratings (simple performance-based)
+    int baseELO = 1500;
+    int agent1ELO = baseELO + (int)((agent1WinRate / 100.0 - 0.5) * 800);
+    int agent2ELO = baseELO + (int)((agent2WinRate / 100.0 - 0.5) * 800);
+
+    sb.append("ESTIMATED ELO:\n");
+    sb.append("--------------\n");
+    sb.append(String.format("%s: %d ELO\n", agent1, agent1ELO));
+    sb.append(String.format("%s: %d ELO\n\n", agent2, agent2ELO));
+
+    // Determine winner
+    if (wins1 > wins2) {
+      sb.append(String.format("WINNER: %s\n", agent1));
+    } else if (wins2 > wins1) {
+      sb.append(String.format("WINNER: %s\n", agent2));
+    } else {
+      sb.append("RESULT: TIE\n");
     }
 
-    // Play all matchups
-    for (int i = 0; i < agents.length; i++) {
-      for (int j = i + 1; j < agents.length; j++) {
-        String agent1 = agents[i];
-        String agent2 = agents[j];
-
-        // Play GAMES_PER_MATCHUP games
-        for (int game = 0; game < GAMES_PER_MATCHUP; game++) {
-          boolean agent1White = (game % 2 == 0); // Alternate colors
-          int result = playGame(agent1, agent2, agent1White);
-
-          if (result == 1) { // Agent1 wins
-            wins.put(agent1, wins.get(agent1) + 1);
-            losses.put(agent2, losses.get(agent2) + 1);
-          } else if (result == -1) { // Agent2 wins
-            wins.put(agent2, wins.get(agent2) + 1);
-            losses.put(agent1, losses.get(agent1) + 1);
-          } else { // Draw
-            draws.put(agent1, draws.get(agent1) + 1);
-            draws.put(agent2, draws.get(agent2) + 1);
-          }
-
-          // Update UI
-          updateResults(resultsText, agent1, agent2, wins, losses, draws);
-        }
-      }
-    }
-
-    // Calculate and display ELO ratings
-    Map<String, Integer> eloRatings = calculateELO(agents, wins, losses, draws);
-    displayFinalResults(resultsText, eloRatings, wins, losses, draws);
+    resultsText.setText(sb.toString());
+    resultsText.setTextColor(0xFF000000); // Black color
   }
 
   /**
@@ -130,8 +275,9 @@ public class TournamentActivity extends AppCompatActivity {
         // Check for checkmate or stalemate
         if (moves.isEmpty()) {
           if (king.isChecked || king.isDoubleChecked) {
-            // Checkmate
-            return isWhiteTurn ? -1 : 1; // Other player wins
+            // Checkmate - determine winner
+            boolean whiteWon = !isWhiteTurn;
+            return (whiteWon == agent1White) ? 1 : -1;
           } else {
             // Stalemate
             return 0;
@@ -188,6 +334,9 @@ public class TournamentActivity extends AppCompatActivity {
     return (whiteWinning == agent1White) ? 1 : -1;
   }
 
+  /**
+   * Gets the material value of a piece.
+   */
   private int getPieceValue(String pieceName) {
     switch (pieceName) {
       case "Pawn": return 1;
@@ -200,63 +349,16 @@ public class TournamentActivity extends AppCompatActivity {
   }
 
   /**
-   * Calculates ELO ratings using simple performance rating.
+   * Exports tournament results to share.
    */
-  private Map<String, Integer> calculateELO(String[] agents,
-                                            Map<String, Integer> wins,
-                                            Map<String, Integer> losses,
-                                            Map<String, Integer> draws) {
-    Map<String, Integer> elo = new HashMap<>();
-    int baseELO = 1500; // Starting ELO
+  private void exportResults() {
+    String results = resultsText.getText().toString();
 
-    for (String agent : agents) {
-      int totalGames = wins.get(agent) + losses.get(agent) + draws.get(agent);
-      double score = wins.get(agent) + 0.5 * draws.get(agent);
-      double winRate = score / totalGames;
+    Intent shareIntent = new Intent(Intent.ACTION_SEND);
+    shareIntent.setType("text/plain");
+    shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Chess Tournament Results");
+    shareIntent.putExtra(Intent.EXTRA_TEXT, results);
 
-      // Simple ELO calculation based on win rate
-      int eloRating = baseELO + (int)((winRate - 0.5) * 400);
-      elo.put(agent, eloRating);
-    }
-
-    return elo;
-  }
-
-  private void updateResults(TextView resultsText, String agent1, String agent2,
-                             Map<String, Integer> wins, Map<String, Integer> losses,
-                             Map<String, Integer> draws) {
-    runOnUiThread(() -> {
-      StringBuilder sb = new StringBuilder();
-      sb.append("Current Results:\n\n");
-      sb.append(agent1).append(" vs ").append(agent2).append("\n");
-      sb.append(agent1).append(": W:").append(wins.get(agent1))
-          .append(" L:").append(losses.get(agent1))
-          .append(" D:").append(draws.get(agent1)).append("\n");
-      resultsText.setText(sb.toString());
-    });
-  }
-
-  private void displayFinalResults(TextView resultsText, Map<String, Integer> elo,
-                                   Map<String, Integer> wins, Map<String, Integer> losses,
-                                   Map<String, Integer> draws) {
-    StringBuilder sb = new StringBuilder();
-    sb.append("TOURNAMENT RESULTS\n");
-    sb.append("==================\n\n");
-
-    // Sort by ELO
-    List<Map.Entry<String, Integer>> sortedElo = new ArrayList<>(elo.entrySet());
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-      sortedElo.sort((a, b) -> b.getValue().compareTo(a.getValue()));
-    }
-
-    for (Map.Entry<String, Integer> entry : sortedElo) {
-      String agent = entry.getKey();
-      sb.append(agent).append(": ").append(entry.getValue()).append(" ELO\n");
-      sb.append("  Wins: ").append(wins.get(agent))
-          .append(" | Losses: ").append(losses.get(agent))
-          .append(" | Draws: ").append(draws.get(agent)).append("\n\n");
-    }
-
-    resultsText.setText(sb.toString());
+    startActivity(Intent.createChooser(shareIntent, "Share Results"));
   }
 }
