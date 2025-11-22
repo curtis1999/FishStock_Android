@@ -643,6 +643,12 @@ public class Rook implements Piece {
   public void setPossibleMoves(ArrayList<Move> potentialMoves_2) {
     this.possibleMoves = potentialMoves_2;
   }
+
+  @Override
+  public void setRevealChecker() {
+
+  }
+
   public void connectRooks() {
     this.isConnected=true;
   }

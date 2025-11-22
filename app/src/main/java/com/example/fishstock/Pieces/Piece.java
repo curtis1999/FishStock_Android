@@ -31,7 +31,13 @@ public interface Piece {
   public Coordinate getRevealCheckerLoc();
   public ArrayList<Move> getPossibleMoves();
   public void setPossibleMoves(ArrayList<Move> potentialMoves_2);
+
+  void setRevealChecker();
+
   public boolean isRevealChecker();
+
+  void setRevealQueenChecker();
+
   public boolean isRevealQueenChecker();
   public void reset();
   public Piece copyPiece();

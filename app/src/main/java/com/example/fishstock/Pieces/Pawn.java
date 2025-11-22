@@ -1,5 +1,4 @@
 package com.example.fishstock.Pieces;
-import androidx.collection.ArraySet;
 
 import com.example.fishstock.Board;
 import com.example.fishstock.Cell;
@@ -8,702 +7,101 @@ import com.example.fishstock.GameService;
 import com.example.fishstock.Move;
 import com.example.fishstock.Status;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Pawn implements Piece {
-  boolean isWhite;
-  public ArrayList<Move> legalMoves;
-  public boolean firstMove;
-  Coordinate fromPos;
-  Coordinate curPos;
-  Status stat;
-  ArrayList<Piece> protectors = new ArrayList<>();
-  ArrayList<Piece> attackers = new ArrayList<>();
-  boolean isRevealChecker = false;
-  boolean isPinned = false;
-  boolean isPinnedToQueen;
-  boolean isRevealQueenChecker;
-  public ArrayList<Coordinate> pinAve = new ArrayList<>();
+
+  // Position and state
+  private Coordinate fromPos;
+  private Coordinate curPos;
+  private boolean isWhite;
+  private Status stat;
+  private boolean firstMove;
   public boolean enPassantable;
+
+  // Move generation
+  private ArrayList<Move> possibleMoves = new ArrayList<>();
+
+  // Tactical state
+  private ArrayList<Piece> protectors = new ArrayList<>();
+  private ArrayList<Piece> attackers = new ArrayList<>();
+  private boolean isPinned = false;
+  private boolean isRevealChecker = false;
+  private boolean isPinnedToQueen = false;
+  private boolean isRevealQueenChecker = false;
+
+  // Pin/reveal data
+  private ArrayList<Coordinate> pinAve = new ArrayList<>();
   private Coordinate pinnerLoc;
   private Coordinate revealCheckerLoc;
   private ArrayList<Coordinate> revealAve;
-  ArrayList<Move> possibleMoves = new ArrayList<>();
-  public ArrayList<Piece> criticallyAttacking = new ArrayList<>();
-  public ArrayList<Piece> criticallyDefending = new ArrayList<>();
-  public List<Integer> criticallyAttackingValues = new ArrayList<>();
-  public List<Integer> criticallyDefendingValues = new ArrayList<>();
-  public int forkingValue = 0;
-  public int overLoadingValue = 0;
+
+  // Critical piece tracking
+  private ArrayList<Piece> criticallyAttacking = new ArrayList<>();
+  private ArrayList<Piece> criticallyDefending = new ArrayList<>();
+  private List<Integer> criticallyAttackingValues = new ArrayList<>();
+  private List<Integer> criticallyDefendingValues = new ArrayList<>();
+  private int forkingValue = 0;
+  private int overLoadingValue = 0;
+
+  // Base value
+  private static final double BASE_VALUE = 1.0;
 
   public Pawn(Coordinate pos, boolean isWhite) {
-    this.isWhite = isWhite;
-    this.fromPos = pos;
-    this.curPos = pos;
-    this.firstMove = true;
-    if (isWhite) {
-      this.stat = Status.WHITE;
-    } else {
-      this.stat = Status.BLACK;
-    }
+    this(pos, pos, isWhite, true);
   }
 
-  public Pawn(Coordinate fromPos, Coordinate toPos, boolean isWhite, boolean isFirst) {
-    this.isWhite = isWhite;
+  public Pawn(Coordinate fromPos, Coordinate curPos, boolean isWhite, boolean firstMove) {
     this.fromPos = fromPos;
-    this.curPos = toPos;
-    this.firstMove = isFirst;
-    if (isWhite) {
-      this.stat = Status.WHITE;
-    } else {
-      this.stat = Status.BLACK;
-    }
-  }
-
-  public ArrayList<Move> generateMoves(Coordinate pos, Cell[][] board) {
-    ArrayList<Move> legalMoves = new ArrayList<>();
-    if (firstMove && isWhite) {
-      Coordinate pos1 = new Coordinate(curPos.file, curPos.rank + 1);
-      if (board[pos1.rank][pos1.file].PieceStatus == Status.EMPTY) {
-        Move mv1 = new Move(pos, pos1, "Pawn", false, this.isWhite);
-        legalMoves.add(mv1);
-        Coordinate pos2 = new Coordinate(curPos.file, curPos.rank + 2);
-        if (board[pos2.rank][pos2.file].PieceStatus == Status.EMPTY) {
-          Move mv2 = new Move(pos, pos2, "Pawn", false, this.isWhite);
-          legalMoves.add(mv2);
-        }
-      }
-      if (curPos.file < 7) {
-        Coordinate pos3 = new Coordinate(curPos.file + 1, curPos.rank + 1);
-        if (board[pos3.rank][pos3.file].PieceStatus == Status.BLACK) {
-          Move m3 = new Move(pos, pos3, "Pawn", true, this.isWhite);
-          m3.setCapture(board[pos3.rank][pos3.file].piece);
-          if (board[pos3.rank][pos3.file].piece.getName().equals("King")) {
-            m3.setCheck(m3.fromCoord, generateAvenue(m3.fromCoord, m3.toCoord));
-          }
-          legalMoves.add(m3);
-        } else if (board[pos3.rank][pos3.file].PieceStatus == Status.WHITE) {
-          Move m3 = new Move(pos, pos3, "Pawn", false, this.isWhite);
-          m3.setProtectionMove(pos3);
-          legalMoves.add(m3);
-        } else {
-          Move m3 = new Move(pos, pos3, "Pawn", false, this.isWhite);
-          m3.setCoverMove();
-          legalMoves.add(m3);
-        }
-      }
-      if (curPos.file > 0) {
-        Coordinate pos4 = new Coordinate(curPos.file - 1, curPos.rank + 1);
-        if (board[pos4.rank][pos4.file].PieceStatus == Status.BLACK) {
-          Move m4 = new Move(pos, pos4, "Pawn", true, this.isWhite);
-          m4.setCapture(board[pos4.rank][pos4.file].piece);
-          if (board[pos4.rank][pos4.file].piece.getName().equals("King")) {
-            m4.setCheck(m4.fromCoord, generateAvenue(m4.fromCoord, m4.toCoord));
-          }
-          legalMoves.add(m4);
-        } else if (board[pos4.rank][pos4.file].PieceStatus == Status.WHITE) {
-          Move m4 = new Move(pos, pos4, "Pawn", false, this.isWhite);
-          m4.setProtectionMove(pos4);
-          legalMoves.add(m4);
-        } else {
-          Move m4 = new Move(pos, pos4, "Pawn", false, this.isWhite);
-          m4.setCoverMove();
-          legalMoves.add(m4);
-        }
-
-      }
-    } else if (!firstMove && isWhite) {
-      //Can be promoted next Move
-      if (pos.rank == 6) {
-        if (board[pos.rank + 1][pos.file].PieceStatus == Status.EMPTY) {
-          Coordinate pos1 = new Coordinate(pos.file, pos.rank + 1);
-          Move mv1 = new Move(pos, pos1, "Pawn", false, true);
-          mv1.setPromotion();
-          legalMoves.add(mv1);
-        }
-        if (pos.file < 7) {
-          Coordinate pos1 = new Coordinate(pos.file + 1, pos.rank + 1);
-          if (board[pos1.rank][pos1.file].PieceStatus == Status.BLACK) {
-            Move mv1 = new Move(pos, pos1, "Pawn", true, isWhite);
-            mv1.setCapture(board[pos1.rank][pos1.file].piece);
-            if (board[pos1.rank][pos1.file].piece.getName().equals("King")) {
-              mv1.setCheck(mv1.fromCoord, generateAvenue(mv1.fromCoord, mv1.toCoord));
-            }
-            mv1.setPromotion();
-            legalMoves.add(mv1);
-          } else if (board[pos1.rank][pos1.file].PieceStatus == Status.WHITE) {
-            Move m3 = new Move(pos, pos1, "Pawn", false, this.isWhite);
-            m3.setProtectionMove(pos1);
-            legalMoves.add(m3);
-          } else {
-            Move m3 = new Move(pos, pos1, "Pawn", false, this.isWhite);
-            m3.setCoverMove();
-            legalMoves.add(m3);
-          }
-        }
-        if (pos.file > 0) {
-          Coordinate pos1 = new Coordinate(pos.file - 1, pos.rank + 1);
-          if (board[pos1.rank][pos1.file].PieceStatus == Status.BLACK) {
-            Move mv1 = new Move(pos, pos1, "Pawn", true, isWhite);
-            mv1.setCapture(board[pos1.rank][pos1.file].piece);
-            if (board[pos1.rank][pos1.file].piece.getName().equals("King")) {
-              mv1.setCheck(mv1.fromCoord, generateAvenue(mv1.fromCoord, mv1.toCoord));
-            }
-            mv1.setPromotion();
-            legalMoves.add(mv1);
-          } else if (board[pos1.rank][pos1.file].PieceStatus == Status.WHITE) {
-            Move m3 = new Move(pos, pos1, "Pawn", false, this.isWhite);
-            m3.setProtectionMove(pos1);
-            legalMoves.add(m3);
-          } else {
-            Move m3 = new Move(pos, pos1, "Pawn", false, this.isWhite);
-            m3.setCoverMove();
-            legalMoves.add(m3);
-          }
-        }
-        //Have to check for enPassant.
-      } else if (pos.rank == 4) {
-        Coordinate pos1 = new Coordinate(curPos.file, curPos.rank + 1);
-        if (board[pos1.rank][pos1.file].PieceStatus == Status.EMPTY) {
-          Move m1 = new Move(pos, pos1, "Pawn", false, this.isWhite);
-          legalMoves.add(m1);
-        }
-        if (curPos.file < 7) {
-          Coordinate pos2 = new Coordinate(curPos.file + 1, curPos.rank + 1);
-          if (board[pos2.rank][pos2.file].PieceStatus == Status.BLACK) {
-            Move m2 = new Move(pos, pos2, "Pawn", true, this.isWhite);
-            m2.setCapture(board[pos2.rank][pos2.file].piece);
-            if (board[pos2.rank][pos2.file].piece.getName().equals("King")) {
-              m2.setCheck(m2.fromCoord, generateAvenue(m2.fromCoord, m2.toCoord));
-            }
-            legalMoves.add(m2);
-          } else if (board[pos2.rank][pos2.file].PieceStatus == Status.WHITE) {
-            Move m3 = new Move(pos, pos2, "Pawn", false, this.isWhite);
-            m3.setProtectionMove(pos2);
-            legalMoves.add(m3);
-          } else {
-            if (!(board[curPos.rank][curPos.file + 1].isEmpty)
-                && board[curPos.rank][curPos.file + 1].piece.getName().equals("Pawn")
-                && ((Pawn) board[curPos.rank][curPos.file + 1].piece).enPassantable) {
-              Move m3 = new Move(pos, pos2, "Pawn", true, this.isWhite);
-              m3.setCapture(board[curPos.rank][curPos.file + 1].piece);
-              m3.setEnPassant();
-              legalMoves.add(m3);
-            } else {
-              Move m3 = new Move(pos, pos2, "Pawn", false, this.isWhite);
-              m3.setCoverMove();
-              legalMoves.add(m3);
-            }
-          }
-        }
-        if (curPos.file > 0) {
-          Coordinate pos3 = new Coordinate(curPos.file - 1, curPos.rank + 1);
-          if (board[pos3.rank][pos3.file].PieceStatus == Status.BLACK) {
-            Move m3 = new Move(pos, pos3, "Pawn", true, this.isWhite);
-            m3.setCapture(board[pos3.rank][pos3.file].piece);
-            if (board[pos3.rank][pos3.file].piece.getName().equals("King")) {
-              m3.setCheck(m3.fromCoord, generateAvenue(m3.fromCoord, m3.toCoord));
-            }
-            legalMoves.add(m3);
-          } else if (board[pos3.rank][pos3.file].PieceStatus == Status.WHITE) {
-            Move m3 = new Move(pos, pos3, "Pawn", false, this.isWhite);
-            m3.setProtectionMove(pos3);
-            legalMoves.add(m3);
-          } else {
-            if (!(board[curPos.rank][curPos.file - 1].isEmpty)
-                && board[curPos.rank][curPos.file - 1].piece.getName().equals("Pawn")
-                && ((Pawn) board[curPos.rank][curPos.file - 1].piece).enPassantable) {
-              Move m3 = new Move(pos, pos3, "Pawn", true, this.isWhite);
-              m3.setCapture(board[curPos.rank][curPos.file - 1].piece);
-              m3.setEnPassant();
-              legalMoves.add(m3);
-            } else {
-              Move m3 = new Move(pos, pos3, "Pawn", false, this.isWhite);
-              m3.setCoverMove();
-              legalMoves.add(m3);
-            }
-          }
-        }
-      }
-      //Not one away from promotion and no dont need to check for enPassant
-      else {
-        if (pos.rank < 7) {
-          Coordinate pos1 = new Coordinate(curPos.file, curPos.rank + 1);
-          if (board[pos1.rank][pos1.file].PieceStatus == Status.EMPTY) {
-            Move m1 = new Move(pos, pos1, "Pawn", false, this.isWhite);
-            legalMoves.add(m1);
-          }
-          if (curPos.file < 7) {
-            Coordinate pos2 = new Coordinate(curPos.file + 1, curPos.rank + 1);
-            if (board[pos2.rank][pos2.file].PieceStatus == Status.BLACK) {
-              Move m2 = new Move(pos, pos2, "Pawn", true, this.isWhite);
-              m2.setCapture(board[pos2.rank][pos2.file].piece);
-              if (board[pos2.rank][pos2.file].piece.getName().equals("King")) {
-                m2.setCheck(m2.fromCoord, generateAvenue(m2.fromCoord, m2.toCoord));
-              }
-
-              legalMoves.add(m2);
-            } else if (board[pos2.rank][pos2.file].PieceStatus == Status.WHITE) {
-              Move m3 = new Move(pos, pos2, "Pawn", false, this.isWhite);
-              m3.setProtectionMove(pos2);
-              legalMoves.add(m3);
-            } else {
-              Move m3 = new Move(pos, pos2, "Pawn", false, this.isWhite);
-              m3.setCoverMove();
-              legalMoves.add(m3);
-            }
-          }
-          if (curPos.file > 0) {
-            Coordinate pos3 = new Coordinate(curPos.file - 1, curPos.rank + 1);
-            if (board[pos3.rank][pos3.file].PieceStatus == Status.BLACK) {
-              Move m3 = new Move(pos, pos3, "Pawn", true, this.isWhite);
-              m3.setCapture(board[pos3.rank][pos3.file].piece);
-              if (board[pos3.rank][pos3.file].piece.getName().equals("King")) {
-                m3.setCheck(m3.fromCoord, generateAvenue(m3.fromCoord, m3.toCoord));
-              }
-              legalMoves.add(m3);
-            } else if (board[pos3.rank][pos3.file].PieceStatus == Status.WHITE) {
-              Move m3 = new Move(pos, pos3, "Pawn", false, this.isWhite);
-              m3.setProtectionMove(pos3);
-              legalMoves.add(m3);
-            } else {
-              Move m3 = new Move(pos, pos3, "Pawn", false, this.isWhite);
-              m3.setCoverMove();
-              legalMoves.add(m3);
-            }
-          }
-        }
-      }
-    } else if (firstMove && !isWhite) {
-      Coordinate pos1 = new Coordinate(curPos.file, curPos.rank - 1);
-      if (board[pos1.rank][pos1.file].PieceStatus == Status.EMPTY) {
-        Move m1 = new Move(pos, pos1, "Pawn", false, this.isWhite);
-        legalMoves.add(m1);
-        Coordinate pos2 = new Coordinate(curPos.file, curPos.rank - 2);
-        if (board[pos2.rank][pos2.file].PieceStatus == Status.EMPTY) {
-          Move m2 = new Move(pos, pos2, "Pawn", false, this.isWhite);
-          legalMoves.add(m2);
-        }
-      }
-      if (curPos.file < 7) {
-        Coordinate pos3 = new Coordinate(curPos.file + 1, curPos.rank - 1);
-        if (board[pos3.rank][pos3.file].PieceStatus == Status.WHITE) {
-          Move m3 = new Move(pos, pos3, "Pawn", true, this.isWhite);
-          m3.setCapture(board[pos3.rank][pos3.file].piece);
-          if (board[pos3.rank][pos3.file].piece.getName().equals("King")) {
-            m3.setCheck(m3.fromCoord, generateAvenue(m3.fromCoord, m3.toCoord));
-          }
-          legalMoves.add(m3);
-        } else if (board[pos3.rank][pos3.file].PieceStatus == Status.BLACK) {
-          Move m3 = new Move(pos, pos3, "Pawn", false, this.isWhite);
-          m3.setProtectionMove(pos3);
-          legalMoves.add(m3);
-        } else {
-          Move m3 = new Move(pos, pos3, "Pawn", false, this.isWhite);
-          m3.setCoverMove();
-          legalMoves.add(m3);
-        }
-      }
-      if (curPos.file > 0) {
-        Coordinate pos4 = new Coordinate(curPos.file - 1, curPos.rank - 1);
-        if (board[pos4.rank][pos4.file].PieceStatus == Status.WHITE) {
-          Move m4 = new Move(pos, pos4, "Pawn", true, this.isWhite);
-          m4.setCapture(board[pos4.rank][pos4.file].piece);
-          if (board[pos4.rank][pos4.file].piece.getName().equals("King")) {
-            m4.setCheck(m4.fromCoord, generateAvenue(m4.fromCoord, m4.toCoord));
-          }
-          legalMoves.add(m4);
-        } else if (board[pos4.rank][pos4.file].PieceStatus == Status.BLACK) {
-          Move m3 = new Move(pos, pos4, "Pawn", false, this.isWhite);
-          m3.setProtectionMove(pos4);
-          legalMoves.add(m3);
-        } else {
-          Move m3 = new Move(pos, pos4, "Pawn", false, this.isWhite);
-          m3.setCoverMove();
-          legalMoves.add(m3);
-        }
-      }
-    } else if (!firstMove && !isWhite) {
-      //Black could promote next turn
-      if (pos.rank == 1) {
-        if (board[pos.rank - 1][pos.file].PieceStatus == Status.EMPTY) {
-          Coordinate pos1 = new Coordinate(pos.file, pos.rank - 1);
-          Move mv1 = new Move(pos, pos1, "Pawn", false, false);
-          mv1.setPromotion();
-          legalMoves.add(mv1);
-        }
-        if (pos.file < 7) {
-          Coordinate pos1 = new Coordinate(pos.file + 1, pos.rank - 1);
-          if (board[pos1.rank][pos1.file].PieceStatus == Status.WHITE) {
-            Move mv1 = new Move(pos, pos1, "Pawn", true, false);
-            mv1.setCapture(board[pos1.rank][pos1.file].piece);
-            if (board[pos1.rank][pos1.file].piece.getName().equals("King")) {
-              mv1.setCheck(mv1.fromCoord, generateAvenue(mv1.fromCoord, mv1.toCoord));
-            }
-            mv1.setPromotion();
-            legalMoves.add(mv1);
-          } else if (board[pos1.rank][pos1.file].PieceStatus == Status.BLACK) {
-            Move m3 = new Move(pos, pos1, "Pawn", false, this.isWhite);
-            m3.setProtectionMove(pos1);
-            legalMoves.add(m3);
-          } else {
-            Move m3 = new Move(pos, pos1, "Pawn", false, this.isWhite);
-            m3.setCoverMove();
-            legalMoves.add(m3);
-          }
-        }
-        if (pos.file > 0) {
-          Coordinate pos1 = new Coordinate(pos.file - 1, pos.rank - 1);
-          if (board[pos1.rank][pos1.file].PieceStatus == Status.WHITE) {
-            Move mv1 = new Move(pos, pos1, "Pawn", true, isWhite);
-            mv1.setCapture(board[pos1.rank][pos1.file].piece);
-            if (board[pos1.rank][pos1.file].piece.getName().equals("King")) {
-              mv1.setCheck(mv1.fromCoord, generateAvenue(mv1.fromCoord, mv1.toCoord));
-            }
-            mv1.setPromotion();
-            legalMoves.add(mv1);
-          } else if (board[pos1.rank][pos1.file].PieceStatus == Status.BLACK) {
-            Move m3 = new Move(pos, pos1, "Pawn", false, this.isWhite);
-            m3.setProtectionMove(pos1);
-            legalMoves.add(m3);
-          } else {
-            Move m3 = new Move(pos, pos1, "Pawn", false, this.isWhite);
-            m3.setCoverMove();
-            legalMoves.add(m3);
-          }
-        }
-        //Need to check for enPassants
-      } else if (pos.rank == 3) {
-        Coordinate pos1 = new Coordinate(curPos.file, curPos.rank - 1);
-        if (board[pos1.rank][pos1.file].PieceStatus == Status.EMPTY) {
-          Move m1 = new Move(pos, pos1, "Pawn", false, this.isWhite);
-          legalMoves.add(m1);
-        }
-        if (curPos.file < 7) {
-          Coordinate pos2 = new Coordinate(curPos.file + 1, curPos.rank - 1);
-          if (board[pos2.rank][pos2.file].PieceStatus == Status.WHITE) {
-            Move m2 = new Move(pos, pos2, "Pawn", true, this.isWhite);
-            m2.setCapture(board[pos2.rank][pos2.file].piece);
-            if (board[pos2.rank][pos2.file].piece.getName().equals("King")) {
-              m2.setCheck(m2.fromCoord, generateAvenue(m2.fromCoord, m2.toCoord));
-            }
-            legalMoves.add(m2);
-          } else if (board[pos2.rank][pos2.file].PieceStatus == Status.BLACK) {
-            Move m2 = new Move(pos, pos2, "Pawn", false, this.isWhite);
-            m2.setProtectionMove(pos2);
-            legalMoves.add(m2);
-            //CoverMove or EnPassant.
-          } else {
-            if (board[curPos.rank][curPos.file + 1].PieceStatus == Status.WHITE
-                && board[curPos.rank][curPos.file + 1].piece.getName().equals("Pawn")
-                && ((Pawn) board[curPos.rank][curPos.file + 1].piece).enPassantable) {
-              Move m2 = new Move(pos, pos2, "Pawn", true, this.isWhite);
-              m2.setCapture(board[curPos.rank][curPos.file + 1].piece);
-              m2.setEnPassant();
-              legalMoves.add(m2);
-            } else {
-              Move m2 = new Move(pos, pos2, "Pawn", false, this.isWhite);
-              m2.setCoverMove();
-              legalMoves.add(m2);
-            }
-          }
-        }
-        if (curPos.file > 0) {
-          Coordinate pos3 = new Coordinate(curPos.file - 1, curPos.rank - 1);
-          if (board[pos3.rank][pos3.file].PieceStatus == Status.WHITE) {
-            Move m3 = new Move(pos, pos3, "Pawn", true, this.isWhite);
-            m3.setCapture(board[pos3.rank][pos3.file].piece);
-            if (board[pos3.rank][pos3.file].piece.getName().equals("King")) {
-              m3.setCheck(m3.fromCoord, generateAvenue(m3.fromCoord, m3.toCoord));
-            }
-            legalMoves.add(m3);
-          } else if (board[pos3.rank][pos3.file].PieceStatus == Status.BLACK) {
-            Move m3 = new Move(pos, pos3, "Pawn", false, this.isWhite);
-            m3.setProtectionMove(pos3);
-            legalMoves.add(m3);
-            //Cover Move or EnPassant.
-          } else {
-            if (board[curPos.rank][curPos.file - 1].PieceStatus == Status.WHITE
-                && board[curPos.rank][curPos.file - 1].piece.getName().equals("Pawn")
-                && ((Pawn) board[curPos.rank][curPos.file - 1].piece).enPassantable) {
-              Move m3 = new Move(pos, pos3, "Pawn", true, this.isWhite);
-              m3.setCapture(board[curPos.rank][curPos.file - 1].piece);
-              m3.setEnPassant();
-              legalMoves.add(m3);
-            } else {
-              Move m3 = new Move(pos, pos3, "Pawn", false, this.isWhite);
-              m3.setCoverMove();
-              legalMoves.add(m3);
-            }
-          }
-        }
-      } else {
-        Coordinate pos1 = new Coordinate(curPos.file, curPos.rank - 1);
-        if (pos1.rank >= 0) {
-          if (board[pos1.rank][pos1.file].PieceStatus == Status.EMPTY) {
-            Move m1 = new Move(pos, pos1, "Pawn", false, this.isWhite);
-            legalMoves.add(m1);
-          }
-          if (curPos.file < 7) {
-            Coordinate pos2 = new Coordinate(curPos.file + 1, curPos.rank - 1);
-            if (board[pos2.rank][pos2.file].PieceStatus == Status.WHITE) {
-              Move m2 = new Move(pos, pos2, "Pawn", true, this.isWhite);
-              m2.setCapture(board[pos2.rank][pos2.file].piece);
-              if (board[pos2.rank][pos2.file].piece.getName().equals("King")) {
-                m2.setCheck(m2.fromCoord, generateAvenue(m2.fromCoord, m2.toCoord));
-              }
-              legalMoves.add(m2);
-            } else if (board[pos2.rank][pos2.file].PieceStatus == Status.BLACK) {
-              Move m3 = new Move(pos, pos2, "Pawn", false, this.isWhite);
-              m3.setProtectionMove(pos2);
-              legalMoves.add(m3);
-            } else {
-              Move m3 = new Move(pos, pos2, "Pawn", false, this.isWhite);
-              m3.setCoverMove();
-              legalMoves.add(m3);
-            }
-          }
-          if (curPos.file > 0) {
-            Coordinate pos3 = new Coordinate(curPos.file - 1, curPos.rank - 1);
-            if (board[pos3.rank][pos3.file].PieceStatus == Status.WHITE) {
-              Move m3 = new Move(pos, pos3, "Pawn", true, this.isWhite);
-              m3.setCapture(board[pos3.rank][pos3.file].piece);
-              if (board[pos3.rank][pos3.file].piece.getName().equals("King")) {
-                m3.setCheck(m3.fromCoord, generateAvenue(m3.fromCoord, m3.toCoord));
-              }
-              legalMoves.add(m3);
-            } else if (board[pos3.rank][pos3.file].PieceStatus == Status.BLACK) {
-              Move m3 = new Move(pos, pos3, "Pawn", false, this.isWhite);
-              m3.setProtectionMove(pos3);
-              legalMoves.add(m3);
-            } else {
-              Move m3 = new Move(pos, pos3, "Pawn", false, this.isWhite);
-              m3.setCoverMove();
-              legalMoves.add(m3);
-            }
-          }
-        }
-      }
-    }
-    //TODO: CONFIRM IF THIS IS NECESSARY
-
-    this.possibleMoves = legalMoves;
-    return legalMoves;
+    this.curPos = curPos;
+    this.isWhite = isWhite;
+    this.firstMove = firstMove;
+    this.stat = isWhite ? Status.WHITE : Status.BLACK;
   }
 
   @Override
-  public double evaluateSimple(Board board) {
-    return 1.0;
-  }
-
-  public double evaluate(Board board) {
-    double eval = 1;
-    Cell curCell = board.board[curPos.rank][curPos.file];
-    if (isPinned) {
-      eval *= 0.5;
-    }
-    if (isRevealChecker) {
-      eval *= 1.5;
-    }
-    if (isPinnedToQueen) {
-      eval *= 2.0/3.0;
-    }
-    if (isRevealQueenChecker) {
-      eval *= 1.25;
-    }
-    //EVAL 1: REMOVES 0.2 if doubled and 0.4 if trippled.
-    eval -= 0.2 * (Board.countAlongFile(board.board, "Pawn", isWhite, 1, curPos.file, isWhite) - 1);
-
-    //EVAL 2: Checks if it is passed
-    if (isPassed(board.board)) {
-      eval *= 1.75;
-    }
-    //Eval 3: If the pawn is a central square.
-    if (Cell.isCentralSquare(curPos)) {
-      eval += 0.25;
-    }
-    //EVAL 4: Check it's safety
-    eval *= evaluateSafety(curCell);
-    //Add the forking value.
-    eval += forkingValue;
-    //Subtract the OverLoadingValue
-    eval -= overLoadingValue;
-    return eval;
-  }
-
-  public boolean isPassed(Cell[][] board) {
-    if (curPos.file > 0 && curPos.file < 7) {
-      if (Board.countAlongFile(board, "Pawn", !isWhite, curPos.rank, curPos.file, isWhite) == 0
-          && Board.countAlongFile(board, "Pawn", !isWhite, curPos.rank, curPos.file + 1, isWhite) == 0
-          && Board.countAlongFile(board, "Pawn", !isWhite, curPos.rank, curPos.file - 1, isWhite) == 0) {
-        return true;
-      } else if (curPos.file == 0) {
-        if (Board.countAlongFile(board, "Pawn",  !isWhite, curPos.rank, curPos.file, isWhite) == 0
-            && Board.countAlongFile(board, "Pawn", !isWhite, curPos.rank, curPos.file + 1, isWhite) == 0) {
-          return true;
-        }
-      } else if (curPos.file == 7) {
-        if (Board.countAlongFile(board, "Pawn", !isWhite, curPos.rank, curPos.file, isWhite) == 0
-            && Board.countAlongFile(board, "Pawn", !isWhite, curPos.rank,curPos.file - 1, isWhite) == 0) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-  //Analyses the list of protectors and defenders and returns a scaling factor for the eval funtion.
-  public double evaluateSafety(Cell curCell) {
-    ArrayList<Piece> attackers;
-    ArrayList<Piece> protectors;
-    if (isWhite) {
-      attackers = curCell.blackAttackers;
-      protectors = curCell.whiteAttackers;
-    } else {
-      attackers = curCell.whiteAttackers;
-      protectors = curCell.blackAttackers;
-    }
-    double eval = 1.0;
-    //PART 1: Cancel all matches from both lists.
-    ArrayList<Piece> copyProtectors = (ArrayList<Piece>) protectors.clone();
-    ArrayList<Piece> copyAttackers = (ArrayList<Piece>) attackers.clone();
-    for (Piece piece : copyAttackers) {
-      if (piece.getName().equals("Pawn")) {
-        removeByName(copyProtectors, "Pawn");
-      } else if (piece.getName().equals("Knight") || piece.getName().equals("Bishop")) {
-        removeByName(copyProtectors, "Knight");
-      } else if (piece.getName().equals("Rook")) {
-        removeByName(copyProtectors, "Rook");
-      } else if (piece.getName().equals("Queen")) {
-        removeByName(copyProtectors, "Queen");
-      } else {
-        removeByName(copyProtectors, "King");
-      }
-      if (copyProtectors.size() == 0) {
-        break;
-      }
-    }
-    //PART 2: evaluate the results.
-    //2.1.1 BEST CASE: PROTECTED BY 2 PAWNS. (without any pawn attackers.
-    if (countByType(copyProtectors, "Pawn") == 2) {
-      return 1.25 + 0.1 * (protectors.size() - (1+attackers.size()));
-    }
-    //2.1.2WORST CASE: ATTACKED BY 2 PAWNS. (Without any pawn defenders
-    if (countByType(copyAttackers, "Pawn") == 2) {
-      return 0.6 - 0.1 * (attackers.size() - (1+ protectors.size()));
-    }
-
-    //2.2.1: Protected by one pawn
-    if (countByType(copyProtectors, "Pawn") == 1) {
-      return 1.15 + 0.1 * (protectors.size() - (1+attackers.size()));
-    }
-    //2.2.2: attacked by one pawn
-    if (countByType(copyAttackers, "Pawn") == 1) {
-      return 0.8 - 0.1 * (attackers.size() - (1+ protectors.size()));
-    }
-    //2.3.1: Protected by a bishop/knight
-    if (countByType(copyProtectors, "Knight") + countByType(copyProtectors, "Bishop") > 0) {
-      return 1.1 + 0.1 * (protectors.size() - (attackers.size()));
-    }
-    //2.3.1: Protected by a bishop/knight
-    if (countByType(copyAttackers, "Knight") + countByType(copyAttackers, "Bishop") > 0) {
-      return 0.9 - 0.1 * (protectors.size() - (attackers.size()));
-    }
-    return 1.0;
-  }
-
-  public static int countByType(ArrayList<Piece> pieces, String pieceName) {
-    int num = 0;
-    for (Piece piece : pieces) {
-      if (piece.getName().equals(pieceName)) {
-        num++;
-      }
-    }
-    return num;
-  }
-//NOTE: pieceName of Knight for both Bishops and knights.
-  public boolean removeByName(List<Piece> pieces, String pieceName) {
-    for (Piece piece: pieces) {
-      if (piece.getName().equals(pieceName) || piece.getName().equals("Bishop") && pieceName.equals("Knight")) {
-        pieces.remove(piece);
-        return true;
-      }
-    }
-    return false;
-  }
-  @Override
-  public void setQueenPin() {
-    this.isPinnedToQueen = true;
-  }
-  public void setRevealQueenChecker() {
-    this.isRevealQueenChecker = true;
-  }
-  @Override
-  public void setReveal() {
-    this.isRevealChecker = true;
-  }
-
-  @Override
-  public void setRevealQueen() {
-    this.isRevealQueenChecker = true;
-  }
-
-  public boolean isRevealQueenChecker(){
-    return this.isRevealQueenChecker;
-  }
   public String getName() {
     return "Pawn";
   }
 
+  @Override
   public Coordinate getPos() {
-    return this.curPos;
+    return curPos;
   }
 
   @Override
   public Coordinate getFromPos() {
-    return this.fromPos;
+    return fromPos;
   }
 
+  @Override
   public boolean getColor() {
-    return this.isWhite;
+    return isWhite;
   }
 
+  @Override
   public void setPos(Coordinate coord) {
     this.fromPos = curPos;
     this.curPos = coord;
+  }
+
+  @Override
+  public char getSymbol() {
+    return 'P';
+  }
+
+  @Override
+  public int getValue() {
+    return 1;
   }
 
   public void growUp() {
     this.firstMove = false;
   }
 
-  public void addAttacker(Piece p) {
-    this.attackers.add(p);
-  }
-
-  public void addProtector(Piece p) {
-    this.protectors.add(p);
-  }
-
-  @Override
-  public ArrayList<Piece> getProtectors() {
-    return this.protectors;
-  }
-
-  @Override
-  public ArrayList<Piece> getAttackers() {
-    return this.attackers;
-  }
-
-  public void setRevealChecker() {
-    this.isRevealChecker = true;
-  }
-
-  public boolean isPinned() {
-    return this.isPinned;
-  }
-
-  public boolean isPinnedToQueen() {
-    return this.isPinnedToQueen;
+  public void unGrow() {
+    this.firstMove = true;
   }
 
   public void setEnPassantable() {
@@ -714,18 +112,476 @@ public class Pawn implements Piece {
     this.enPassantable = false;
   }
 
-  public boolean isRevealChecker() {
-    return this.isRevealChecker;
+  /**
+   * Generates all legal pawn moves including captures, pushes, en passant, and promotions.
+   */
+  @Override
+  public ArrayList<Move> generateMoves(Coordinate pos, Cell[][] board) {
+    ArrayList<Move> legalMoves = new ArrayList<>();
+
+    int direction = isWhite ? 1 : -1;
+    int promotionRank = isWhite ? 7 : 0;
+    int enPassantRank = isWhite ? 4 : 3;
+    Status enemyStat = isWhite ? Status.BLACK : Status.WHITE;
+
+    // Forward moves
+    generateForwardMoves(pos, board, legalMoves, direction, promotionRank);
+
+    // Capture moves (left and right diagonals)
+    generateCaptureMoves(pos, board, legalMoves, direction, promotionRank, enemyStat, enPassantRank);
+
+    this.possibleMoves = legalMoves;
+    return legalMoves;
   }
 
+  /**
+   * Generates forward pawn pushes (1 or 2 squares).
+   */
+  private void generateForwardMoves(Coordinate pos, Cell[][] board, ArrayList<Move> legalMoves,
+                                    int direction, int promotionRank) {
+    Coordinate oneSquareAhead = new Coordinate(pos.file, pos.rank + direction);
 
-  public ArrayList<Coordinate> getPinAvenue() {
-    return this.pinAve;
+    // Check bounds
+    if (oneSquareAhead.rank < 0 || oneSquareAhead.rank > 7) {
+      return;
+    }
+
+    // One square forward
+    if (board[oneSquareAhead.rank][oneSquareAhead.file].PieceStatus == Status.EMPTY) {
+      Move move = new Move(pos, oneSquareAhead, "Pawn", false, isWhite);
+
+      // Check for promotion
+      if (oneSquareAhead.rank == promotionRank) {
+        move.setPromotion();
+      }
+
+      legalMoves.add(move);
+
+      // Two squares forward (only if first move)
+      if (firstMove) {
+        Coordinate twoSquaresAhead = new Coordinate(pos.file, pos.rank + (2 * direction));
+        if (board[twoSquaresAhead.rank][twoSquaresAhead.file].PieceStatus == Status.EMPTY) {
+          legalMoves.add(new Move(pos, twoSquaresAhead, "Pawn", false, isWhite));
+        }
+      }
+    }
   }
 
-  public void unPin() {
-    this.isPinned = false;
-    this.pinAve = null;
+  /**
+   * Generates capture moves (diagonal attacks).
+   */
+  private void generateCaptureMoves(Coordinate pos, Cell[][] board, ArrayList<Move> legalMoves,
+                                    int direction, int promotionRank, Status enemyStat, int enPassantRank) {
+    int[] fileOffsets = {-1, 1};  // Left and right
+
+    for (int fileOffset : fileOffsets) {
+      Coordinate captureSquare = new Coordinate(pos.file + fileOffset, pos.rank + direction);
+
+      // Check bounds
+      if (captureSquare.file < 0 || captureSquare.file > 7 ||
+          captureSquare.rank < 0 || captureSquare.rank > 7) {
+        continue;
+      }
+
+      Cell targetCell = board[captureSquare.rank][captureSquare.file];
+
+      if (targetCell.PieceStatus == enemyStat) {
+        // Regular capture
+        Move move = new Move(pos, captureSquare, "Pawn", true, isWhite);
+        move.setCapture(targetCell.piece);
+
+        if (targetCell.piece.getName().equals("King")) {
+          move.setCheck(move.fromCoord, generateAvenue(move.fromCoord, move.toCoord));
+        }
+
+        if (captureSquare.rank == promotionRank) {
+          move.setPromotion();
+        }
+
+        legalMoves.add(move);
+      } else if (targetCell.PieceStatus == stat) {
+        // Protection move
+        Move move = new Move(pos, captureSquare, "Pawn", false, isWhite);
+        move.setProtectionMove(captureSquare);
+        legalMoves.add(move);
+      } else {
+        // Empty square - could be en passant or just a cover move
+        if (pos.rank == enPassantRank) {
+          // Check for en passant
+          Coordinate adjacentSquare = new Coordinate(pos.file + fileOffset, pos.rank);
+          if (board[adjacentSquare.rank][adjacentSquare.file].PieceStatus == enemyStat &&
+              board[adjacentSquare.rank][adjacentSquare.file].piece.getName().equals("Pawn") &&
+              ((Pawn) board[adjacentSquare.rank][adjacentSquare.file].piece).enPassantable) {
+
+            Move move = new Move(pos, captureSquare, "Pawn", true, isWhite);
+            move.setCapture(board[adjacentSquare.rank][adjacentSquare.file].piece);
+            move.setEnPassant();
+            legalMoves.add(move);
+          } else {
+            // Just a cover move
+            Move move = new Move(pos, captureSquare, "Pawn", false, isWhite);
+            move.setCoverMove();
+            legalMoves.add(move);
+          }
+        } else {
+          // Cover move (controls the square)
+          Move move = new Move(pos, captureSquare, "Pawn", false, isWhite);
+          move.setCoverMove();
+          legalMoves.add(move);
+        }
+      }
+    }
+  }
+
+  @Override
+  public double evaluateSimple(Board board) {
+    return BASE_VALUE;
+  }
+
+  @Override
+  public double evaluate(Board board) {
+    Cell curCell = board.board[curPos.rank][curPos.file];
+    double eval = BASE_VALUE;
+
+    // Positional penalties
+    if (isPinned) {
+      eval *= 0.5;
+    }
+
+    if (isPinnedToQueen) {
+      eval *= 2.0 / 3.0;
+    }
+
+    // Positional bonuses
+    if (isRevealChecker) {
+      eval *= 1.5;
+    }
+
+    if (isRevealQueenChecker) {
+      eval *= 1.25;
+    }
+
+    // Pawn structure evaluation
+    eval += evaluatePawnStructure(board);
+
+    // Central pawns are stronger
+    if (Cell.isCentralSquare(curPos)) {
+      eval += 0.25;
+    }
+
+    // Piece safety
+    eval *= evaluateSafety(curCell);
+
+    // Tactical bonuses/penalties
+    eval += forkingValue;
+    eval -= overLoadingValue;
+
+    return eval;
+  }
+
+  /**
+   * Evaluates pawn structure factors.
+   */
+  private double evaluatePawnStructure(Board board) {
+    double structureEval = 0.0;
+
+    // Penalty for doubled pawns
+    int pawnsOnFile = Board.countAlongFile(board.board, "Pawn", isWhite, 0, curPos.file, true);
+    if (pawnsOnFile > 1) {
+      structureEval -= 0.2 * (pawnsOnFile - 1);
+    }
+
+    // Bonus for passed pawns
+    if (isPassed(board.board)) {
+      structureEval += 0.75;  // Passed pawns are very valuable
+
+      // Extra bonus for advanced passed pawns
+      int distanceToPromotion = isWhite ? (7 - curPos.rank) : curPos.rank;
+      structureEval += (7 - distanceToPromotion) * 0.15;  // Closer = better
+    }
+
+    // Bonus for connected pawns (pawns on adjacent files)
+    if (hasConnectedPawn(board)) {
+      structureEval += 0.2;
+    }
+
+    // Penalty for isolated pawns (no friendly pawns on adjacent files)
+    if (isIsolated(board)) {
+      structureEval -= 0.25;
+    }
+
+    // Penalty for backward pawns
+    if (isBackward(board)) {
+      structureEval -= 0.15;
+    }
+
+    return structureEval;
+  }
+
+  /**
+   * Checks if the pawn is passed (no enemy pawns can stop it).
+   */
+  private boolean isPassed(Cell[][] board) {
+    // Check the same file and adjacent files ahead of the pawn
+    int startRank = isWhite ? curPos.rank + 1 : 0;
+    int endRank = isWhite ? 8 : curPos.rank;
+
+    // Check own file
+    if (Board.countAlongFile(board, "Pawn", !isWhite, startRank, curPos.file, isWhite) > 0) {
+      return false;
+    }
+
+    // Check adjacent files
+    if (curPos.file > 0) {
+      if (Board.countAlongFile(board, "Pawn", !isWhite, startRank, curPos.file - 1, isWhite) > 0) {
+        return false;
+      }
+    }
+
+    if (curPos.file < 7) {
+      if (Board.countAlongFile(board, "Pawn", !isWhite, startRank, curPos.file + 1, isWhite) > 0) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Checks if the pawn has a connected pawn on an adjacent file.
+   */
+  private boolean hasConnectedPawn(Board board) {
+    if (curPos.file > 0) {
+      Cell leftCell = board.board[curPos.rank][curPos.file - 1];
+      if (leftCell.PieceStatus == stat && leftCell.piece.getName().equals("Pawn")) {
+        return true;
+      }
+    }
+
+    if (curPos.file < 7) {
+      Cell rightCell = board.board[curPos.rank][curPos.file + 1];
+      if (rightCell.PieceStatus == stat && rightCell.piece.getName().equals("Pawn")) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Checks if the pawn is isolated (no friendly pawns on adjacent files).
+   */
+  private boolean isIsolated(Board board) {
+    boolean hasLeftPawn = false;
+    boolean hasRightPawn = false;
+
+    if (curPos.file > 0) {
+      hasLeftPawn = Board.countAlongFile(board.board, "Pawn", isWhite, 0, curPos.file - 1, true) > 0;
+    }
+
+    if (curPos.file < 7) {
+      hasRightPawn = Board.countAlongFile(board.board, "Pawn", isWhite, 0, curPos.file + 1, true) > 0;
+    }
+
+    return !hasLeftPawn && !hasRightPawn;
+  }
+
+  /**
+   * Checks if the pawn is backward (behind friendly pawns and can't advance safely).
+   */
+  private boolean isBackward(Board board) {
+    // Check if there are friendly pawns ahead on adjacent files
+    int direction = isWhite ? 1 : -1;
+
+    if (curPos.file > 0) {
+      Coordinate leftAhead = new Coordinate(curPos.file - 1, curPos.rank + direction);
+      if (leftAhead.rank >= 0 && leftAhead.rank < 8) {
+        Cell cell = board.board[leftAhead.rank][leftAhead.file];
+        if (cell.PieceStatus == stat && cell.piece.getName().equals("Pawn")) {
+          return false;  // Has pawn support, not backward
+        }
+      }
+    }
+
+    if (curPos.file < 7) {
+      Coordinate rightAhead = new Coordinate(curPos.file + 1, curPos.rank + direction);
+      if (rightAhead.rank >= 0 && rightAhead.rank < 8) {
+        Cell cell = board.board[rightAhead.rank][rightAhead.file];
+        if (cell.PieceStatus == stat && cell.piece.getName().equals("Pawn")) {
+          return false;  // Has pawn support, not backward
+        }
+      }
+    }
+
+    // Check if adjacent pawns are behind us
+    boolean hasAdjacentPawns = false;
+    if (curPos.file > 0) {
+      int leftPawnCount = Board.countAlongFile(board.board, "Pawn", isWhite, 0, curPos.file - 1, true);
+      if (leftPawnCount > 0) hasAdjacentPawns = true;
+    }
+
+    if (curPos.file < 7) {
+      int rightPawnCount = Board.countAlongFile(board.board, "Pawn", isWhite, 0, curPos.file + 1, true);
+      if (rightPawnCount > 0) hasAdjacentPawns = true;
+    }
+
+    return hasAdjacentPawns;  // Has adjacent pawns but they're all behind
+  }
+
+  /**
+   * Evaluates pawn safety based on attackers and defenders.
+   */
+  private double evaluateSafety(Cell curCell) {
+    ArrayList<Piece> attackers;
+    ArrayList<Piece> protectors;
+
+    if (isWhite) {
+      attackers = curCell.blackAttackers;
+      protectors = curCell.whiteAttackers;
+    } else {
+      attackers = curCell.whiteAttackers;
+      protectors = curCell.blackAttackers;
+    }
+
+    // Remove matching pieces to simplify evaluation
+    ArrayList<Piece> copyProtectors = (ArrayList<Piece>) protectors.clone();
+    ArrayList<Piece> copyAttackers = (ArrayList<Piece>) attackers.clone();
+
+    removeMatchingPieces(copyProtectors, copyAttackers);
+
+    // Protected by two pawns - very strong
+    if (countByType(copyProtectors, "Pawn") >= 2) {
+      return 1.25 + 0.1 * (protectors.size() - attackers.size());
+    }
+
+    // Attacked by two pawns - very weak
+    if (countByType(copyAttackers, "Pawn") >= 2) {
+      return 0.6 - 0.1 * (attackers.size() - protectors.size());
+    }
+
+    // Protected by one pawn - strong
+    if (countByType(copyProtectors, "Pawn") == 1) {
+      return 1.15 + 0.1 * (protectors.size() - attackers.size());
+    }
+
+    // Attacked by one pawn - weak
+    if (countByType(copyAttackers, "Pawn") == 1) {
+      return 0.8 - 0.1 * (attackers.size() - protectors.size());
+    }
+
+    // Protected by minor piece
+    if (countByType(copyProtectors, "Knight") + countByType(copyProtectors, "Bishop") > 0) {
+      return 1.1 + 0.1 * (protectors.size() - attackers.size());
+    }
+
+    // Attacked by minor piece
+    if (countByType(copyAttackers, "Knight") + countByType(copyAttackers, "Bishop") > 0) {
+      return 0.9 - 0.1 * (attackers.size() - protectors.size());
+    }
+
+    return 1.0;
+  }
+
+  /**
+   * Removes matching piece types from both lists.
+   */
+  private void removeMatchingPieces(ArrayList<Piece> protectors, ArrayList<Piece> attackers) {
+    String[] pieceTypes = {"Pawn", "Knight", "Bishop", "Rook", "Queen", "King"};
+
+    for (String pieceType : pieceTypes) {
+      while (countByType(protectors, pieceType) > 0 && countByType(attackers, pieceType) > 0) {
+        removeByName(protectors, pieceType);
+        if (attackers.size() == 0) break;
+      }
+    }
+  }
+
+  private static int countByType(ArrayList<Piece> pieces, String pieceName) {
+    int count = 0;
+    for (Piece piece : pieces) {
+      if (piece.getName().equals(pieceName)) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  private boolean removeByName(List<Piece> pieces, String pieceName) {
+    for (int i = 0; i < pieces.size(); i++) {
+      Piece piece = pieces.get(i);
+      if (piece.getName().equals(pieceName) ||
+          (piece.getName().equals("Bishop") && pieceName.equals("Knight")) ||
+          (piece.getName().equals("Knight") && pieceName.equals("Bishop"))) {
+        pieces.remove(i);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // ==================== Tactical State Management ====================
+
+  @Override
+  public void addAttacker(Piece piece) {
+    attackers.add(piece);
+  }
+
+  @Override
+  public void addProtector(Piece piece) {
+    protectors.add(piece);
+  }
+
+  @Override
+  public ArrayList<Piece> getProtectors() {
+    return protectors;
+  }
+
+  @Override
+  public ArrayList<Piece> getAttackers() {
+    return attackers;
+  }
+
+  @Override
+  public void addCriticalAttack(Piece piece) {
+    criticallyAttacking.add(piece);
+    if (criticallyAttacking.size() > 1) {
+      forkingValue = GameService.getSecondHighestValue(criticallyAttacking);
+    }
+  }
+
+  @Override
+  public void addCriticalDefenence(Piece piece) {
+    criticallyDefending.add(piece);
+    if (criticallyDefending.size() > 1) {
+      overLoadingValue = GameService.getSecondHighestValue(criticallyDefending);
+    }
+  }
+
+  @Override
+  public void addOverloadValue(int value) {
+    criticallyDefendingValues.add(value);
+  }
+
+  @Override
+  public void addForkValue(int value) {
+    criticallyAttackingValues.add(value);
+  }
+
+  @Override
+  public void clearCriticalLabels() {
+    criticallyAttacking.clear();
+    criticallyDefending.clear();
+    criticallyDefendingValues.clear();
+    criticallyAttackingValues.clear();
+    forkingValue = 0;
+    overLoadingValue = 0;
+  }
+
+  // ==================== Pin/Check State ====================
+
+  @Override
+  public boolean isPinned() {
+    return isPinned;
   }
 
   @Override
@@ -735,13 +591,78 @@ public class Pawn implements Piece {
     this.pinnerLoc = pinnerLoc;
   }
 
+  public void unPin() {
+    this.isPinned = false;
+    this.pinAve = null;
+  }
+
+  public ArrayList<Coordinate> getPinAvenue() {
+    return pinAve;
+  }
+
+  @Override
   public Coordinate getPinnerLoc() {
-    return this.pinnerLoc;
+    return pinnerLoc;
+  }
+
+  @Override
+  public void setQueenPin() {
+    this.isPinnedToQueen = true;
+  }
+
+  @Override
+  public boolean isPinnedToQueen() {
+    return isPinnedToQueen;
+  }
+
+  @Override
+  public void setReveal() {
+    this.isRevealChecker = true;
+  }
+
+  @Override
+  public void setRevealChecker(ArrayList<Coordinate> revealAve, Coordinate checkerLoc) {
+    this.isRevealChecker = true;
+    this.revealCheckerLoc = checkerLoc;
+    this.revealAve = revealAve;
+  }
+
+  public void setRevealChecker() {
+    this.isRevealChecker = true;
+  }
+
+  @Override
+  public boolean isRevealChecker() {
+    return isRevealChecker;
+  }
+
+  @Override
+  public Coordinate getRevealCheckerLoc() {
+    return revealCheckerLoc;
+  }
+
+  public void unReveal() {
+    this.isRevealChecker = false;
+    this.revealAve = null;
+    this.revealCheckerLoc = new Coordinate(-1, -1);
+  }
+
+  @Override
+  public void setRevealQueen() {
+    this.isRevealQueenChecker = true;
+  }
+
+  public void setRevealQueenChecker() {
+    this.isRevealQueenChecker = true;
+  }
+
+  @Override
+  public boolean isRevealQueenChecker() {
+    return isRevealQueenChecker;
   }
 
   @Override
   public Coordinate getCheckerLoc() {
-    // TODO Auto-generated method stub
     return null;
   }
 
@@ -753,50 +674,31 @@ public class Pawn implements Piece {
     return ave;
   }
 
-  @Override
-  public void setRevealChecker(ArrayList<Coordinate> revealAve, Coordinate checkerLoc) {
-    this.isRevealChecker = true;
-    this.revealCheckerLoc = checkerLoc;
-    this.revealAve = revealAve;
-  }
-
-  public Coordinate getRevealCheckerLoc() {
-    return this.revealCheckerLoc;
-  }
-
-  public void unReveal() {
-    this.isRevealChecker = false;
-    this.revealAve = null;
-    this.revealCheckerLoc = new Coordinate(-1, -1);
-  }
-
-  //Used for undo.
-  public void unGrow() {
-    this.firstMove = true;
-  }
+  // ==================== Move Management ====================
 
   @Override
   public ArrayList<Move> getPossibleMoves() {
-    return this.possibleMoves;
+    return possibleMoves;
   }
 
   @Override
-  public void setPossibleMoves(ArrayList<Move> potentialMoves_2) {
-    this.possibleMoves = potentialMoves_2;
+  public void setPossibleMoves(ArrayList<Move> moves) {
+    this.possibleMoves = moves;
   }
+
+  // ==================== State Reset ====================
 
   @Override
   public void reset() {
-    this.attackers = new ArrayList<>();
-    this.protectors = new ArrayList<>();
-    this.isPinned = false;
-    this.pinAve = null;
-    this.pinnerLoc = new Coordinate(-1, -1);
-    this.isRevealChecker = false;
-    this.revealAve = null;
-    this.revealCheckerLoc = new Coordinate(-1, -1);
-    this.criticallyAttacking = new ArrayList<>();
-    this.criticallyDefending = new ArrayList<>();
+    attackers = new ArrayList<>();
+    protectors = new ArrayList<>();
+    isPinned = false;
+    pinAve = null;
+    pinnerLoc = new Coordinate(-1, -1);
+    isRevealChecker = false;
+    revealAve = null;
+    revealCheckerLoc = new Coordinate(-1, -1);
+    clearCriticalLabels();
   }
 
   public void setProtectors(ArrayList<Piece> protectors) {
@@ -809,56 +711,19 @@ public class Pawn implements Piece {
 
   @Override
   public Piece copyPiece() {
-    Pawn copyPiece = new Pawn(this.curPos, this.isWhite);
-    copyPiece.setPossibleMoves(this.possibleMoves);
-    copyPiece.setProtectors(this.protectors);
-    copyPiece.setAttackers(this.attackers);
-    copyPiece.isRevealChecker = this.isRevealChecker;
-    copyPiece.revealCheckerLoc = this.revealCheckerLoc;
-    copyPiece.isPinned = this.isPinned;
-    copyPiece.pinnerLoc = this.pinnerLoc;
-    copyPiece.pinAve = this.pinAve;
-    copyPiece.revealCheckerLoc = this.revealCheckerLoc;
-    copyPiece.revealAve = this.revealAve;
-    copyPiece.firstMove = this.firstMove;
-    return copyPiece;
+    Pawn copy = new Pawn(fromPos, curPos, isWhite, firstMove);
+    copy.setPossibleMoves(possibleMoves);
+    copy.setProtectors(protectors);
+    copy.setAttackers(attackers);
+    copy.isRevealChecker = isRevealChecker;
+    copy.revealCheckerLoc = revealCheckerLoc;
+    copy.isPinned = isPinned;
+    copy.pinnerLoc = pinnerLoc;
+    copy.pinAve = pinAve;
+    copy.revealAve = revealAve;
+    copy.isPinnedToQueen = isPinnedToQueen;
+    copy.isRevealQueenChecker = isRevealQueenChecker;
+    copy.enPassantable = enPassantable;
+    return copy;
   }
-
-  public char getSymbol() {
-    return 'P';
-  }
-  public void addCriticalAttack(Piece piece) {
-    this.criticallyAttacking.add(piece);
-    if (criticallyAttacking.size() > 1) {
-      forkingValue = GameService.getSecondHighestValue(criticallyAttacking);
-    }
-  }
-  public void addCriticalDefenence(Piece piece) {
-    this.criticallyDefending.add(piece);
-    if (criticallyDefending.size() > 1) {
-      overLoadingValue = GameService.getSecondHighestValue(criticallyDefending);
-    }
-  }
-
-  @Override
-  public void addOverloadValue(int value) {
-    this.criticallyDefendingValues.add(value);
-  }
-
-  @Override
-  public void addForkValue(int value) {
-    this.criticallyAttackingValues.add(value);
-  }
-
-  public int getValue() {
-    return 1;
-  }
-  @Override
-  public void clearCriticalLabels() {
-    criticallyAttacking.clear();
-    criticallyDefending.clear();
-    criticallyDefendingValues.clear();
-    criticallyAttackingValues.clear();
-  }
-
 }

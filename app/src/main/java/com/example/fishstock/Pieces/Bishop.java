@@ -8,437 +8,404 @@ import com.example.fishstock.Move;
 import com.example.fishstock.Status;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class Bishop implements Piece {
-  Coordinate fromPos;
-  Coordinate curPos;
-  boolean isWhite;
-  ArrayList<Move> possibleMoves = new ArrayList<>();
-  Status stat;
-  ArrayList<Piece> protectors = new ArrayList<>();
-  ArrayList<Piece> attackers = new ArrayList<>();
-  boolean isRevealChecker = false;
-  boolean isRevealQueenChecker = false;
-  boolean isPinned=false;
-  boolean isPinnedToQueen = false;
-  Coordinate pinnerLoc;
-  ArrayList<Coordinate> pinAve = new ArrayList<>();
+
+  // Position tracking
+  private Coordinate fromPos;
+  private Coordinate curPos;
+  private boolean isWhite;
+  private Status stat;
+
+  // Move generation
+  private ArrayList<Move> possibleMoves = new ArrayList<>();
+
+  // Tactical state
+  private ArrayList<Piece> protectors = new ArrayList<>();
+  private ArrayList<Piece> attackers = new ArrayList<>();
+  private boolean isPinned = false;
+  private boolean isRevealChecker = false;
+  private boolean isRevealQueenChecker = false;
+  private boolean isPinnedToQueen = false;
+
+  // Pin/reveal check data
+  private Coordinate pinnerLoc;
+  private ArrayList<Coordinate> pinAve = new ArrayList<>();
   private Coordinate revealCheckerLoc;
   private ArrayList<Coordinate> revealAve;
-  public List<Piece> criticallyAttacking = new ArrayList<>();
-  public  List<Piece> criticallyDefending = new ArrayList<>();
-  public List<Integer> criticallyAttackingValues = new ArrayList<>();
-  public List<Integer> criticallyDefendingValues = new ArrayList<>();
-  public int forkingValue = 0;
-  public int overLoadingValue = 0;
 
-  public Bishop (Coordinate curPos, boolean isWhite) {
-    this.fromPos= curPos;
-    this.curPos=curPos;
-    this.isWhite=isWhite;
-    if (isWhite) {
-      this.stat = Status.WHITE;
-    }else {
-      this.stat = Status.BLACK;
-    }
+  // Critical piece tracking
+  private List<Piece> criticallyAttacking = new ArrayList<>();
+  private List<Piece> criticallyDefending = new ArrayList<>();
+  private List<Integer> criticallyAttackingValues = new ArrayList<>();
+  private List<Integer> criticallyDefendingValues = new ArrayList<>();
+  private int forkingValue = 0;
+  private int overLoadingValue = 0;
+
+  // Diagonal directions: {fileOffset, rankOffset}
+  private static final int[][] DIAGONAL_DIRECTIONS = {
+      {1, 1},   // towards a8
+      {1, -1},  // towards a1
+      {-1, 1},  // towards h8
+      {-1, -1}  // towards h1
+  };
+
+  // Base material value
+  private static final double BASE_VALUE = 3.33;
+
+  public Bishop(Coordinate curPos, boolean isWhite) {
+    this(curPos, curPos, isWhite);
   }
-  public Bishop(Coordinate fromPos,Coordinate coord, boolean isWhite) {
-    this.fromPos= fromPos;
-    this.curPos=coord;
-    this.isWhite=isWhite;
-    if (isWhite) {
-      this.stat = Status.WHITE;
-    }else {
-      this.stat = Status.BLACK;
-    }
+
+  public Bishop(Coordinate fromPos, Coordinate curPos, boolean isWhite) {
+    this.fromPos = fromPos;
+    this.curPos = curPos;
+    this.isWhite = isWhite;
+    this.stat = isWhite ? Status.WHITE : Status.BLACK;
   }
+
+  @Override
+  public String getName() {
+    return "Bishop";
+  }
+
+  @Override
+  public Coordinate getPos() {
+    return curPos;
+  }
+
+  @Override
+  public Coordinate getFromPos() {
+    return fromPos;
+  }
+
+  @Override
+  public boolean getColor() {
+    return isWhite;
+  }
+
+  @Override
+  public void setPos(Coordinate coord) {
+    this.fromPos = curPos;
+    this.curPos = coord;
+  }
+
+  @Override
+  public char getSymbol() {
+    return 'B';
+  }
+
+  @Override
+  public int getValue() {
+    return 3;
+  }
+
+  /**
+   * Generates all possible diagonal moves for the bishop.
+   * Also handles x-ray vision for pins and discovered checks.
+   */
+  @Override
   public ArrayList<Move> generateMoves(Coordinate pos, Cell[][] board) {
-    ArrayList<Move> legalMoves = new ArrayList<Move>();
-    //Towards a8
-    if (pos.file<7 && pos.rank<7) {
-      boolean xRay = false;
-      boolean revealer = false;
-      Coordinate pinLoc = new Coordinate(-1,-1);
-      Coordinate revealerLoc = new Coordinate(-1, -1);
-      Move mv1 = new Move(false);
-      Coordinate pos1 = new Coordinate(pos.file+1,pos.rank+1);
-      while (pos1.file<=7 && pos1.rank<=7) {
-        if (!xRay) {
-          if (board[pos1.rank][pos1.file].PieceStatus==Status.EMPTY) {
-            mv1 = new Move(pos,pos1,"Bishop",false,this.isWhite);
-            legalMoves.add(mv1);
-            pos1 = new Coordinate(pos1.file+1,pos1.rank+1);
-            continue;
-          } else if (board[pos1.rank][pos1.file].PieceStatus!=this.stat) {
-            mv1 = new Move(pos,pos1,"Bishop",true, this.isWhite);
-            mv1.setCapture(board[pos1.rank][pos1.file].piece);
-            if (board[pos1.rank][pos1.file].piece.getName().equals("King")) {
-              mv1.setCheck(mv1.fromCoord, generateAvenue(mv1.fromCoord, mv1.toCoord));
-            }
-            legalMoves.add(mv1);
-            xRay=true;
-            pinLoc = new Coordinate(pos1.file,pos1.rank);
-            pos1 = new Coordinate(pos1.file+1,pos1.rank+1);
-            continue;
-          }else {
-            mv1 = new Move(pos,pos1,"Bishop",false, this.isWhite);
-            mv1.setProtectionMove(pos1);
-            legalMoves.add(mv1);
-            revealer=true; //Could lead to a reveal check.
-            xRay=true;
-            revealerLoc = new Coordinate(pos1.file,pos1.rank);
-            pos1 = new Coordinate(pos1.file+1,pos1.rank+1);
-            continue;
-          }
-        }	//Could be a reveal Check (On King/Queen)
-        else if (xRay && revealer) {
-          if (board[pos1.rank][pos1.file].PieceStatus==this.stat) {
-            break; //TODO: Extend X-ray vision 1 more.
-          }else if (board[pos1.rank][pos1.file].PieceStatus==Status.EMPTY) {
-            pos1 = new Coordinate(pos1.file+1,pos1.rank+1);
-            continue;
-          }else {
-            if (board[pos1.rank][pos1.file].piece.getName().equals("King")) {
-              mv1.setReveal(revealerLoc);
-            } else if (board[pos1.rank][pos1.file].piece.getName().equals("Queen")) {
-              mv1.setRevealQueen(revealerLoc);
-            }
-            break;
-          }
-          //Could be a pin
-        } else {
-          if (board[pos1.rank][pos1.file].PieceStatus==Status.EMPTY) {
-            pos1 = new Coordinate(pos1.file+1,pos1.rank+1);
-            continue;
-          } else if (board[pos1.rank][pos1.file].PieceStatus != this.stat) {
-            if (board[pos1.rank][pos1.file].piece.getName().equals("King")) { //Pins the adversary piece
-              ArrayList<Coordinate> pinAvenue = generateAvenue(pos,pos1);
-              //board[pinLoc.rank][pinLoc.file].piece.setPin(pinAvenue,pos);
-              mv1.setPin(pinLoc,pinAvenue);
-            } else if (board[pos1.rank][pos1.file].piece.getName().equals("Queen")) {
-              mv1.setPinQueen(pinLoc);
-            }
-            break;
-          } else {
-            break;
-          }
-        }
-      }
+    ArrayList<Move> legalMoves = new ArrayList<>();
+
+    for (int[] direction : DIAGONAL_DIRECTIONS) {
+      generateMovesInDirection(pos, board, direction[0], direction[1], legalMoves);
     }
 
-    //Towards a 1
-    if (pos.file<7 && pos.rank>0) {
-      Coordinate pos2 = new Coordinate(pos.file+1,pos.rank-1);
-      Coordinate pinLoc = new Coordinate(-1,-1);
-      Coordinate revealerLoc = new Coordinate(-1, -1);
-      Move mv2 = new Move(false);
-      boolean xRay = false;
-      boolean revealer = false;
-      while (pos2.file<=7 && pos2.rank>=0) {
-        if (!xRay) {
-          if (board[pos2.rank][pos2.file].PieceStatus==Status.EMPTY) {
-            mv2 = new Move(pos,pos2,"Bishop",false,this.isWhite);
-            legalMoves.add(mv2);
-            pos2= new Coordinate(pos2.file+1,pos2.rank-1);
-            continue;
-            //If there is an enemy piece in the way.
-          }else if (board[pos2.rank][pos2.file].PieceStatus!=this.stat) {
-            mv2 = new Move(pos,pos2,"Bishop",true, this.isWhite);
-            mv2.setCapture(board[pos2.rank][pos2.file].piece);
-            if (board[pos2.rank][pos2.file].piece.getName().equals("King")) {
-              mv2.setCheck(mv2.fromCoord, generateAvenue(mv2.fromCoord, mv2.toCoord));
-            }
-            legalMoves.add(mv2);
-            xRay=true;
-            pinLoc = new Coordinate(pos2.file, pos2.rank);
-            pos2 = new Coordinate(pos2.file+1,pos2.rank-1);
-            continue;
-          }else {
-            mv2 = new Move(pos,pos2,"Bishop",false, this.isWhite);
-            mv2.setProtectionMove(pos2);
-            legalMoves.add(mv2);
-            revealer=true; //Could lead to a reveal check.
-            xRay=true;
-            revealerLoc = new Coordinate(pos2.file,pos2.rank);
-            pos2 = new Coordinate(pos2.file+1,pos2.rank-1);
-            continue;
-          }
-
-        } else if (xRay && revealer) {
-          if (board[pos2.rank][pos2.file].PieceStatus==this.stat) {
-            break; //TODO: Extend X-ray vision 1 more.
-          }else if (board[pos2.rank][pos2.file].PieceStatus==Status.EMPTY) {
-            pos2 = new Coordinate(pos2.file+1,pos2.rank-1);
-            continue;
-          }else {
-            if (board[pos2.rank][pos2.file].piece.getName().equals("King")) {
-              mv2.setReveal(revealerLoc);
-            } else if (board[pos2.rank][pos2.file].piece.getName().equals("Queen")) {
-              mv2.setRevealQueen(revealerLoc);
-            }
-            break;
-          }
-        }
-         else {
-           if (board[pos2.rank][pos2.file].PieceStatus==Status.EMPTY) {
-            pos2= new Coordinate(pos2.file+1,pos2.rank-1);
-            continue;
-            //If there is an enemy piece in the way.
-          } else if (board[pos2.rank][pos2.file].PieceStatus!=this.stat) {
-            if (board[pos2.rank][pos2.file].piece.getName().equals("King")) {
-              ArrayList<Coordinate> pinAvenue = generateAvenue(pos,pos2);
-              //board[pinLoc.rank][pinLoc.file].piece.setPin(pinAvenue,pos);
-              mv2.setPin(pinLoc,pinAvenue);
-            } else if (board[pos2.rank][pos2.file].piece.getName().equals("Queen")) {
-              mv2.setPinQueen(pinLoc);
-            }
-             break;
-           } else {
-             break;
-           }
-        }
-      }
-    }
-    //Towards h8
-    if (pos.file>0 && pos.rank<7) {
-      Coordinate pos3 = new Coordinate(pos.file-1,pos.rank+1);
-      Coordinate pinLoc = new Coordinate(-1,-1);
-      Coordinate revealerLoc = new Coordinate(-1,-1);
-      Move mv3 = new Move(false);
-      boolean xRay = false;
-      boolean revealer = false;
-      while (pos3.file>=0 && pos3.rank<=7) {
-        if (!xRay) {
-          if (board[pos3.rank][pos3.file].PieceStatus==Status.EMPTY) {
-            mv3 = new Move(pos,pos3,"Bishop",false,this.isWhite);
-            legalMoves.add(mv3);
-            pos3 = new Coordinate(pos3.file-1, pos3.rank+1);
-            continue;
-            //If there is an enemy piece in the way.
-          }else if (board[pos3.rank][pos3.file].PieceStatus!=this.stat) {
-            mv3 = new Move(pos,pos3,"Bishop",true, this.isWhite);
-            mv3.setCapture(board[pos3.rank][pos3.file].piece);
-            if (board[pos3.rank][pos3.file].piece.getName().equals("King")) {
-              mv3.setCheck(mv3.fromCoord, generateAvenue(mv3.fromCoord, mv3.toCoord));
-            }
-            legalMoves.add(mv3);
-            xRay=true;
-            pinLoc = new Coordinate(pos3.file,pos3.rank);
-            pos3 = new Coordinate(pos3.file-1, pos3.rank+1);
-            continue;
-            //Your own piece in the way
-          }else {
-            mv3 = new Move(pos,pos3,"Bishop",false, this.isWhite);
-            mv3.setProtectionMove(pos3);
-            legalMoves.add(mv3);
-            revealer=true; //Could lead to a reveal check.
-            xRay=true;
-            revealerLoc = new Coordinate(pos3.file,pos3.rank);
-            pos3 = new Coordinate(pos3.file-1,pos3.rank+1);
-            continue;
-          }
-        } else if (xRay && revealer) {
-          if (board[pos3.rank][pos3.file].PieceStatus==this.stat) {
-            break; //TODO: Extend X-ray vision 1 more.
-          }else if (board[pos3.rank][pos3.file].PieceStatus==Status.EMPTY) {
-            pos3 = new Coordinate(pos3.file-1,pos3.rank+1);
-            continue;
-          }else {
-            if (board[pos3.rank][pos3.file].piece.getName().equals("King")) {
-              mv3.setReveal(revealerLoc);
-            } else if (board[pos3.rank][pos3.file].piece.getName().equals("Queen")) {
-              mv3.setRevealQueen(revealerLoc);
-            }
-            break;
-          }
-        }
-        else {
-          if (board[pos3.rank][pos3.file].PieceStatus==Status.EMPTY) {
-            pos3 = new Coordinate(pos3.file-1, pos3.rank+1);
-            continue;
-          }else if (board[pos3.rank][pos3.file].PieceStatus!=this.stat) {
-            if (board[pos3.rank][pos3.file].piece.getName().equals("King")) {
-              ArrayList<Coordinate> pinAvenue = generateAvenue(pos,pos3);
-              //board[pinLoc.rank][pinLoc.file].piece.setPin(pinAvenue,pos);
-              mv3.setPin(pinLoc, pinAvenue);
-            } else if (board[pos3.rank][pos3.file].piece.getName().equals("Queen")) {
-              mv3.setPinQueen(pinLoc);
-            }
-            break;
-          }else {
-            break;
-          }
-        }
-      }
-    }
-    //Towards h1
-    if (pos.file>0 && pos.rank>0) {
-      Coordinate pos4 = new Coordinate(pos.file-1,pos.rank-1);
-      Coordinate pinLoc = new Coordinate(-1,-1);
-      Coordinate revealerLoc = new Coordinate(-1,-1);
-      Move mv4 = new Move(false);
-      boolean xRay=false;
-      boolean revealer = false;
-      while (pos4.file>=0 && pos4.rank>=0) {
-        if (!xRay) {
-          if (board[pos4.rank][pos4.file].PieceStatus==Status.EMPTY) {
-            mv4 = new Move(pos,pos4,"Bishop",false,this.isWhite);
-            legalMoves.add(mv4);
-            pos4= new Coordinate(pos4.file-1, pos4.rank-1);
-            continue;
-            //If there is an enemy piece in the way.
-          }else if (board[pos4.rank][pos4.file].PieceStatus!=this.stat) {
-            mv4 = new Move(pos,pos4,"Bishop",true, this.isWhite);
-            mv4.setCapture(board[pos4.rank][pos4.file].piece);
-            if (board[pos4.rank][pos4.file].piece.getName().equals("King")) {
-              mv4.setCheck(mv4.fromCoord, generateAvenue(mv4.fromCoord, mv4.toCoord));
-            }
-            legalMoves.add(mv4);
-            xRay = true;
-            pinLoc = new Coordinate(pos4.file,pos4.rank);
-            pos4= new Coordinate(pos4.file-1, pos4.rank-1);
-            continue;
-            //Your own piece in the way
-          }else {
-            mv4= new Move(pos,pos4,"Bishop",false, this.isWhite);
-            mv4.setProtectionMove(pos4);
-            legalMoves.add(mv4);
-            revealer=true; //Could lead to a reveal check.
-            xRay=true;
-            revealerLoc = new Coordinate(pos4.file,pos4.rank);
-            pos4 = new Coordinate(pos4.file-1,pos4.rank-1);
-            continue;
-          }
-        } else if (xRay && revealer) {
-          if (board[pos4.rank][pos4.file].PieceStatus==this.stat) {
-            break; //TODO: Extend X-ray vision 1 more.
-          }else if (board[pos4.rank][pos4.file].PieceStatus==Status.EMPTY) {
-            pos4 = new Coordinate(pos4.file-1,pos4.rank-1);
-            continue;
-          }else {
-            if (board[pos4.rank][pos4.file].piece.getName().equals("King")) {
-              mv4.setReveal(revealerLoc);
-            } else if (board[pos4.rank][pos4.file].piece.getName().equals("Queen")) {
-              mv4.setRevealQueen(revealerLoc);
-            }
-            break;
-          }
-        }
-        else {
-          if (board[pos4.rank][pos4.file].PieceStatus==Status.EMPTY) {
-            pos4 = new Coordinate(pos4.file-1, pos4.rank-1);
-            continue;
-          }else if (board[pos4.rank][pos4.file].PieceStatus!=this.stat) {
-            if (board[pos4.rank][pos4.file].piece.getName().equals("King")) {
-              ArrayList<Coordinate> pinAvenue = generateAvenue(pos,pos4);
-              //board[pinLoc.rank][pinLoc.file].piece.setPin(pinAvenue,pos);
-              mv4.setPin(pinLoc,pinAvenue);
-            } else if (board[pos4.rank][pos4.file].piece.getName().equals("Queen")) {
-              mv4.setPinQueen(pinLoc);
-            }
-            break;
-          }else {
-            break;
-          }
-        }
-      }
-
-    }
-    if (legalMoves.size()==0) {
+    if (legalMoves.isEmpty()) {
       legalMoves.add(new Move(false));
     }
-    this.possibleMoves=legalMoves;
+
+    this.possibleMoves = legalMoves;
     return legalMoves;
   }
 
+  /**
+   * Generates moves in a single diagonal direction.
+   * Handles x-ray vision for pins and discovered checks.
+   */
+  private void generateMovesInDirection(Coordinate pos, Cell[][] board,
+                                        int fileStep, int rankStep,
+                                        ArrayList<Move> legalMoves) {
+    Coordinate current = new Coordinate(pos.file + fileStep, pos.rank + rankStep);
+    boolean xRay = false;
+    boolean revealer = false;
+    Coordinate pinLoc = new Coordinate(-1, -1);
+    Coordinate revealerLoc = new Coordinate(-1, -1);
+    Move lastMove = new Move(false);
 
-  public ArrayList<Coordinate> generateAvenue(Coordinate pinnerLoc, Coordinate kingLoc){
-    ArrayList<Coordinate> pinAvenue = new ArrayList<>();
-    //pinAvenue.add(pinnerLoc);
-    if ((pinnerLoc.file + pinnerLoc.rank)==(kingLoc.file+kingLoc.rank)) {
-      if (pinnerLoc.rank>kingLoc.rank) {
-        Coordinate temp = new Coordinate(pinnerLoc.file+1, pinnerLoc.rank-1);
-        while (temp.rank>kingLoc.rank) {
-          pinAvenue.add(temp);
-          temp = new Coordinate(temp.file+1,temp.rank-1);
+    while (isValidSquare(current)) {
+      Cell cell = board[current.rank][current.file];
+
+      if (!xRay) {
+        // First pass - normal move generation
+        Move move = new Move(pos, current, "Bishop", false, isWhite);
+
+        if (cell.PieceStatus == Status.EMPTY) {
+          legalMoves.add(move);
+        } else if (cell.PieceStatus != stat) {
+          // Enemy piece - capture
+          move.setCapture(cell.piece);
+          if (cell.piece.getName().equals("King")) {
+            move.setCheck(move.fromCoord, generateAvenue(move.fromCoord, move.toCoord));
+          }
+          legalMoves.add(move);
+          lastMove = move;
+          xRay = true;
+          pinLoc = new Coordinate(current.file, current.rank);
+        } else {
+          // Friendly piece - protection
+          move.setProtectionMove(current);
+          legalMoves.add(move);
+          lastMove = move;
+          revealer = true;
+          xRay = true;
+          revealerLoc = new Coordinate(current.file, current.rank);
         }
-      }else {
-        Coordinate temp = new Coordinate(pinnerLoc.file-1, pinnerLoc.rank+1);
-        while (temp.rank<kingLoc.rank) {
-          pinAvenue.add(temp);
-          temp = new Coordinate(temp.file-1,temp.rank+1);
+      } else if (revealer) {
+        // X-ray through friendly piece - check for discovered checks
+        if (cell.PieceStatus == stat) {
+          break; // Our own piece blocks further x-ray
+        } else if (cell.PieceStatus == Status.EMPTY) {
+          // Continue searching
+        } else {
+          // Enemy piece - check if it's king or queen
+          if (cell.piece.getName().equals("King")) {
+            lastMove.setReveal(revealerLoc);
+          } else if (cell.piece.getName().equals("Queen")) {
+            lastMove.setRevealQueen(revealerLoc);
+          }
+          break;
+        }
+      } else {
+        // X-ray through enemy piece - check for pins
+        if (cell.PieceStatus == Status.EMPTY) {
+          // Continue searching
+        } else if (cell.PieceStatus != stat) {
+          // Another enemy piece - check if it's king or queen
+          if (cell.piece.getName().equals("King")) {
+            ArrayList<Coordinate> pinAvenue = generateAvenue(pos, current);
+            lastMove.setPin(pinLoc, pinAvenue);
+          } else if (cell.piece.getName().equals("Queen")) {
+            lastMove.setPinQueen(pinLoc);
+          }
+          break;
+        } else {
+          // Friendly piece blocks x-ray
+          break;
         }
       }
-    }else {
-      if (pinnerLoc.rank>kingLoc.rank) {
-        Coordinate temp = new Coordinate(pinnerLoc.file-1, pinnerLoc.rank-1);
-        while (temp.rank>kingLoc.rank) {
-          pinAvenue.add(temp);
-          temp = new Coordinate(temp.file-1,temp.rank-1);
-        }
-      }else {
-        Coordinate temp = new Coordinate(pinnerLoc.file+1, pinnerLoc.rank+1);
-        while (temp.rank<kingLoc.rank) {
-          pinAvenue.add(temp);
-          temp = new Coordinate(temp.file+1,temp.rank+1);
-        }
-      }
+
+      current = new Coordinate(current.file + fileStep, current.rank + rankStep);
     }
-    return pinAvenue;
   }
 
-  public double evaluateSimple(Board board) {
-    double eval = 3.33;
-    if (isPinned) {
-      eval *= 1.0/2.0;
+  /**
+   * Checks if a coordinate is within board bounds.
+   */
+  private boolean isValidSquare(Coordinate coord) {
+    return coord.rank >= 0 && coord.rank < 8 && coord.file >= 0 && coord.file < 8;
+  }
+
+  /**
+   * Generates the avenue (path) between two squares on a diagonal.
+   */
+  @Override
+  public ArrayList<Coordinate> generateAvenue(Coordinate start, Coordinate end) {
+    ArrayList<Coordinate> avenue = new ArrayList<>();
+
+    int fileStep = Integer.signum(end.file - start.file);
+    int rankStep = Integer.signum(end.rank - start.rank);
+
+    Coordinate current = new Coordinate(start.file + fileStep, start.rank + rankStep);
+
+    while (current.rank != end.rank && current.file != end.file) {
+      avenue.add(current);
+      current = new Coordinate(current.file + fileStep, current.rank + rankStep);
     }
+
+    return avenue;
+  }
+
+  /**
+   * Simple evaluation for opponent pieces (used in position evaluator).
+   */
+  @Override
+  public double evaluateSimple(Board board) {
+    double eval = BASE_VALUE;
+
+    // Penalty for pinned bishops
+    if (isPinned) {
+      eval *= 0.5;
+    }
+
+    if (isPinnedToQueen) {
+      eval *= 2.0 / 3.0;
+    }
+
+    // Bonus for reveal checkers
     if (isRevealChecker) {
       eval *= 1.5;
     }
-    if (isPinnedToQueen) {
-      eval *= 2.0/3.0;
-    }
+
     if (isRevealQueenChecker) {
       eval *= 1.25;
     }
+
+    // Mobility bonus
     int numMoves = GameService.filterMoves(possibleMoves).size();
-    eval += (numMoves/12.0) - (4.0/14.0);
+    eval += (numMoves / 12.0) - (4.0 / 14.0);
+
     return eval;
   }
 
+  /**
+   * Full evaluation including tactical and positional considerations.
+   */
+  @Override
   public double evaluate(Board board) {
     Cell curCell = board.board[curPos.rank][curPos.file];
-    double eval = 3.33;
+    double eval = BASE_VALUE;
+
+    // Positional penalties
     if (isPinned) {
-      eval *= 1.0/2.0;
+      eval *= 0.5;
     }
+
+    if (isPinnedToQueen) {
+      eval *= 2.0 / 3.0;
+    }
+
+    // Positional bonuses
     if (isRevealChecker) {
       eval *= 1.5;
     }
-    if (isPinnedToQueen) {
-      eval *= 2.0/3.0;
-    }
+
     if (isRevealQueenChecker) {
       eval *= 1.25;
     }
-    int numMoves = GameService.filterMoves(possibleMoves).size();
-    eval += (numMoves/12.0) - (4.0/14.0);
+
+    // Mobility evaluation
+    eval += evaluateMobility();
+
+    // Positional evaluation
+    eval += evaluatePosition(board);
+
+    // Piece safety
     eval *= evaluateSafety(curCell);
 
-    //Add the forking value.
+    // Tactical bonuses
     eval += forkingValue;
-    //Subtract the OverLoadingValue
     eval -= overLoadingValue;
+
     return eval;
   }
 
-  //Analyses the list of protectors and defenders and returns a scaling factor for the eval funtion.
-  public double evaluateSafety(Cell curCell) {
+  /**
+   * Evaluates bishop mobility.
+   */
+  private double evaluateMobility() {
+    int numMoves = GameService.filterMoves(possibleMoves).size();
+
+    // Bishops can have 0-13 possible moves
+    // Central bishops typically have 13 moves, blocked bishops have few
+    // Formula gives bonus for mobility
+    return (numMoves / 12.0) - (4.0 / 14.0);
+  }
+
+  /**
+   * Evaluates positional factors for the bishop.
+   */
+  private double evaluatePosition(Board board) {
+    double positionalBonus = 0.0;
+
+    // Bonus for long diagonals (a1-h8, h1-a8 and nearby)
+    if (isOnLongDiagonal()) {
+      positionalBonus += 0.4;
+    }
+
+    // Bonus for fianchetto bishops (protected by pawns on g2/g7/b2/b7)
+    if (isFianchettoed(board)) {
+      positionalBonus += 0.3;
+    }
+
+    // Penalty for bishops blocked by own pawns (bad bishop)
+    int blockedDiagonals = countBlockedDiagonals(board);
+    positionalBonus -= blockedDiagonals * 0.2;
+
+    // Bonus for bishop pair (if this is evaluated in context with another bishop)
+    // This would need to be evaluated at the board level, not piece level
+
+    return positionalBonus;
+  }
+
+  /**
+   * Checks if bishop is on or near the long diagonals (a1-h8, h1-a8).
+   */
+  private boolean isOnLongDiagonal() {
+    // a1-h8 diagonal: rank + file = 7
+    // h1-a8 diagonal: rank - file = 0
+    int sum = curPos.rank + curPos.file;
+    int diff = Math.abs(curPos.rank - curPos.file);
+
+    return sum == 7 || diff == 0;
+  }
+
+  /**
+   * Checks if bishop is fianchettoed (on g2, b2, g7, or b7 protected by pawn).
+   */
+  private boolean isFianchettoed(Board board) {
+    if (isWhite) {
+      // Check for b2 or g2 positions
+      if ((curPos.file == 1 || curPos.file == 6) && curPos.rank == 1) {
+        // Check if protected by pawn on b3/g3
+        Cell protectorCell = board.board[2][curPos.file];
+        return protectorCell.PieceStatus == Status.WHITE &&
+            protectorCell.piece.getName().equals("Pawn");
+      }
+    } else {
+      // Check for b7 or g7 positions
+      if ((curPos.file == 1 || curPos.file == 6) && curPos.rank == 6) {
+        // Check if protected by pawn on b6/g6
+        Cell protectorCell = board.board[5][curPos.file];
+        return protectorCell.PieceStatus == Status.BLACK &&
+            protectorCell.piece.getName().equals("Pawn");
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Counts how many diagonals are blocked by own pawns.
+   */
+  private int countBlockedDiagonals(Board board) {
+    int blocked = 0;
+
+    for (int[] direction : DIAGONAL_DIRECTIONS) {
+      Coordinate adjacent = new Coordinate(
+          curPos.file + direction[0],
+          curPos.rank + direction[1]
+      );
+
+      if (isValidSquare(adjacent)) {
+        Cell cell = board.board[adjacent.rank][adjacent.file];
+        if (cell.PieceStatus == stat && cell.piece.getName().equals("Pawn")) {
+          blocked++;
+        }
+      }
+    }
+
+    return blocked;
+  }
+
+  /**
+   * Evaluates the safety of the bishop based on attackers and defenders.
+   */
+  private double evaluateSafety(Cell curCell) {
     ArrayList<Piece> attackers;
     ArrayList<Piece> protectors;
+
     if (isWhite) {
       attackers = curCell.blackAttackers;
       protectors = curCell.whiteAttackers;
@@ -446,29 +413,37 @@ public class Bishop implements Piece {
       attackers = curCell.whiteAttackers;
       protectors = curCell.blackAttackers;
     }
-    //A hanging piece which can be taken.
-    if (attackers.size() > 0 && protectors.size() == 0) {
-      return -1;
+
+    // Hanging piece - very bad
+    if (!attackers.isEmpty() && protectors.isEmpty()) {
+      return -1.0;
     }
 
-    //If it can be captured by a pawn -> bad eval.
-    if (countByType(attackers, "Pawn") > 0) {
+    // Attacked by pawn - dangerous
+    int pawnAttackers = countByType(attackers, "Pawn");
+    if (pawnAttackers > 0) {
       if (attackers.size() > protectors.size()) {
-        return 0;
+        return 0.0; // Will likely be captured
       } else {
-        return 0.1;
+        return 0.1; // Under pressure but defended
       }
     }
-    if (countByType(protectors, "Pawn") == 2) {
+
+    // Protected by pawns - very good
+    int pawnProtectors = countByType(protectors, "Pawn");
+    if (pawnProtectors >= 2) {
       return 1.25;
-    }
-    if (countByType(protectors, "Pawn") == 1){
+    } else if (pawnProtectors == 1) {
       return 1.15;
     }
-    //No pawns attacking or defending.
-    if (countByType(protectors, "Knight") > countByType(attackers, "knight")) {
+
+    // Protected by minor pieces
+    int minorProtectors = countByType(protectors, "Knight") + countByType(protectors, "Bishop");
+    int minorAttackers = countByType(attackers, "Knight") + countByType(attackers, "Bishop");
+
+    if (minorProtectors > minorAttackers) {
       if (attackers.size() > protectors.size()) {
-        //Could give up a rook for two minor pieces.
+        // Might lose bishop for rook (good exchange)
         if (countByType(attackers, "Rook") > 0) {
           return 0.8;
         } else {
@@ -478,117 +453,157 @@ public class Bishop implements Piece {
         return 1.15;
       }
     }
-    return 1.0;
+
+    return 1.0; // Neutral
   }
 
-  public static int countByType(ArrayList<Piece> pieces, String pieceName) {
-    int num = 0;
+  /**
+   * Counts pieces of a given type in a list.
+   */
+  private static int countByType(ArrayList<Piece> pieces, String pieceName) {
+    int count = 0;
     for (Piece piece : pieces) {
       if (piece.getName().equals(pieceName)) {
-        num++;
+        count++;
       }
     }
-    return num;
-  }
-  //NOTE: pieceName of Knight for both Bishops and knights.
-  public boolean removeByName(List<Piece> pieces, String pieceName) {
-    for (Piece piece: pieces) {
-      if (piece.getName().equals(pieceName) || piece.getName().equals("Bishop") && pieceName.equals("Knight")) {
-        pieces.remove(piece);
-        return true;
-      }
-    }
-    return false;
-  }
-  public boolean isRevealChecker(){
-    return this.isRevealChecker;
+    return count;
   }
 
-  public boolean isRevealQueenChecker(){
-    return this.isRevealQueenChecker;
-  }
+  // ==================== Tactical State Management ====================
 
-  public boolean isPinnedToQueen() {
-    return this.isPinnedToQueen;
-  }
   @Override
-  public String getName() {
-    return "Bishop";
-  }
-
-  public Coordinate getPos() {
-    return this.curPos;
+  public void addAttacker(Piece piece) {
+    attackers.add(piece);
   }
 
   @Override
-  public Coordinate getFromPos() {
-    return this.fromPos;
+  public void addProtector(Piece piece) {
+    protectors.add(piece);
   }
 
-  public boolean getColor() {
-    // TODO Auto-generated method stub
-    return this.isWhite;
-  }
-
-  public void setPos(Coordinate coord) {
-    this.fromPos = curPos;
-    this.curPos=coord;
-  }
-  public void addAttacker(Piece p) {
-    this.attackers.add(p);
-  }
-  public void addProtector(Piece p) {
-    this.protectors.add(p);
-  }
   @Override
   public ArrayList<Piece> getProtectors() {
-    return this.protectors;
+    return protectors;
   }
+
   @Override
   public ArrayList<Piece> getAttackers() {
-    return this.attackers;
+    return attackers;
   }
-  public void setRevealChecker() {
-    this.isRevealChecker=true;
+
+  @Override
+  public void addCriticalAttack(Piece piece) {
+    criticallyAttacking.add(piece);
+    if (criticallyAttacking.size() > 1) {
+      forkingValue = GameService.getSecondHighestValue(criticallyAttacking);
+    }
   }
+
+  @Override
+  public void addCriticalDefenence(Piece piece) {
+    criticallyDefending.add(piece);
+    // Only count as overload if not on same diagonal
+    if (criticallyDefending.size() > 1 && !areOnSameDiagonal(criticallyDefending)) {
+      overLoadingValue = GameService.getSecondHighestValue(criticallyDefending);
+    }
+  }
+
+  /**
+   * Checks if all pieces in the list are on the same diagonal.
+   * If they are, the bishop can defend them all without being overloaded.
+   */
+  private boolean areOnSameDiagonal(List<Piece> pieces) {
+    if (pieces.isEmpty()) {
+      return false;
+    }
+
+    // Check if all pieces are on the same diagonal from the bishop
+    for (Piece piece : pieces) {
+      Coordinate piecePos = piece.getPos();
+      int fileDiff = Math.abs(piecePos.file - curPos.file);
+      int rankDiff = Math.abs(piecePos.rank - curPos.rank);
+
+      // Not on diagonal if file and rank differences don't match
+      if (fileDiff != rankDiff) {
+        return false;
+      }
+    }
+
+    // Check if all pieces are on the same diagonal line (not opposite diagonals)
+    Coordinate firstPos = pieces.get(0).getPos();
+    int firstFileDir = Integer.signum(firstPos.file - curPos.file);
+    int firstRankDir = Integer.signum(firstPos.rank - curPos.rank);
+
+    for (int i = 1; i < pieces.size(); i++) {
+      Coordinate pos = pieces.get(i).getPos();
+      int fileDir = Integer.signum(pos.file - curPos.file);
+      int rankDir = Integer.signum(pos.rank - curPos.rank);
+
+      if (fileDir != firstFileDir || rankDir != firstRankDir) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  @Override
+  public void addOverloadValue(int value) {
+    criticallyDefendingValues.add(value);
+  }
+
+  @Override
+  public void addForkValue(int value) {
+    criticallyAttackingValues.add(value);
+  }
+
+  @Override
+  public void clearCriticalLabels() {
+    criticallyAttacking.clear();
+    criticallyDefending.clear();
+    criticallyDefendingValues.clear();
+    criticallyAttackingValues.clear();
+    forkingValue = 0;
+    overLoadingValue = 0;
+  }
+
+  // ==================== Pin/Check State ====================
+
+  @Override
+  public boolean isPinned() {
+    return isPinned;
+  }
+
+  @Override
   public void setPin(ArrayList<Coordinate> pinAve, Coordinate pinnerLoc) {
     this.isPinned = true;
-    this.pinAve=pinAve;
+    this.pinAve = pinAve;
     this.pinnerLoc = pinnerLoc;
+  }
+
+  public void unPin() {
+    this.isPinned = false;
+    this.pinAve = null;
+  }
+
+  public ArrayList<Coordinate> getPinAvenue() {
+    return pinAve;
+  }
+
+  @Override
+  public Coordinate getPinnerLoc() {
+    return pinnerLoc;
   }
 
   @Override
   public void setQueenPin() {
     this.isPinnedToQueen = true;
   }
-  public void setRevealQueenChecker() {
-    this.isRevealQueenChecker = true;
-  }
 
-  public boolean isPinned() {
-    return this.isPinned;
-  }
-  public ArrayList<Coordinate> getPinAvenue() {
-    return this.pinAve;
-  }
-  public void unPin() {
-    this.isPinned=false;
-    this.pinAve = null;
-  }
   @Override
-  public Coordinate getPinnerLoc() {
-    return this.pinnerLoc;
-  }
-  @Override
-  public Coordinate getCheckerLoc() {
-    // TODO Auto-generated method stub
-    return null;
-  }
-  @Override
-  public void setRevealChecker(ArrayList<Coordinate> revealAve,Coordinate checkerLoc) {
-    this.isRevealChecker=true;
-    this.revealCheckerLoc = checkerLoc;
-    this.revealAve = revealAve;
+  public boolean isPinnedToQueen() {
+    return isPinnedToQueen;
   }
 
   @Override
@@ -597,122 +612,96 @@ public class Bishop implements Piece {
   }
 
   @Override
+  public void setRevealChecker(ArrayList<Coordinate> revealAve, Coordinate checkerLoc) {
+    this.isRevealChecker = true;
+    this.revealCheckerLoc = checkerLoc;
+    this.revealAve = revealAve;
+  }
+
+  @Override
+  public void setRevealChecker() {
+    this.isRevealChecker = true;
+  }
+
+  @Override
+  public boolean isRevealChecker() {
+    return isRevealChecker;
+  }
+
+  @Override
+  public Coordinate getRevealCheckerLoc() {
+    return revealCheckerLoc;
+  }
+
+  @Override
   public void setRevealQueen() {
     this.isRevealQueenChecker = true;
   }
 
-  public Coordinate getRevealCheckerLoc() {
-    return this.revealCheckerLoc;
+  @Override
+  public void setRevealQueenChecker() {
+    this.isRevealQueenChecker = true;
   }
+
+  @Override
+  public boolean isRevealQueenChecker() {
+    return isRevealQueenChecker;
+  }
+
+  @Override
+  public Coordinate getCheckerLoc() {
+    return null;
+  }
+
+  // ==================== Move Management ====================
 
   @Override
   public ArrayList<Move> getPossibleMoves() {
-    return this.possibleMoves;
+    return possibleMoves;
   }
+
   @Override
-  public void setPossibleMoves(ArrayList<Move> potentialMoves_2) {
-    this.possibleMoves = potentialMoves_2;
+  public void setPossibleMoves(ArrayList<Move> moves) {
+    this.possibleMoves = moves;
   }
+
+  // ==================== State Reset ====================
 
   @Override
   public void reset() {
-    this.attackers = new ArrayList<>();
-    this.protectors = new ArrayList<>();
-    this.isPinned = false;
-    this.pinAve = null;
-    this.pinnerLoc = new Coordinate(-1, -1);
-    this.isRevealChecker = false;
-    this.revealAve = null;
-    this.revealCheckerLoc = new Coordinate(-1, -1);
-    this.criticallyAttacking = new ArrayList<>();
-    this.criticallyDefending = new ArrayList<>();
+    attackers = new ArrayList<>();
+    protectors = new ArrayList<>();
+    isPinned = false;
+    pinAve = null;
+    pinnerLoc = new Coordinate(-1, -1);
+    isRevealChecker = false;
+    revealAve = null;
+    revealCheckerLoc = new Coordinate(-1, -1);
+    clearCriticalLabels();
   }
-  public void setProtectors(ArrayList<Piece> protectors){
+
+  public void setProtectors(ArrayList<Piece> protectors) {
     this.protectors = protectors;
   }
+
   public void setAttackers(ArrayList<Piece> attackers) {
     this.attackers = attackers;
   }
+
   @Override
   public Piece copyPiece() {
-    Bishop copyPiece = new Bishop(this.curPos, this.curPos, this.isWhite);
-    copyPiece.setPossibleMoves(this.possibleMoves);
-    copyPiece.setProtectors(this.protectors);
-    copyPiece.setAttackers(this.attackers);
-    copyPiece.isRevealChecker = this.isRevealChecker;
-    copyPiece.isPinned = this.isPinned;
-    copyPiece.pinnerLoc = this.pinnerLoc;
-    copyPiece.pinAve = this.pinAve;
-    copyPiece.revealCheckerLoc = this.revealCheckerLoc;
-    copyPiece.revealAve = this.revealAve;
-    return copyPiece;
-  }
-  public char getSymbol() {
-    return 'B';
-  }
-
-  public void addCriticalAttack(Piece piece) {
-    this.criticallyAttacking.add(piece);
-    if (criticallyAttacking.size() > 1) {
-      forkingValue = GameService.getSecondHighestValue(criticallyAttacking);
-    }
-  }
-
-  //TODO: UPDATE THE overLoadingValue
-  public void addCriticalDefenence(Piece piece) {
-    this.criticallyDefending.add(piece);
-    if (criticallyDefending.size() > 1 && !onSameDiagonal(criticallyDefending)) {
-      overLoadingValue = GameService.getSecondHighestValue(criticallyDefending);
-    }
-  }
-
-  public boolean onSameDiagonal(List<Piece> pieces) {
-      if (pieces.isEmpty()) {
-        return false;
-      }
-
-      Coordinate firstPiecePos = pieces.get(0).getPos();
-      int rankDiff = 0;
-      int fileDiff = 0;
-
-      for (Piece piece : pieces) {
-        Coordinate piecePos = piece.getPos();
-        int currentRankDiff = Math.abs(piecePos.rank - firstPiecePos.rank);
-        int currentFileDiff = Math.abs(piecePos.file - firstPiecePos.file);
-
-        if (currentRankDiff != currentFileDiff) {
-          return false;
-        }
-
-        if (rankDiff == 0 && fileDiff == 0) {
-          rankDiff = currentRankDiff;
-          fileDiff = currentFileDiff;
-        }
-
-        if (currentRankDiff != rankDiff || currentFileDiff != fileDiff) {
-          return false;
-        }
-      }
-      return true;
-  }
-  @Override
-  public void addOverloadValue(int value) {
-    this.criticallyDefendingValues.add(value);
-  }
-
-  @Override
-  public void addForkValue(int value) {
-    this.criticallyAttackingValues.add(value);
-  }
-
-  public int getValue() {
-    return 3;
-  }
-  @Override
-  public void clearCriticalLabels() {
-    criticallyAttacking.clear();
-    criticallyDefending.clear();
-    criticallyDefendingValues.clear();
-    criticallyAttackingValues.clear();
+    Bishop copy = new Bishop(fromPos, curPos, isWhite);
+    copy.setPossibleMoves(possibleMoves);
+    copy.setProtectors(protectors);
+    copy.setAttackers(attackers);
+    copy.isRevealChecker = isRevealChecker;
+    copy.isPinned = isPinned;
+    copy.pinnerLoc = pinnerLoc;
+    copy.pinAve = pinAve;
+    copy.revealCheckerLoc = revealCheckerLoc;
+    copy.revealAve = revealAve;
+    copy.isPinnedToQueen = isPinnedToQueen;
+    copy.isRevealQueenChecker = isRevealQueenChecker;
+    return copy;
   }
 }
