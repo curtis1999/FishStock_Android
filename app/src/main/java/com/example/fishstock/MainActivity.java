@@ -106,5 +106,11 @@ public class MainActivity extends AppCompatActivity {
         startActivity(intent);
       }
     });
+    // Tournament buttom
+    Button tournamentButton = findViewById(R.id.tournamentButton);
+    tournamentButton.setOnClickListener(v -> {
+      Intent intent = new Intent(MainActivity.this, TournamentActivity.class);
+      startActivity(intent);
+    });
   }
 }
