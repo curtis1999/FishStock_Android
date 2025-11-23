@@ -15,6 +15,7 @@ public class GameOverDialog extends Dialog {
   OnGameOverMoveListener listener;
   Button playAgain;
   Button exit;
+  Button analyze;
   TextView gameResult;
   public interface OnGameOverMoveListener {
     void onGameOver();
@@ -26,6 +27,7 @@ public class GameOverDialog extends Dialog {
     setContentView(R.layout.dialog_game_over);
     playAgain = findViewById(R.id.playAgain);
     exit = findViewById(R.id.exit);
+    analyze = findViewById(R.id.analyze);
     gameResult = findViewById(R.id.winnerMessage);
     if (result == 0) {
       gameResult.setText("DRAW :|");
@@ -47,6 +49,19 @@ public class GameOverDialog extends Dialog {
         dismiss(); // Close the dialog
       }
     });
+    analyze.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View v) {
+        // Create intent for the new GameAnalysis class
+        Intent intent = new Intent(getContext(), GameAnalysis.class);
+
+        // Pass the current game object (ensure Game implements Serializable)
+        intent.putExtra("GAME_DATA", (CharSequence) game);
+        getContext().startActivity(intent);
+        dismiss();
+      }
+    });
+
     exit.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View v) {

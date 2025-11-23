@@ -72,6 +72,7 @@ public class GameManager extends AppCompatActivity
     // If player is black and adversary is not human, show initial position then make adversary move
     if (!isWhite && !adversary.getName().equals("Human")) {
       // Show initial board state
+      flipBoard();
       updateBoard(board, isWhite);
 
       // Wait 1 second then make adversary's first move
@@ -195,8 +196,12 @@ public class GameManager extends AppCompatActivity
     }
 
     this.game.boardStates.add(GameService.copyBoard(this.board));
-    this.boardFlipped = !isWhite;
-    updateBoard(board, boardFlipped);
+    if(!isWhite && !adversary.getName().equals("Human")){
+      updateBoard(board, true);
+    } else {
+      updateBoard(board, !isWhite);
+    }
+
   }
 
   /**
