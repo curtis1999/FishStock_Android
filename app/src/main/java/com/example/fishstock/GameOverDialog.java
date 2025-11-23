@@ -19,7 +19,7 @@ public class GameOverDialog extends Dialog {
   public interface OnGameOverMoveListener {
     void onGameOver();
   }
-  public GameOverDialog(@NonNull Context context, int result, boolean isWhite, String adversaryName) {
+  public GameOverDialog(@NonNull Context context, int result, boolean isWhite, String adversaryName, Game game) {
     super(context);
     this.result = result;
     this.isWhite = isWhite;

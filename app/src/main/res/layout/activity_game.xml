@@ -107,6 +107,7 @@
         android:text="UNDO"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/draw"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent" />
 
     <Button
@@ -126,10 +127,11 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|right"
-        android:layout_marginBottom="4dp"
+        android:layout_marginBottom="16dp"
         android:text="OFFER DRAW"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.645"
         app:layout_constraintStart_toStartOf="parent" />
 
     <TextView
@@ -1244,5 +1246,13 @@
         app:layout_constraintStart_toStartOf="@+id/topCapturedPawns"
         app:layout_constraintTop_toBottomOf="@+id/gridlayout"
         app:layout_constraintVertical_bias="0.319" />
+
+    <Button
+        android:id="@+id/flipBoard"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="FLIP"
+        tools:layout_editor_absoluteX="83dp"
+        tools:layout_editor_absoluteY="843dp" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

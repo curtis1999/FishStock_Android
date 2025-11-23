@@ -6,6 +6,8 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
@@ -29,6 +31,7 @@ public class GameManager extends AppCompatActivity
   private Agent adversary;
   private Piece selectedPiece;
   private boolean isWhite;
+  private boolean boardFlipped = false; // Tracks current board orientation
 
   // Move tracking
   private ArrayList<Piece> capturedPiecesWhite = new ArrayList<>();
@@ -42,6 +45,7 @@ public class GameManager extends AppCompatActivity
   private TextView checkStatusWhite;
   private TextView whiteScore;
   private TextView blackScore;
+  private Button flipBoardButton;
 
   // Captured piece counters
   private Map<String, TextView> whiteCapturedCounters = new HashMap<>();
@@ -65,12 +69,96 @@ public class GameManager extends AppCompatActivity
     initializeUI();
     setupButtonListeners();
 
-    // If player is black and adversary is not human, adversary makes first move
+    // If player is black and adversary is not human, show initial position then make adversary move
     if (!isWhite && !adversary.getName().equals("Human")) {
-      makeAdversaryMove();
+      // Show initial board state
+      updateBoard(board, isWhite);
+
+      // Wait 1 second then make adversary's first move
+      new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+        @Override
+        public void run() {
+          makeAdversaryMove();
+        }
+      }, 1000);
+    } else if (bothAgents()) {
+      // Agent vs Agent game - start the game loop
+      updateBoard(board, isWhite);
+      new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+        @Override
+        public void run() {
+          startAgentVsAgentGame();
+        }
+      }, 1000);
     }
 
     setupBoardClickListeners();
+  }
+
+  /**
+   * Checks if both players are agents (not human)
+   */
+  private boolean bothAgents() {
+    return !player1.getName().equals("Human") && !adversary.getName().equals("Human");
+  }
+
+  /**
+   * Starts the agent vs agent game loop
+   */
+  private void startAgentVsAgentGame() {
+    if (game.isGameOver) {
+      return;
+    }
+
+    try {
+      // Determine whose turn it is
+      boolean whiteTurn = game.whitesMovesLog.size() == game.blacksMovesLog.size();
+      Agent currentAgent = whiteTurn ?
+          (isWhite ? player1 : adversary) :
+          (isWhite ? adversary : player1);
+
+      ArrayList<Move> currentMoves = whiteTurn ? whitesPotentialMoves : blacksPotentialMoves;
+      ArrayList<Move> opponentMoves = whiteTurn ? blacksPotentialMoves : whitesPotentialMoves;
+
+      Move agentMove = currentAgent.getMove(board, currentMoves, opponentMoves);
+
+      // Handle capture
+      if (agentMove.isCapture) {
+        updateCaptureUI(agentMove.capturablePiece, whiteTurn);
+      }
+
+      GameService.makeMove(board, agentMove, whiteTurn);
+      GameService.updateBoardMeta(board);
+
+      // Log move
+      if (whiteTurn) {
+        game.whitesMovesLog.add(agentMove);
+      } else {
+        game.blacksMovesLog.add(agentMove);
+      }
+
+      game.boardStates.add(GameService.copyBoard(board));
+      updateBoard(board, boardFlipped);
+
+      // Check for game over
+      if (postMoveChecks(board, whiteTurn)) {
+        game.isGameOver = true;
+        return;
+      }
+
+      messageText.setText(whiteTurn ? "BLACK TO MOVE" : "WHITE TO MOVE");
+
+      // Continue the game loop
+      new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+        @Override
+        public void run() {
+          startAgentVsAgentGame();
+        }
+      }, 1000);
+
+    } catch (CloneNotSupportedException e) {
+      e.printStackTrace();
+    }
   }
 
   /**
@@ -88,8 +176,17 @@ public class GameManager extends AppCompatActivity
     }
 
     this.isWhite = getIntent().getBooleanExtra("isWhite", false);
-    this.adversary = initializeAgent(getIntent().getStringExtra("agentType"), !isWhite);
-    this.player1 = new Human(AgentType.HUMAN, isWhite);
+    String player1Type = getIntent().getStringExtra("player1Type");
+    String adversaryType = getIntent().getStringExtra("agentType");
+
+    // Handle agent vs agent
+    if (player1Type != null && !player1Type.equals("Human")) {
+      this.player1 = initializeAgent(player1Type, true);
+      this.adversary = initializeAgent(adversaryType, false);
+    } else {
+      this.adversary = initializeAgent(adversaryType, !isWhite);
+      this.player1 = new Human(AgentType.HUMAN, isWhite);
+    }
 
     if (isWhite) {
       this.game = new Game(board, player1.type, adversary.type);
@@ -98,7 +195,8 @@ public class GameManager extends AppCompatActivity
     }
 
     this.game.boardStates.add(GameService.copyBoard(this.board));
-    updateBoard(board, isWhite);
+    this.boardFlipped = !isWhite;
+    updateBoard(board, boardFlipped);
   }
 
   /**
@@ -109,12 +207,17 @@ public class GameManager extends AppCompatActivity
 
     // Setup player names
     TextView adversaryName = findViewById(R.id.player2);
-    if (adversary.getName().equals("Human")) {
+    TextView playerName = findViewById(R.id.player1);
+
+    if (bothAgents()) {
+      playerName.setText(player1.getName());
+      adversaryName.setText(adversary.getName());
+    } else if (adversary.getName().equals("Human")) {
       adversaryName.setText("Player2");
-      TextView playerName = findViewById(R.id.player1);
       playerName.setText("Player1");
     } else {
       adversaryName.setText(adversary.getName());
+      playerName.setText("Player");
     }
 
     // Setup score and check status displays based on perspective
@@ -128,7 +231,7 @@ public class GameManager extends AppCompatActivity
    * Sets up UI elements based on player perspective (white or black).
    */
   private void setupPerspectiveBasedUI() {
-    if (isWhite) {
+    if (!boardFlipped) {
       checkStatusBlack = findViewById(R.id.checkStatusTop);
       checkStatusWhite = findViewById(R.id.checkStatusBottom);
       whiteScore = findViewById(R.id.BottomScore);
@@ -168,8 +271,8 @@ public class GameManager extends AppCompatActivity
    * Sets up maps for captured piece counters based on perspective.
    */
   private void setupCapturedPieceCounters() {
-    String topPrefix = isWhite ? "numCapturedTop" : "numCapturedBottom";
-    String bottomPrefix = isWhite ? "numCapturedBottom" : "numCapturedTop";
+    String topPrefix = !boardFlipped ? "numCapturedTop" : "numCapturedBottom";
+    String bottomPrefix = !boardFlipped ? "numCapturedBottom" : "numCapturedTop";
 
     // Black captured pieces (displayed on top for white, bottom for black)
     blackCapturedCounters.put("Pawn", findViewById(getResources().getIdentifier(topPrefix + "Pawns", "id", getPackageName())));
@@ -193,6 +296,7 @@ public class GameManager extends AppCompatActivity
     Button resign = findViewById(R.id.resign);
     Button undo = findViewById(R.id.undo);
     Button draw = findViewById(R.id.draw);
+    flipBoardButton = findViewById(R.id.flipBoard);
 
     resign.setOnClickListener(v -> {
       Intent intent = new Intent(GameManager.this, MainActivity.class);
@@ -202,10 +306,88 @@ public class GameManager extends AppCompatActivity
     undo.setOnClickListener(v -> {
       board = game.getPreviousBoard();
       GameService.updateBoardMeta(board);
-      updateBoard(board, isWhite);
+      updateBoard(board, boardFlipped);
     });
 
     draw.setOnClickListener(v -> handleDrawOffer());
+
+    flipBoardButton.setOnClickListener(v -> flipBoard());
+
+    // Hide flip button for agent vs agent games
+    if (bothAgents()) {
+      flipBoardButton.setVisibility(View.GONE);
+    }
+  }
+
+  /**
+   * Flips the board orientation
+   */
+  private void flipBoard() {
+    boardFlipped = !boardFlipped;
+
+    // Clear any selected piece
+    if (selectedPiece != null) {
+      clearPieceHighlights();
+      selectedPiece = null;
+    }
+
+    // Re-setup UI elements for new orientation
+    setupPerspectiveBasedUI();
+    setupCapturedPieceCounters();
+
+    // Update captured piece images if needed
+    if (boardFlipped) {
+      updateCapturedPieceImages();
+    } else {
+      // Reset to normal orientation images
+      ((ImageView) findViewById(R.id.topCapturedPawns)).setImageResource(R.drawable.black_pawn);
+      ((ImageView) findViewById(R.id.topCapturedBishops)).setImageResource(R.drawable.black_bishop);
+      ((ImageView) findViewById(R.id.topCapturedKnights)).setImageResource(R.drawable.black_knight);
+      ((ImageView) findViewById(R.id.topCapturedRooks)).setImageResource(R.drawable.black_rook);
+      ((ImageView) findViewById(R.id.topCapturedQueens)).setImageResource(R.drawable.black_queen);
+
+      ((ImageView) findViewById(R.id.bottomCapturedPawns)).setImageResource(R.drawable.white_pawn);
+      ((ImageView) findViewById(R.id.bottomCapturedBishops)).setImageResource(R.drawable.white_bishop);
+      ((ImageView) findViewById(R.id.bottomCapturedKnights)).setImageResource(R.drawable.white_knight);
+      ((ImageView) findViewById(R.id.bottomCapturedRooks)).setImageResource(R.drawable.whie_rook);
+      ((ImageView) findViewById(R.id.bottomCapturedQueens)).setImageResource(R.drawable.white_queen);
+    }
+
+    // Redraw the board
+    updateBoard(board, boardFlipped);
+
+    // Update captured counters
+    updateAllCapturedCounters();
+  }
+
+  /**
+   * Updates all captured piece counters after board flip
+   */
+  private void updateAllCapturedCounters() {
+    // Reset all counters to 0
+    for (TextView counter : whiteCapturedCounters.values()) {
+      if (counter != null) counter.setText("0");
+    }
+    for (TextView counter : blackCapturedCounters.values()) {
+      if (counter != null) counter.setText("0");
+    }
+
+    // Re-count captured pieces
+    for (Piece piece : capturedPiecesWhite) {
+      TextView counter = whiteCapturedCounters.get(piece.getName());
+      if (counter != null) {
+        int count = Integer.parseInt(counter.getText().toString());
+        counter.setText(String.valueOf(count + 1));
+      }
+    }
+
+    for (Piece piece : capturedPiecesBlack) {
+      TextView counter = blackCapturedCounters.get(piece.getName());
+      if (counter != null) {
+        int count = Integer.parseInt(counter.getText().toString());
+        counter.setText(String.valueOf(count + 1));
+      }
+    }
   }
 
   /**
@@ -220,7 +402,7 @@ public class GameManager extends AppCompatActivity
       messageText.setText("DECLINED");
     } else {
       messageText.setText("ACCEPTED");
-      GameOverDialog ggDialog = new GameOverDialog(this, 0, isWhite, adversary.getName());
+      GameOverDialog ggDialog = new GameOverDialog(this, 0, isWhite, adversary.getName(), game);
       ggDialog.setOnGameOverListener(this);
       ggDialog.show();
     }
@@ -230,9 +412,14 @@ public class GameManager extends AppCompatActivity
    * Sets up click listeners for all board squares.
    */
   private void setupBoardClickListeners() {
+    // Disable clicks for agent vs agent games
+    if (bothAgents()) {
+      return;
+    }
+
     for (int row = 0; row < 8; row++) {
       for (int col = 0; col < 8; col++) {
-        ImageButton button = (ImageButton) getButtonFromCoord(new Coordinate(col, row), isWhite);
+        ImageButton button = (ImageButton) getButtonFromCoord(new Coordinate(col, row), boardFlipped);
         button.setOnClickListener(v -> handleSquareClick(button));
       }
     }
@@ -242,7 +429,7 @@ public class GameManager extends AppCompatActivity
    * Main handler for board square clicks.
    */
   private void handleSquareClick(ImageButton button) {
-    Coordinate coord = getCoordFromButton(button, isWhite);
+    Coordinate coord = getCoordFromButton(button, boardFlipped);
     Cell cell = board.board[coord.rank][coord.file];
 
     // Case 1: Empty square - making a non-capturing move
@@ -319,7 +506,7 @@ public class GameManager extends AppCompatActivity
     selectedPiece = cell.piece;
 
     // Highlight selected piece
-    ImageButton pieceButton = (ImageButton) getButtonFromCoord(selectedPiece.getPos(), isWhite);
+    ImageButton pieceButton = (ImageButton) getButtonFromCoord(selectedPiece.getPos(), boardFlipped);
     pieceButton.setColorFilter(Color.YELLOW, PorterDuff.Mode.OVERLAY);
 
     // Highlight legal moves
@@ -335,7 +522,7 @@ public class GameManager extends AppCompatActivity
    * Highlights a legal move destination square.
    */
   private void highlightLegalMove(Move move) {
-    ImageButton button = (ImageButton) getButtonFromCoord(move.toCoord, isWhite);
+    ImageButton button = (ImageButton) getButtonFromCoord(move.toCoord, boardFlipped);
     Cell targetCell = board.board[move.toCoord.rank][move.toCoord.file];
 
     if (targetCell.PieceStatus == Status.EMPTY) {
@@ -359,12 +546,12 @@ public class GameManager extends AppCompatActivity
     if (selectedPiece == null) return;
 
     // Clear selected piece highlight
-    ImageButton pieceButton = (ImageButton) getButtonFromCoord(selectedPiece.getPos(), isWhite);
+    ImageButton pieceButton = (ImageButton) getButtonFromCoord(selectedPiece.getPos(), boardFlipped);
     pieceButton.setColorFilter(null);
 
     // Clear move highlights
     for (Move move : GameService.filterMoves(selectedPiece.generateMoves(selectedPiece.getPos(), board.board))) {
-      ImageButton button = (ImageButton) getButtonFromCoord(move.toCoord, isWhite);
+      ImageButton button = (ImageButton) getButtonFromCoord(move.toCoord, boardFlipped);
       Cell cell = board.board[move.toCoord.rank][move.toCoord.file];
 
       if (cell.PieceStatus == Status.EMPTY) {
@@ -375,9 +562,6 @@ public class GameManager extends AppCompatActivity
     }
   }
 
-  /**
-   * Executes a player's move.
-   */
   private void executePlayerMove(Move move) {
     move = updateMove(move);
 
@@ -420,7 +604,7 @@ public class GameManager extends AppCompatActivity
     } else {
       // Switch perspective for human vs human
       isWhite = !isWhite;
-      // TODO: Implement switchViewSide() if needed
+      flipBoard();
     }
   }
 
@@ -454,7 +638,7 @@ public class GameManager extends AppCompatActivity
       }
 
       game.boardStates.add(GameService.copyBoard(board));
-      updateBoard(board, isWhite);
+      updateBoard(board, boardFlipped);
       postMoveChecks(board, !isWhite);
 
       messageText.setText(isWhite ? "WHITE TO MOVE" : "BLACK TO MOVE");
@@ -590,7 +774,7 @@ public class GameManager extends AppCompatActivity
         showGameOver("STALEMATE. THE GAME ENDS IN A DRAW", 0);
         return true;
       }
-      updateBoard(board, isWhite);
+      updateBoard(board, boardFlipped);
       selectedPiece = null;
     }
 
@@ -630,7 +814,7 @@ public class GameManager extends AppCompatActivity
         showGameOver("STALEMATE. THE GAME ENDS IN A DRAW", 0);
         return true;
       }
-      updateBoard(board, isWhite);
+      updateBoard(board, boardFlipped);
     }
 
     updateEndgameStatus();
@@ -642,7 +826,7 @@ public class GameManager extends AppCompatActivity
    */
   private void showGameOver(String message, int result) {
     messageText.setText(message);
-    GameOverDialog dialog = new GameOverDialog(this, result, isWhite, adversary.getName());
+    GameOverDialog dialog = new GameOverDialog(this, result, isWhite, adversary.getName(), game);
     dialog.setOnGameOverListener(this);
     dialog.show();
   }
@@ -753,9 +937,9 @@ public class GameManager extends AppCompatActivity
   /**
    * Converts a coordinate to the corresponding button view.
    */
-  private ImageView getButtonFromCoord(Coordinate coord, boolean isWhite) {
+  private ImageView getButtonFromCoord(Coordinate coord, boolean flipped) {
     int resId;
-    if (isWhite) {
+    if (!flipped) {
       resId = getResources().getIdentifier(
           "button" + (7 - coord.rank) + (7 - coord.file),
           "id",
@@ -772,12 +956,12 @@ public class GameManager extends AppCompatActivity
   /**
    * Extracts coordinate from a button's resource ID.
    */
-  private Coordinate getCoordFromButton(View button, boolean isWhite) {
+  private Coordinate getCoordFromButton(View button, boolean flipped) {
     String buttonId = getResources().getResourceEntryName(button.getId());
     int rank;
     int file;
 
-    if (isWhite) {
+    if (!flipped) {
       rank = 7 - (buttonId.charAt(6) - '0');
       file = 7 - (buttonId.charAt(7) - '0');
     } else {
@@ -791,17 +975,17 @@ public class GameManager extends AppCompatActivity
   /**
    * Updates the entire board display.
    */
-  public void updateBoard(Board board, boolean isWhite) {
-    if (isWhite) {
+  public void updateBoard(Board board, boolean flipped) {
+    if (!flipped) {
       for (int rank = 0; rank < 8; rank++) {
         for (int file = 0; file < 8; file++) {
-          updateCellImage(board.board[rank][file], rank, file);
+          updateCellImage(board.board[rank][file], rank, file, flipped);
         }
       }
     } else {
       for (int rank = 7; rank >= 0; rank--) {
         for (int file = 7; file >= 0; file--) {
-          updateCellImage(board.board[rank][file], rank, file);
+          updateCellImage(board.board[rank][file], rank, file, flipped);
         }
       }
     }
@@ -810,8 +994,8 @@ public class GameManager extends AppCompatActivity
   /**
    * Updates a single cell's image on the board.
    */
-  private void updateCellImage(Cell cell, int rank, int file) {
-    ImageView cellImageView = getButtonFromCoord(new Coordinate(file, rank), isWhite);
+  private void updateCellImage(Cell cell, int rank, int file, boolean flipped) {
+    ImageView cellImageView = getButtonFromCoord(new Coordinate(file, rank), flipped);
     cellImageView.setColorFilter(null);
 
     if (cell.isEmpty) {
@@ -853,7 +1037,7 @@ public class GameManager extends AppCompatActivity
   // Promotion dialog callback
   @Override
   public void onPromotionMove() throws CloneNotSupportedException {
-    updateBoard(board, isWhite);
+    updateBoard(board, boardFlipped);
 
     // Adversary responds to promotion
     if (!adversary.getName().equals("Human")) {
