@@ -275,18 +275,18 @@ public class GameManager extends AppCompatActivity
     String bottomPrefix = !boardFlipped ? "numCapturedBottom" : "numCapturedTop";
 
     // Black captured pieces (displayed on top for white, bottom for black)
-    blackCapturedCounters.put("Pawn", findViewById(getResources().getIdentifier(topPrefix + "Pawns", "id", getPackageName())));
-    blackCapturedCounters.put("Rook", findViewById(getResources().getIdentifier(topPrefix + "Rooks", "id", getPackageName())));
-    blackCapturedCounters.put("Knight", findViewById(getResources().getIdentifier(topPrefix + "Knights", "id", getPackageName())));
-    blackCapturedCounters.put("Bishop", findViewById(getResources().getIdentifier(topPrefix + "Bishops", "id", getPackageName())));
-    blackCapturedCounters.put("Queen", findViewById(getResources().getIdentifier(topPrefix + "Queens", "id", getPackageName())));
+    blackCapturedCounters.put("Pawn", findViewById(getResources().getIdentifier(bottomPrefix + "Pawns", "id", getPackageName())));
+    blackCapturedCounters.put("Rook", findViewById(getResources().getIdentifier(bottomPrefix + "Rooks", "id", getPackageName())));
+    blackCapturedCounters.put("Knight", findViewById(getResources().getIdentifier(bottomPrefix + "Knights", "id", getPackageName())));
+    blackCapturedCounters.put("Bishop", findViewById(getResources().getIdentifier(bottomPrefix + "Bishops", "id", getPackageName())));
+    blackCapturedCounters.put("Queen", findViewById(getResources().getIdentifier(bottomPrefix + "Queens", "id", getPackageName())));
 
     // White captured pieces
-    whiteCapturedCounters.put("Pawn", findViewById(getResources().getIdentifier(bottomPrefix + "Pawns", "id", getPackageName())));
-    whiteCapturedCounters.put("Rook", findViewById(getResources().getIdentifier(bottomPrefix + "Rooks", "id", getPackageName())));
-    whiteCapturedCounters.put("Knight", findViewById(getResources().getIdentifier(bottomPrefix + "Knights", "id", getPackageName())));
-    whiteCapturedCounters.put("Bishop", findViewById(getResources().getIdentifier(bottomPrefix + "Bishops", "id", getPackageName())));
-    whiteCapturedCounters.put("Queen", findViewById(getResources().getIdentifier(bottomPrefix + "Queens", "id", getPackageName())));
+    whiteCapturedCounters.put("Pawn", findViewById(getResources().getIdentifier(topPrefix + "Pawns", "id", getPackageName())));
+    whiteCapturedCounters.put("Rook", findViewById(getResources().getIdentifier(topPrefix + "Rooks", "id", getPackageName())));
+    whiteCapturedCounters.put("Knight", findViewById(getResources().getIdentifier(topPrefix + "Knights", "id", getPackageName())));
+    whiteCapturedCounters.put("Bishop", findViewById(getResources().getIdentifier(topPrefix + "Bishops", "id", getPackageName())));
+    whiteCapturedCounters.put("Queen", findViewById(getResources().getIdentifier(topPrefix + "Queens", "id", getPackageName())));
   }
 
   /**

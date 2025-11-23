@@ -309,7 +309,7 @@
         android:id="@+id/game_over_layout"
         layout="@layout/dialog_game_over"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
         android:layout_margin="16dp"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
