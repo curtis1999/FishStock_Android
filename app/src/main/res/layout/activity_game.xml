@@ -8,66 +8,6 @@
     tools:context=".MainActivity">
 
     <TextView
-        android:id="@+id/numCapturedBottomQueens"
-        android:layout_width="8dp"
-        android:layout_height="17dp"
-        android:text="0"
-        app:layout_constraintBottom_toTopOf="@+id/bottomCapturedQueens"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.33"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/gridlayout"
-        app:layout_constraintVertical_bias="1.0" />
-
-    <TextView
-        android:id="@+id/numCapturedBottomBishops"
-        android:layout_width="8dp"
-        android:layout_height="17dp"
-        android:text="0"
-        app:layout_constraintBottom_toTopOf="@+id/bottomCapturedBishops"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.263"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/gridlayout"
-        app:layout_constraintVertical_bias="0.975" />
-
-    <TextView
-        android:id="@+id/numCapturedTopQueens"
-        android:layout_width="8dp"
-        android:layout_height="17dp"
-        android:text="0"
-        app:layout_constraintBottom_toTopOf="@+id/topCapturedQueens"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.31"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="1.01" />
-
-    <TextView
-        android:id="@+id/numCapturedTopKnights"
-        android:layout_width="8dp"
-        android:layout_height="17dp"
-        android:text="0"
-        app:layout_constraintBottom_toTopOf="@+id/topCapturedKnights"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.175"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/welcomeMessage"
-        app:layout_constraintVertical_bias="1.013" />
-
-    <TextView
-        android:id="@+id/numCapturedTopRooks"
-        android:layout_width="8dp"
-        android:layout_height="17dp"
-        android:text="0"
-        app:layout_constraintBottom_toTopOf="@+id/topCapturedRooks"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.103"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/welcomeMessage"
-        app:layout_constraintVertical_bias="1.00" />
-
-    <TextView
         android:id="@+id/player1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -99,49 +39,258 @@
         app:layout_constraintStart_toStartOf="@+id/player1"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <Button
-        android:id="@+id/undo"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:id="@+id/bottomButtonsLayout"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|left"
-        android:text="UNDO"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/draw"
-        app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <Button
-        android:id="@+id/resign"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|center"
-        android:text="RESIGN"
+        android:orientation="horizontal"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.547"
-        app:layout_constraintStart_toEndOf="@+id/draw"
-        app:layout_constraintVertical_bias="0.987" />
+        app:layout_constraintStart_toStartOf="parent">
 
-    <Button
-        android:id="@+id/draw"
+        <Button
+            android:id="@+id/undo"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="UNDO" />
+
+        <Button
+            android:id="@+id/flipBoard"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="FLIP" />
+
+        <Button
+            android:id="@+id/draw"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="DRAW" />
+
+        <Button
+            android:id="@+id/resign"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="RESIGN" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/topCapturedLayout"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|right"
-        android:layout_marginBottom="16dp"
-        android:text="OFFER DRAW"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.645"
-        app:layout_constraintStart_toStartOf="parent" />
+        android:orientation="horizontal"
+        android:layout_marginStart="8dp"
+        android:layout_marginBottom="5dp"
+        app:layout_constraintBottom_toTopOf="@+id/gridlayout"
+        app:layout_constraintStart_toStartOf="parent">
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:layout_marginEnd="8dp">
+            <TextView
+                android:id="@+id/numCapturedTopPawns"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0" />
 
+            <ImageView
+                android:id="@+id/topCapturedPawns"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/white_pawn" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:layout_marginEnd="8dp">
+            <TextView
+                android:id="@+id/numCapturedTopKnights"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0" />
+            <ImageView
+                android:id="@+id/topCapturedKnights"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/white_knight" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:layout_marginEnd="8dp">
+            <TextView
+                android:id="@+id/numCapturedTopBishops"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0" />
+            <ImageView
+                android:id="@+id/topCapturedBishops"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/white_bishop" />
+        </LinearLayout>
+
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:layout_marginEnd="8dp">
+            <TextView
+                android:id="@+id/numCapturedTopRooks"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0" />
+            <ImageView
+                android:id="@+id/topCapturedRooks"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/whie_rook" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:layout_marginEnd="8dp">
+            <TextView
+                android:id="@+id/numCapturedTopQueens"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0" />
+            <ImageView
+                android:id="@+id/topCapturedQueens"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/white_queen" />
+        </LinearLayout>
+    </LinearLayout>
+    <!-- BOTTOM CAPTURED PIECES: Just below board, Left Aligned -->
+    <!-- Structure: Piece ABOVE Count -->
+    <LinearLayout
+        android:id="@+id/bottomCapturedLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="4dp"
+        app:layout_constraintTop_toBottomOf="@+id/gridlayout"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:layout_marginEnd="8dp">
+
+            <ImageView
+                android:id="@+id/bottomCapturedPawns"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/black_pawn" />
+            <TextView
+                android:id="@+id/numCapturedBottomPawns"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0" />
+        </LinearLayout>
+        <!-- Knights -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:layout_marginEnd="8dp">
+
+            <ImageView
+                android:id="@+id/bottomCapturedKnights"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/black_knight" />
+            <TextView
+                android:id="@+id/numCapturedBottomKnights"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0" />
+        </LinearLayout>
+        <!-- Bishops -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:layout_marginEnd="8dp">
+            <ImageView
+                android:id="@+id/bottomCapturedBishops"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/black_bishop" />
+            <TextView
+                android:id="@+id/numCapturedBottomBishops"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0" />
+        </LinearLayout>
+
+
+        <!-- Rooks -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:layout_marginEnd="8dp">
+            <ImageView
+                android:id="@+id/bottomCapturedRooks"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/black_rook" />
+            <TextView
+                android:id="@+id/numCapturedBottomRooks"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0" />
+        </LinearLayout>
+
+        <!-- Queens -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:layout_marginEnd="8dp">
+            <ImageView
+                android:id="@+id/bottomCapturedQueens"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/black_queen" />
+            <TextView
+                android:id="@+id/numCapturedBottomQueens"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0" />
+        </LinearLayout>
+    </LinearLayout>
     <TextView
         android:id="@+id/checkStatusBottom"
         android:layout_width="61dp"
         android:layout_height="19dp"
-        app:layout_constraintBottom_toTopOf="@+id/resign"
+        app:layout_constraintBottom_toTopOf="@+id/bottomButtonsLayout"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.843"
-        app:layout_constraintStart_toEndOf="@+id/CapturedPiecesWhite"
+        app:layout_constraintStart_toEndOf="@+id/topCapturedLayout"
         app:layout_constraintTop_toBottomOf="@+id/gridlayout"
         app:layout_constraintVertical_bias="0.797" />
 
@@ -159,13 +308,64 @@
     <include
         android:id="@+id/game_over_layout"
         layout="@layout/dialog_game_over"
-        android:layout_width="376dp"
-        android:layout_height="354dp"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
         android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="@+id/draw"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/CapturedPiecesBlack"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="33dp"
+        android:text="CapturedPieces"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.057"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+
+    <TextView
+        android:id="@+id/checkStatusTop"
+        android:layout_width="0dp"
+        android:layout_height="11dp"
+        android:text=""
+        app:layout_constraintBottom_toTopOf="@+id/gridlayout"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toEndOf="@+id/CapturedPiecesBlack"
+        app:layout_constraintTop_toBottomOf="@+id/welcomeMessage"
+        app:layout_constraintVertical_bias="0.693" />
+
+
+    <TextView
+        android:id="@+id/BottomScore"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="0"
+        android:textSize="20dp"
+        app:layout_constraintBottom_toBottomOf="@+id/bottomButtonsLayout"
+        app:layout_constraintEnd_toEndOf="@+id/checkStatusTop"
+        app:layout_constraintHorizontal_bias="0.448"
+        app:layout_constraintStart_toStartOf="@+id/topCapturedLayout"
+        app:layout_constraintTop_toBottomOf="@+id/gridlayout"
+        app:layout_constraintVertical_bias="0.085" />
+
+    <LinearLayout
+        android:id="@+id/navigation_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="140dp"
+        android:orientation="horizontal"
         app:layout_constraintEnd_toEndOf="@+id/gridlayout"
-        app:layout_constraintStart_toStartOf="@+id/gridlayout"
-        app:layout_constraintTop_toTopOf="@+id/welcomeMessage" />
+        app:layout_constraintTop_toBottomOf="@+id/gridlayout">
+
+    </LinearLayout>
 
     <GridLayout
         android:id="@+id/gridlayout"
@@ -173,8 +373,10 @@
         android:layout_height="400dp"
         android:columnCount="8"
         android:rowCount="8"
-        app:layout_constraintBottom_toTopOf="@+id/draw"
-        app:layout_constraintTop_toBottomOf="@+id/welcomeMessage">
+        app:layout_constraintBottom_toTopOf="@+id/bottomButtonsLayout"
+        app:layout_constraintTop_toBottomOf="@+id/welcomeMessage"
+        app:layout_constraintVertical_bias="0.471"
+        tools:layout_editor_absoluteX="-142dp">
 
         <ImageButton
             android:id="@+id/button00"
@@ -1009,217 +1211,6 @@
             tools:src="@drawable/empty_light" />
     </GridLayout>
 
-    <TextView
-        android:id="@+id/CapturedPiecesBlack"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="33dp"
-        android:text="CapturedPieces"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.057"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <ImageView
-        android:id="@+id/topCapturedRooks"
-        android:layout_width="30dp"
-        android:layout_height="44dp"
-        app:layout_constraintBottom_toTopOf="@+id/gridlayout"
-        app:layout_constraintEnd_toEndOf="@+id/player2"
-        app:layout_constraintHorizontal_bias="0.078"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.912"
-        app:srcCompat="@drawable/whie_rook" />
-
-    <TextView
-        android:id="@+id/checkStatusTop"
-        android:layout_width="0dp"
-        android:layout_height="11dp"
-        android:text=""
-        app:layout_constraintBottom_toTopOf="@+id/gridlayout"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="1.0"
-        app:layout_constraintStart_toEndOf="@+id/CapturedPiecesBlack"
-        app:layout_constraintTop_toBottomOf="@+id/welcomeMessage"
-        app:layout_constraintVertical_bias="0.693" />
-
-    <ImageView
-        android:id="@+id/topCapturedPawns"
-        android:layout_width="34dp"
-        android:layout_height="37dp"
-        app:layout_constraintBottom_toTopOf="@+id/gridlayout"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.007"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/welcomeMessage"
-        app:layout_constraintVertical_bias="0.90"
-        app:srcCompat="@drawable/white_pawn" />
-
-    <ImageView
-        android:id="@+id/topCapturedQueens"
-        android:layout_width="21dp"
-        android:layout_height="46dp"
-        app:layout_constraintBottom_toTopOf="@+id/gridlayout"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.3"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/welcomeMessage"
-        app:layout_constraintVertical_bias="0.909"
-        app:srcCompat="@drawable/white_queen" />
-
-    <ImageView
-        android:id="@+id/topCapturedBishops"
-        android:layout_width="28dp"
-        android:layout_height="45dp"
-        app:layout_constraintBottom_toTopOf="@+id/gridlayout"
-        app:layout_constraintEnd_toEndOf="@+id/checkStatusTop"
-        app:layout_constraintHorizontal_bias="0.229"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/welcomeMessage"
-        app:layout_constraintVertical_bias="0.91"
-        app:srcCompat="@drawable/white_bishop" />
-
-    <ImageView
-        android:id="@+id/topCapturedKnights"
-        android:layout_width="25dp"
-        android:layout_height="46dp"
-        app:layout_constraintBottom_toTopOf="@+id/gridlayout"
-        app:layout_constraintEnd_toEndOf="@+id/checkStatusTop"
-        app:layout_constraintHorizontal_bias="0.163"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/welcomeMessage"
-        app:layout_constraintVertical_bias="0.909"
-        app:srcCompat="@drawable/white_knight" />
-
-    <TextView
-        android:id="@+id/numCapturedTopPawns"
-        android:layout_width="14dp"
-        android:layout_height="17dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginBottom="6dp"
-        android:text="0"
-        app:layout_constraintBottom_toTopOf="@+id/topCapturedPawns"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <TextView
-        android:id="@+id/numCapturedTopBishops"
-        android:layout_width="8dp"
-        android:layout_height="17dp"
-        android:text="0"
-        app:layout_constraintBottom_toTopOf="@+id/topCapturedBishops"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.244"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/welcomeMessage"
-        app:layout_constraintVertical_bias="1.00" />
-
-    <ImageView
-        android:id="@+id/bottomCapturedKnights"
-        android:layout_width="28dp"
-        android:layout_height="50dp"
-        app:layout_constraintBottom_toBottomOf="@+id/draw"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.159"
-        app:layout_constraintStart_toStartOf="@+id/CapturedPiecesWhite"
-        app:layout_constraintTop_toBottomOf="@+id/gridlayout"
-        app:layout_constraintVertical_bias="0.492"
-        app:srcCompat="@drawable/black_knight" />
-
-    <ImageView
-        android:id="@+id/bottomCapturedBishops"
-        android:layout_width="36dp"
-        android:layout_height="48dp"
-        app:layout_constraintBottom_toBottomOf="@+id/draw"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.237"
-        app:layout_constraintStart_toStartOf="@+id/CapturedPiecesWhite"
-        app:layout_constraintTop_toBottomOf="@+id/gridlayout"
-        app:layout_constraintVertical_bias="0.497"
-        app:srcCompat="@drawable/black_bishop" />
-
-    <ImageView
-        android:id="@+id/bottomCapturedPawns"
-        android:layout_width="33dp"
-        android:layout_height="48dp"
-        app:layout_constraintBottom_toBottomOf="@+id/draw"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="@+id/CapturedPiecesWhite"
-        app:layout_constraintTop_toBottomOf="@+id/gridlayout"
-        app:layout_constraintVertical_bias="0.497"
-        app:srcCompat="@drawable/black_pawn" />
-
-    <ImageView
-        android:id="@+id/bottomCapturedRooks"
-        android:layout_width="28dp"
-        android:layout_height="52dp"
-        app:layout_constraintBottom_toBottomOf="@+id/draw"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.086"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/gridlayout"
-        app:layout_constraintVertical_bias="0.490"
-        app:srcCompat="@drawable/black_rook" />
-
-    <TextView
-        android:id="@+id/CapturedPiecesWhite"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="52dp"
-        android:text="CapturedPiece's"
-        app:layout_constraintBottom_toTopOf="@+id/draw"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.009"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <ImageView
-        android:id="@+id/bottomCapturedQueens"
-        android:layout_width="24dp"
-        android:layout_height="54dp"
-        app:layout_constraintBottom_toBottomOf="@+id/draw"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.325"
-        app:layout_constraintStart_toStartOf="@+id/CapturedPiecesWhite"
-        app:layout_constraintTop_toBottomOf="@+id/gridlayout"
-        app:layout_constraintVertical_bias="0.485"
-        app:srcCompat="@drawable/black_queen" />
-
-    <TextView
-        android:id="@+id/numCapturedBottomPawns"
-        android:layout_width="8dp"
-        android:layout_height="17dp"
-        android:text="0"
-        app:layout_constraintBottom_toTopOf="@+id/bottomCapturedPawns"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.039"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/gridlayout"
-        app:layout_constraintVertical_bias="1.0" />
-
-    <TextView
-        android:id="@+id/numCapturedBottomRooks"
-        android:layout_width="8dp"
-        android:layout_height="17dp"
-        android:text="0"
-        app:layout_constraintBottom_toTopOf="@+id/bottomCapturedRooks"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.104"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/gridlayout"
-        app:layout_constraintVertical_bias="1.0" />
-
-    <TextView
-        android:id="@+id/numCapturedBottomKnights"
-        android:layout_width="8dp"
-        android:layout_height="17dp"
-        android:text="0"
-        app:layout_constraintBottom_toTopOf="@+id/bottomCapturedKnights"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.186"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/gridlayout"
-        app:layout_constraintVertical_bias="1.0" />
 
     <TextView
         android:id="@+id/topScore"
@@ -1229,30 +1220,10 @@
         android:textSize="20dp"
         app:layout_constraintBottom_toTopOf="@+id/gridlayout"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.372"
-        app:layout_constraintStart_toStartOf="@+id/topCapturedPawns"
+        app:layout_constraintHorizontal_bias="0.448"
+        app:layout_constraintStart_toStartOf="@+id/topCapturedLayout"
         app:layout_constraintTop_toTopOf="@+id/welcomeMessage"
-        app:layout_constraintVertical_bias="0.72" />
+        app:layout_constraintVertical_bias="0.934" />
 
-    <TextView
-        android:id="@+id/BottomScore"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="0"
-        android:textSize="20dp"
-        app:layout_constraintBottom_toBottomOf="@+id/draw"
-        app:layout_constraintEnd_toEndOf="@+id/checkStatusTop"
-        app:layout_constraintHorizontal_bias="0.397"
-        app:layout_constraintStart_toStartOf="@+id/topCapturedPawns"
-        app:layout_constraintTop_toBottomOf="@+id/gridlayout"
-        app:layout_constraintVertical_bias="0.319" />
-
-    <Button
-        android:id="@+id/flipBoard"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="FLIP"
-        tools:layout_editor_absoluteX="83dp"
-        tools:layout_editor_absoluteY="843dp" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

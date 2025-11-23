@@ -43,3 +43,8 @@ public class Game {
     }
   }
 }
+/*
+TODOS 1: Add test to black side promotion
+2: Factor draw potential into the pieces evaluation.  (AGENT WILL GET INTO A LOOP LEADING TO DRAW BY REPETITION WHEN IT IS WINNING)
+
+ */
