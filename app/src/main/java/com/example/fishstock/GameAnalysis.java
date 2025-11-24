@@ -28,15 +28,6 @@ public class GameAnalysis extends AppCompatActivity {
   }
 
   private void initializeViews() {
-    // Bind Standard Game Controls
-    Button undoBtn = findViewById(R.id.undo);
-    Button resignBtn = findViewById(R.id.resign);
-    Button drawBtn = findViewById(R.id.draw);
-
-    // Bind Text info
-    TextView welcomeMsg = findViewById(R.id.welcomeMessage);
-    TextView player1 = findViewById(R.id.player1);
-    TextView player2 = findViewById(R.id.player2);
 
     // Bind the Board
     GridLayout gridLayout = findViewById(R.id.gridlayout);
@@ -48,21 +39,5 @@ public class GameAnalysis extends AppCompatActivity {
         // Setup click listeners or piece images here based on gameToAnalyze
       }
     }
-
-    // Bind Captured Pieces Counts (Top)
-    TextView topQueens = findViewById(R.id.numCapturedTopQueens);
-    TextView topRooks = findViewById(R.id.numCapturedTopRooks);
-    TextView topKnights = findViewById(R.id.numCapturedTopKnights);
-    TextView topBishops = findViewById(R.id.numCapturedTopBishops);
-
-    // Bind Captured Pieces Counts (Bottom)
-    TextView botQueens = findViewById(R.id.numCapturedBottomQueens);
-    TextView botRooks = findViewById(R.id.numCapturedBottomRooks);
-    TextView botKnights = findViewById(R.id.numCapturedBottomKnights);
-    TextView botBishops = findViewById(R.id.numCapturedBottomBishops);
-
-    // Hide the Game Over/Promotion dialogs initially so the board is visible for analysis
-    findViewById(R.id.game_over_layout).setVisibility(android.view.View.GONE);
-    findViewById(R.id.promotion_layout).setVisibility(android.view.View.GONE);
   }
 }

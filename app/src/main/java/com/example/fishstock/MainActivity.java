@@ -7,9 +7,12 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CompoundButton;
+import android.widget.Switch;
 
 public class MainActivity extends AppCompatActivity {
   boolean isWhite = true;
+  boolean isHardMode = false;
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
@@ -24,6 +27,7 @@ public class MainActivity extends AppCompatActivity {
     Button playSimple = findViewById(R.id.playSimple);
     Button playMinMax = findViewById(R.id.playMinMax);
     Button playHuman = findViewById(R.id.playHuman);
+    Switch hardMode = findViewById(R.id.hardModeSwitch);
     if (adversaryName != null) {
       switch (adversaryName) {
         case "Randy":
@@ -42,6 +46,13 @@ public class MainActivity extends AppCompatActivity {
           break;
       }
     }
+    hardMode.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+      @Override
+      public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+        isHardMode = isChecked;
+        // isHardMode will be true when switch is ON, false when OFF
+      }
+    });
     blackSelection.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View v) {
@@ -58,6 +69,7 @@ public class MainActivity extends AppCompatActivity {
         whiteSelection.setTextColor(Color.WHITE);
       }
     });
+
     // Set a click listener on the button
     playFishStock.setOnClickListener(new View.OnClickListener() {
       @Override
@@ -66,6 +78,7 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(MainActivity.this, GameManager.class);
         intent.putExtra("agentType", "FishStock");
         intent.putExtra("isWhite", isWhite);
+        intent.putExtra("isHardMode", isHardMode);
         // Start the activity
         startActivity(intent);
       }
@@ -76,6 +89,7 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(MainActivity.this, GameManager.class);
         intent.putExtra("agentType", "Randy");
         intent.putExtra("isWhite", isWhite);
+        intent.putExtra("isHardMode", isHardMode);
         startActivity(intent);
       }
     });
@@ -85,6 +99,7 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(MainActivity.this, GameManager.class);
         intent.putExtra("agentType", "Simple");
         intent.putExtra("isWhite", isWhite);
+        intent.putExtra("isHardMode", isHardMode);
         startActivity(intent);
       }
     });
@@ -94,6 +109,7 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(MainActivity.this, GameManager.class);
         intent.putExtra("agentType", "MinMax");
         intent.putExtra("isWhite", isWhite);
+        intent.putExtra("isHardMode", isHardMode);
         startActivity(intent);
       }
     });
@@ -103,6 +119,7 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(MainActivity.this, GameManager.class);
         intent.putExtra("agentType", "Human");
         intent.putExtra("isWhite", true);
+        intent.putExtra("isHardMode", isHardMode);
         startActivity(intent);
       }
     });

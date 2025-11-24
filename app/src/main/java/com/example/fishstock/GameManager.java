@@ -32,7 +32,7 @@ public class GameManager extends AppCompatActivity
   private Piece selectedPiece;
   private boolean isWhite;
   private boolean boardFlipped = false; // Tracks current board orientation
-
+  private boolean isHardMode;
   // Move tracking
   private ArrayList<Piece> capturedPiecesWhite = new ArrayList<>();
   private ArrayList<Piece> capturedPiecesBlack = new ArrayList<>();
@@ -46,6 +46,7 @@ public class GameManager extends AppCompatActivity
   private TextView whiteScore;
   private TextView blackScore;
   private Button flipBoardButton;
+
 
   // Captured piece counters
   private Map<String, TextView> whiteCapturedCounters = new HashMap<>();
@@ -175,7 +176,7 @@ public class GameManager extends AppCompatActivity
     } catch (CloneNotSupportedException e) {
       e.printStackTrace();
     }
-
+    this.isHardMode = getIntent().getBooleanExtra("isHardMode", false);
     this.isWhite = getIntent().getBooleanExtra("isWhite", false);
     String player1Type = getIntent().getStringExtra("player1Type");
     String adversaryType = getIntent().getStringExtra("agentType");
@@ -307,13 +308,13 @@ public class GameManager extends AppCompatActivity
       Intent intent = new Intent(GameManager.this, MainActivity.class);
       startActivity(intent);
     });
-
-    undo.setOnClickListener(v -> {
-      board = game.getPreviousBoard();
-      GameService.updateBoardMeta(board);
-      updateBoard(board, boardFlipped);
-    });
-
+    if (!isHardMode) {
+      undo.setOnClickListener(v -> {
+        board = game.getPreviousBoard();
+        GameService.updateBoardMeta(board);
+        updateBoard(board, boardFlipped);
+      });
+    }
     draw.setOnClickListener(v -> handleDrawOffer());
 
     flipBoardButton.setOnClickListener(v -> flipBoard());
