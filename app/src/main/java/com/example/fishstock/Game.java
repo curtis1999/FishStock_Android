@@ -46,5 +46,5 @@ public class Game {
 /*
 TODOS 1: Add test to promotion checkmate (Not entering the Game Over Dialogue)
 2: Factor draw potential into the pieces evaluation.  (AGENT WILL GET INTO A LOOP LEADING TO DRAW BY REPETITION WHEN IT IS WINNING)
-
+3: The winning/losing message is inverted when you are playing as black
  */

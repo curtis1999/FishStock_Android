@@ -31,7 +31,7 @@ public class GameOverDialog extends Dialog {
     gameResult = findViewById(R.id.winnerMessage);
     if (result == 0) {
       gameResult.setText("DRAW :|");
-    } else if(result == 1) {
+    } else if((result == 1 && isWhite) || (result == -1  && !isWhite)) {
       gameResult.setText("YOU WIN!! :)");
     } else {
       gameResult.setText("YOU LOSE  :(");
