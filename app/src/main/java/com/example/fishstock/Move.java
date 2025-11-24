@@ -2,9 +2,10 @@ package com.example.fishstock;
 
 import com.example.fishstock.Pieces.*;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 
-public class Move implements Comparable<Move>{
+public class Move implements Comparable<Move>, Serializable {
   double eval=0;
   public Coordinate fromCoord;
   public Coordinate toCoord;

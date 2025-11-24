@@ -2,9 +2,11 @@ package com.example.fishstock.Agents;
 
 import com.example.fishstock.Board;
 import com.example.fishstock.Move;
+
+import java.io.Serializable;
 import java.util.ArrayList;
 
-public abstract class Agent {
+public abstract class Agent implements Serializable {
   public AgentType type;
   public boolean isWhite;
   public abstract Move getMove(Board ChessBoard, ArrayList<Move> possibleMoves, ArrayList<Move> possibleMovesAdv) throws CloneNotSupportedException;

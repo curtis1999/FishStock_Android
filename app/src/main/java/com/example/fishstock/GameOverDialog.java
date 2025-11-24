@@ -56,7 +56,7 @@ public class GameOverDialog extends Dialog {
         Intent intent = new Intent(getContext(), GameAnalysis.class);
 
         // Pass the current game object (ensure Game implements Serializable)
-        intent.putExtra("GAME_DATA", (CharSequence) game);
+        intent.putExtra("BOARD_STATES", game.whitesMovesLog);
         getContext().startActivity(intent);
         dismiss();
       }

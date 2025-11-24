@@ -1,8 +1,9 @@
 package com.example.fishstock;
 
+import java.io.Serializable;
 import java.util.Random;
 
-public class Coordinate {
+public class Coordinate implements Serializable {
   public int file;
   public int rank;
 

@@ -6,13 +6,15 @@ import com.example.fishstock.Agents.FishStock;
 import com.example.fishstock.Agents.Human;
 import com.example.fishstock.Agents.Randy;
 import com.example.fishstock.Pieces.*;
+
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class GameService {
+public class GameService implements Serializable {
   //Game game;
 
 

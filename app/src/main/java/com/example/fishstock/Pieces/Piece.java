@@ -4,10 +4,11 @@ import com.example.fishstock.Cell;
 import com.example.fishstock.Coordinate;
 import com.example.fishstock.Move;
 
+import java.io.Serializable;
 import java.util.*;
 
 
-public interface Piece {
+public interface Piece extends Serializable{
   public Coordinate getPos();
   public Coordinate getFromPos();
   public String getName();

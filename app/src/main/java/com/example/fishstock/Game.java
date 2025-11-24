@@ -2,8 +2,10 @@ package com.example.fishstock;
 
 import com.example.fishstock.Agents.AgentType;
 import com.example.fishstock.Pieces.*;
+
+import java.io.Serializable;
 import java.util.*;
-public class Game {
+public class Game implements Serializable {
   Board ChessBoard = new Board();
   int moveNum;
   boolean isWhite;

@@ -15,7 +15,7 @@ public class GameAnalysis extends AppCompatActivity {
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     // 1. Reuse the existing Game Manager layout
-    setContentView(R.layout.activity_main);
+    setContentView(R.layout.activity_analysis);
 
     // 2. Retrieve the Game object passed from the previous activity
     // Note: The 'Game' class and its internal classes (Board, Move, etc.) must implement Serializable

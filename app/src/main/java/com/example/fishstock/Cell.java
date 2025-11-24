@@ -1,8 +1,9 @@
 package com.example.fishstock;
+import java.io.Serializable;
 import java.util.*;
 import com.example.fishstock.Pieces.*;
 
-public class Cell {
+public class Cell implements Serializable {
   char Symbol;
   boolean isLight;
   public boolean isEmpty;
