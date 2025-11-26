@@ -35,6 +35,7 @@ public class GameManager extends AppCompatActivity
   private boolean isWhite;
   private boolean boardFlipped = false; // Tracks current board orientation
   private boolean isHardMode;
+  private boolean canUndo = true;
   // Move tracking
   private ArrayList<Piece> capturedPiecesWhite = new ArrayList<>();
   private ArrayList<Piece> capturedPiecesBlack = new ArrayList<>();
@@ -50,6 +51,7 @@ public class GameManager extends AppCompatActivity
   private Button flipBoardButton;
   private Button leftArrow;
   private Button rightArrow;
+  private Button undo;
 
   // Captured piece counters
   private Map<String, TextView> whiteCapturedCounters = new HashMap<>();
@@ -300,7 +302,7 @@ public class GameManager extends AppCompatActivity
    */
   private void setupButtonListeners() {
     Button resign = findViewById(R.id.resign);
-    Button undo = findViewById(R.id.undo);
+    undo = findViewById(R.id.undo);
     Button draw = findViewById(R.id.draw);
     flipBoardButton = findViewById(R.id.flipBoard);
     rightArrow = findViewById(R.id.rightarrow);
@@ -309,13 +311,23 @@ public class GameManager extends AppCompatActivity
       Intent intent = new Intent(GameManager.this, MainActivity.class);
       startActivity(intent);
     });
-    if (!isHardMode) {
       undo.setOnClickListener(v -> {
-        board = game.getPreviousBoard();
-        GameService.updateBoardMeta(board);
-        updateBoard(board, boardFlipped);
+        if (isHardMode || !canUndo) {
+          undo.setTextColor(Color.GRAY);
+          undo.setAlpha(0.5f);
+          return;
+        }
+        else {
+          board = game.getPreviousBoard();
+          GameService.updateBoardMeta(board);
+          updateBoard(board, boardFlipped);
+          undo.setEnabled(canUndo);
+          undo.setAlpha(canUndo ? 1.0f : 0.5f);
+          canUndo = false;
+          undo.setTextColor(Color.GRAY);
+          undo.setAlpha(0.5f);
+        }
       });
-    }
     draw.setOnClickListener(v -> handleDrawOffer());
     leftArrow.setOnClickListener(v -> {
       if (currentBoardIndex > 0) {
@@ -628,6 +640,14 @@ public class GameManager extends AppCompatActivity
     displayBoard = GameService.copyBoard(board);
     currentBoardIndex = game.boardStates.size()-1;
     updateButtonStates();
+    if (!isHardMode) {
+      canUndo = true;
+      undo.setEnabled(true);
+      undo.setTextColor(Color.BLACK); // Or your original color
+      undo.setAlpha(1.0f);
+
+
+    }
 
     // Check for game over
     if (postMoveChecks(board, isWhite)) {

@@ -264,7 +264,7 @@ public class GameService implements Serializable {
 
     for (Move move : possibleMoves) {
       if (move.piece.getName().equals("King")) {
-        if (isKingMoveValid(board, move, checkingAvenue, isWhite)) {
+        if (isKingMoveValidInCheck(board, move, checkingAvenue, checkingPiece, isWhite)) {
           validMoves.add(move);
         }
       } else {
@@ -275,6 +275,28 @@ public class GameService implements Serializable {
     }
 
     return validMoves;
+  }
+
+  private static boolean isKingMoveValidInCheck(Board board, Move move, ArrayList<Coordinate> checkingAvenue, Piece checkingPiece, boolean isWhite) {
+    Cell targetCell = board.board[move.toCoord.rank][move.toCoord.file];
+
+    // Check if king is moving to an attacked square
+    boolean isAttacked = isWhite ?
+        targetCell.blackAttackers.size() > 0 :
+        targetCell.whiteAttackers.size() > 0;
+
+    // If capturing the checking piece, we need to verify it's not protected
+    if (move.isCapture && move.capturablePiece.equals(checkingPiece)) {
+      // Count attackers excluding the checking piece itself
+      int numAttackers = isWhite ?
+          (int) targetCell.blackAttackers.stream().filter(p -> !p.equals(checkingPiece)).count() :
+          (int) targetCell.whiteAttackers.stream().filter(p -> !p.equals(checkingPiece)).count();
+
+      return numAttackers == 0; // Can capture if not protected by another piece
+    }
+
+    // For non-capture moves, square must not be attacked and not in checking avenue
+    return !isAttacked && !isInCheckingAvenue(move.toCoord, checkingAvenue);
   }
 
   private static boolean isKingMoveValid(Board board, Move move, ArrayList<Coordinate> checkingAvenue, boolean isWhite) {
