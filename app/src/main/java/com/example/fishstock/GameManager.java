@@ -174,12 +174,8 @@ public class GameManager extends AppCompatActivity
     this.board = new Board();
     GameService.updateBoardMeta(board);
 
-    try {
-      whitesPotentialMoves = GameService.generateMoves(board, true);
-      blacksPotentialMoves = GameService.generateMoves(board, false);
-    } catch (CloneNotSupportedException e) {
-      e.printStackTrace();
-    }
+    whitesPotentialMoves = GameService.generateMoves(board, true);
+    blacksPotentialMoves = GameService.generateMoves(board, false);
     this.isHardMode = getIntent().getBooleanExtra("isHardMode", false);
     this.isWhite = getIntent().getBooleanExtra("isWhite", false);
     String player1Type = getIntent().getStringExtra("player1Type");
@@ -791,11 +787,7 @@ public class GameManager extends AppCompatActivity
    * Checks black's status after white moves.
    */
   private boolean checkBlackStatus() {
-    try {
-      blacksPotentialMoves = GameService.generateMoves(board, false);
-    } catch (CloneNotSupportedException e) {
-      e.printStackTrace();
-    }
+    blacksPotentialMoves = GameService.generateMoves(board, false);
 
     King blackKing = (King) board.blackPieces.get(0);
 
@@ -831,11 +823,7 @@ public class GameManager extends AppCompatActivity
    * Checks white's status after black moves.
    */
   private boolean checkWhiteStatus() {
-    try {
-      whitesPotentialMoves = GameService.generateMoves(board, true);
-    } catch (CloneNotSupportedException e) {
-      e.printStackTrace();
-    }
+    whitesPotentialMoves = GameService.generateMoves(board, true);
 
     King whiteKing = (King) board.whitePieces.get(0);
 

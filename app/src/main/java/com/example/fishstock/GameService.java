@@ -1,10 +1,6 @@
 package com.example.fishstock;
 
-import com.example.fishstock.Agents.Agent;
-import com.example.fishstock.Agents.AgentType;
-import com.example.fishstock.Agents.FishStock;
-import com.example.fishstock.Agents.Human;
-import com.example.fishstock.Agents.Randy;
+import com.example.fishstock.Agents.*;
 import com.example.fishstock.Pieces.*;
 
 import java.io.Serializable;
@@ -12,910 +8,505 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class GameService implements Serializable {
-  //Game game;
-
 
   public static boolean isRepetition(List<Board> boardStates, Board board) {
-    int numRepetitions = 0;
-    for (Board curBoard : boardStates) {
-      if (Board.compareBoard(board, curBoard)) {
-        numRepetitions ++;
-      }
-    }
-    return numRepetitions >= 3;
+    return boardStates.stream()
+        .filter(curBoard -> Board.compareBoard(board, curBoard))
+        .count() >= 3;
   }
 
-  /**
-   * Updates the board given a Move.
-   *
-   * @param ChessBoard
-   * @param curMove
-   * @param isWhite
-   */
-  public static void makeMove(Board ChessBoard, Move curMove, boolean isWhite) {
-    //The id of the piece being moved this turn.
-    int pieceIndex = 0;
-    if (isWhite) {
-      pieceIndex = Board.getIndex(ChessBoard.whitePieces, curMove.fromCoord);
-    } else {
-      pieceIndex = Board.getIndex(ChessBoard.blackPieces, curMove.fromCoord);
+  public static void makeMove(Board chessBoard, Move move, boolean isWhite) {
+    ArrayList<Piece> activePieces = isWhite ? chessBoard.whitePieces : chessBoard.blackPieces;
+    ArrayList<Piece> opponentPieces = isWhite ? chessBoard.blackPieces : chessBoard.whitePieces;
+
+    int pieceIndex = Board.getIndex(activePieces, move.fromCoord);
+
+    // 1. Move piece on board
+    movePieceOnBoard(chessBoard, move, activePieces.get(pieceIndex));
+
+    // 2. Handle capture
+    if (move.isCapture) {
+      handleCapture(chessBoard, move, opponentPieces);
     }
 
-    //1. Updates the board position of the moved piece.
-    ChessBoard.board[curMove.toCoord.rank][curMove.toCoord.file].empty();
-    ChessBoard.board[curMove.toCoord.rank][curMove.toCoord.file].putPiece(curMove.piece);
-    ChessBoard.board[curMove.fromCoord.rank][curMove.fromCoord.file].empty();
-
-    if (isWhite) {
-      ChessBoard.whitePieces.get(pieceIndex).setPos(curMove.toCoord);
-      ((King)ChessBoard.whitePieces.get(0)).unCheck(); //NOTE: I UNCHECKED THE KING'S HERE
-    } else {
-      ChessBoard.blackPieces.get(pieceIndex).setPos(curMove.toCoord);
-      ((King)ChessBoard.blackPieces.get(0)).unCheck();
+    // 3. Handle castling
+    if (move.isCastle) {
+      handleCastling(chessBoard, move, isWhite, activePieces);
     }
-    //2. If there is a capture in the move, then remove the adversary piece.
-    if (curMove.isCapture) {
-      if (isWhite) {
-        int indexOfBlacksCapturedPiece = Board.getIndex(ChessBoard.blackPieces, curMove.capturablePiece.getPos());
-        ChessBoard.blackPieces.remove(indexOfBlacksCapturedPiece);
-        //If the move is EnPassant, then the piece must be manually removed from the board.
-        if (curMove.isEnPassant) {
-          ChessBoard.board[curMove.capturablePiece.getPos().rank][curMove.capturablePiece.getPos().file].empty();
-        }
-      } else {
-        int indexOfWhitesCapturedPiece = Board.getIndex(ChessBoard.whitePieces, curMove.capturablePiece.getPos());
-        ChessBoard.whitePieces.remove(indexOfWhitesCapturedPiece);
-        if (curMove.isEnPassant) {
-          ChessBoard.board[curMove.capturablePiece.getPos().rank][curMove.capturablePiece.getPos().file].empty();
-        }
-      }
+
+    // 4. Handle promotion
+    if (move.isPromotion) {
+      handlePromotion(chessBoard, move, activePieces);
     }
-    //3. Castle.
-    if (curMove.isCastle) {
-      //3.1 Short Castle
-        if (curMove.toCoord.file == 1) {
-          if (isWhite) {
-          ((King) ChessBoard.whitePieces.get(0)).moved(); //Cannot castle again.
-          int indexRook = Board.getIndex(ChessBoard.whitePieces, new Coordinate(0, 0));
-          ChessBoard.whitePieces.get(indexRook).setPos(new Coordinate(2, 0));
-          ChessBoard.board[0][2].putRook(true, ChessBoard.whitePieces.get(indexRook));
-          ChessBoard.board[0][0].empty();
-          }
-          else {
-            ((King) ChessBoard.blackPieces.get(0)).moved(); //Cannot castle again.
-            int indexRook = Board.getIndex(ChessBoard.blackPieces, new Coordinate(0, 7));
-            ChessBoard.blackPieces.get(indexRook).setPos(new Coordinate(2, 7));
-            ChessBoard.board[7][2].putRook(false, ChessBoard.blackPieces.get(indexRook));
-            ChessBoard.board[7][0].empty();
-          }
-      }
-          //3.2: Long Castle
-          else if (curMove.toCoord.file == 5) {
-            if (isWhite){
-              ((King) ChessBoard.whitePieces.get(0)).moved(); //Cannot castle again.
-              int indexRook = Board.getIndex(ChessBoard.whitePieces, new Coordinate(7, 0));
 
-              ChessBoard.whitePieces.get(indexRook).setPos(new Coordinate(4, 0));
-              ChessBoard.board[0][4].putRook(true, ChessBoard.whitePieces.get(indexRook));
-              ChessBoard.board[0][7].empty();
-            }
-            else {
-              ((King) ChessBoard.blackPieces.get(0)).moved(); //Cannot castle again.
-              int indexRook = Board.getIndex(ChessBoard.blackPieces, new Coordinate(7, 7));
-
-              ChessBoard.blackPieces.get(indexRook).setPos(new Coordinate(4, 7));
-              ChessBoard.board[7][4].putRook(false, ChessBoard.blackPieces.get(indexRook));
-              ChessBoard.board[7][7].empty();
-            }
-          }
-      }
-    //4. If the current move is a promotion.
-      if (curMove.isPromotion) {
-        int promotionIndex;
-        if (isWhite) {
-          promotionIndex = Board.getIndex(ChessBoard.whitePieces, curMove.toCoord);
-          ChessBoard.whitePieces.remove(promotionIndex);
-          curMove.promotionPiece.setPos(curMove.toCoord);
-          ChessBoard.whitePieces.add(curMove.promotionPiece);
-
-        } else {
-          promotionIndex = Board.getIndex(ChessBoard.blackPieces, curMove.toCoord);
-          ChessBoard.blackPieces.remove(promotionIndex);
-          curMove.promotionPiece.setPos(curMove.toCoord);
-          ChessBoard.blackPieces.add(curMove.promotionPiece);
-        }
-        ChessBoard.board[curMove.toCoord.rank][curMove.toCoord.file].empty();
-        ChessBoard.board[curMove.toCoord.rank][curMove.toCoord.file].putPiece(curMove.promotionPiece); //TODO: May be redundant
-      }
-
-       //5. Final Updates.
-      ((King)ChessBoard.blackPieces.get(0)).unCheck();
-      if (curMove.piece.getName().equals("Pawn") && !curMove.isPromotion) {
-        ((Pawn) ChessBoard.board[curMove.toCoord.rank][curMove.toCoord.file].piece).growUp();
-        if (isWhite) {
-          ((Pawn) ChessBoard.whitePieces.get(pieceIndex)).growUp();
-        } else {
-          ((Pawn) ChessBoard.blackPieces.get(pieceIndex)).growUp();
-        }
-        if (curMove.toCoord.rank - curMove.fromCoord.rank == 2 || curMove.toCoord.rank - curMove.fromCoord.rank == -2 && curMove.piece.getName().equals("Pawn")) {
-            ((Pawn) ChessBoard.board[curMove.toCoord.rank][curMove.toCoord.file].piece).setEnPassantable();
-            if (isWhite) {
-              ((Pawn) ChessBoard.whitePieces.get(pieceIndex)).setEnPassantable();
-            } else {
-              ((Pawn) ChessBoard.blackPieces.get(pieceIndex)).setEnPassantable();
-            }
-        }
-      }
-    //King or rook moves then castling rights are revoked
-    if (curMove.piece.getName().equals("Rook")) {
-      ((Rook) ChessBoard.board[curMove.toCoord.rank][curMove.toCoord.file].piece).moved();
-    }
-    if (curMove.piece.getName().equals("King")) {
-      ((King) ChessBoard.board[curMove.toCoord.rank][curMove.toCoord.file].piece).moved();
-      if (isWhite) {
-        ((King) ChessBoard.whitePieces.get(pieceIndex)).moved();
-      } else {
-        ((King) ChessBoard.blackPieces.get(pieceIndex)).moved();
-      }
-    }
-    curMove.piece.setPossibleMoves(curMove.piece.generateMoves(curMove.piece.getPos(), ChessBoard.board));
+    // 5. Final updates
+    finalizeMove(chessBoard, move, activePieces, pieceIndex);
   }
 
-  /**
-   * Undoes the last move made on the board.
-   *
-   * @param ChessBoard
-   * @param curMove
-   * @param isWhite
-   */
-  public static void undoMove(Board ChessBoard, Move curMove, boolean isWhite) {
-    // The id of the piece being moved this turn.
-    int pieceIndex = 0;
-    if (isWhite) {
-      pieceIndex = Board.getIndex(ChessBoard.whitePieces, curMove.toCoord);
-    } else {
-      pieceIndex = Board.getIndex(ChessBoard.blackPieces, curMove.toCoord);
-    }
+  private static void movePieceOnBoard(Board board, Move move, Piece piece) {
+    board.board[move.toCoord.rank][move.toCoord.file].empty();
+    board.board[move.toCoord.rank][move.toCoord.file].putPiece(move.piece);
+    board.board[move.fromCoord.rank][move.fromCoord.file].empty();
+    piece.setPos(move.toCoord);
+  }
 
-    // 1. Restore the board position of the moved piece.
-    ChessBoard.board[curMove.fromCoord.rank][curMove.fromCoord.file].putPiece(curMove.piece);
-    ChessBoard.board[curMove.toCoord.rank][curMove.toCoord.file].empty();
-    if (isWhite) {
-      ChessBoard.whitePieces.get(pieceIndex).setPos(curMove.fromCoord);
-    } else {
-      ChessBoard.blackPieces.get(pieceIndex).setPos(curMove.fromCoord);
-    }
+  private static void handleCapture(Board board, Move move, ArrayList<Piece> opponentPieces) {
+    int capturedIndex = Board.getIndex(opponentPieces, move.capturablePiece.getPos());
+    opponentPieces.remove(capturedIndex);
 
-    // 2. If there was a capture in the move, then restore the captured piece.
-    if (curMove.isCapture) {
-      if (curMove.isEnPassant) {
-        // In the case of EnPassant, we have to put the captured pawn back on the board.
-        ChessBoard.board[curMove.capturablePiece.getPos().rank][curMove.capturablePiece.getPos().file].putPiece(curMove.capturablePiece);
-      } else {
-        // In other cases, we just add the captured piece back to the list of pieces.
-        if (isWhite) {
-          ChessBoard.blackPieces.add(curMove.capturablePiece);
-        } else {
-          ChessBoard.whitePieces.add(curMove.capturablePiece);
-        }
-      }
-    }
-
-    // 3. Undo the castle move.
-    if (curMove.isCastle) {
-      // 3.1 Short castle
-      if (curMove.toCoord.file == 1) {
-        if (isWhite) {
-          int indexRook = Board.getIndex(ChessBoard.whitePieces, new Coordinate(2, 0));
-          ChessBoard.whitePieces.get(indexRook).setPos(new Coordinate(0, 0));
-          ChessBoard.board[0][0].putRook(true, ChessBoard.whitePieces.get(indexRook));
-          ChessBoard.board[0][2].empty();
-          //((King) ChessBoard.whitePieces.get(0)).unmoved();
-        } else {
-          int indexRook = Board.getIndex(ChessBoard.blackPieces, new Coordinate(2, 7));
-          ChessBoard.blackPieces.get(indexRook).setPos(new Coordinate(0, 7));
-          ChessBoard.board[7][0].putRook(false, ChessBoard.blackPieces.get(indexRook));
-          ChessBoard.board[7][2].empty();
-          //((King) ChessBoard.blackPieces.get(0)).unmoved(); //TODO: MAKE moved an int, reverse if it's not 0
-        }
-      }
-      // 3.2 Long castle
-      else if (curMove.toCoord.file == 5) {
-        if (isWhite) {
-          int indexRook = Board.getIndex(ChessBoard.whitePieces, new Coordinate(4, 0));
-          ChessBoard.whitePieces.get(indexRook).setPos(new Coordinate(7, 0));
-          ChessBoard.board[0][7].putRook(true, ChessBoard.whitePieces.get(indexRook));
-          ChessBoard.board[0][4].empty();
-        }
-        else {
-          int indexRook = Board.getIndex(ChessBoard.blackPieces, new Coordinate(4, 7));
-          ChessBoard.blackPieces.get(indexRook).setPos(new Coordinate(7, 7));
-          ChessBoard.board[7][7].putRook(false, ChessBoard.blackPieces.get(indexRook));
-          ChessBoard.board[7][4].empty();
-          //((King) ChessBoard.blackPieces.get(0)).unmoved(); //TODO: MAKE moved an int, reverse if it's not 0
-        }
-      }
-      // 4. Undo any promotion.
-      if (curMove.isPromotion) {
-        int pieceIndex2;
-        if (isWhite) {
-          pieceIndex2 = Board.getIndex(ChessBoard.whitePieces, curMove.toCoord);
-          ChessBoard.whitePieces.remove(pieceIndex2);
-          ChessBoard.whitePieces.add(new Pawn(curMove.toCoord, true));
-        } else {
-          pieceIndex2 = Board.getIndex(ChessBoard.blackPieces, curMove.toCoord);
-          ChessBoard.blackPieces.remove(pieceIndex2);
-          ChessBoard.blackPieces.add(new Pawn( curMove.toCoord,false));
-        }
-      }
-      // 5. Restore any previous en passantable and promotion flags on the moved piece.
-      if (curMove.piece.getName().equals("Pawn")) {
-        Pawn pawn = (Pawn) ChessBoard.board[curMove.fromCoord.rank][curMove.fromCoord.file].piece;
-        pawn.enPassantable = false;
-      } else if (curMove.piece.getName().equals("King")) {
-           King king = (King) ChessBoard.board[curMove.fromCoord.rank][curMove.fromCoord.file].piece; //TODO:
-           king.hasMoved = false; //TODO: MAKE THIS A integer
-      } else if (curMove.piece.getName().equals("Rook")) {
-        //Rook rook = (Rook) ChessBoard.getSquare(curMove.fromCoord).piece; //TODO:
-        //rook.movedBack();
-      }
-      // 6. Undo any check.
-      if (curMove.isCheck) {
-        if (isWhite) {
-          ((King) ChessBoard.blackPieces.get(0)).unCheck();
-        } else {
-          ((King) ChessBoard.whitePieces.get(0)).unCheck();
-        }
-      }
+    if (move.isEnPassant) {
+      board.board[move.capturablePiece.getPos().rank][move.capturablePiece.getPos().file].empty();
     }
   }
 
-          /**
-           * Generates all the possible moves if you are not in check.
-           *
-           * @param ChessBoard The Board.
-           * @return The List of all valid moves
-           * @throws CloneNotSupportedException
-           */
-  public static ArrayList<Move> generateMoves(Board ChessBoard, boolean isWhite) throws CloneNotSupportedException{
+  private static void handleCastling(Board board, Move move, boolean isWhite, ArrayList<Piece> pieces) {
+    King king = (King) pieces.get(0);
+    king.moved();
+
+    int rank = isWhite ? 0 : 7;
+    boolean isShortCastle = move.toCoord.file == 1;
+
+    Coordinate rookFrom = new Coordinate(isShortCastle ? 0 : 7, rank);
+    Coordinate rookTo = new Coordinate(isShortCastle ? 2 : 4, rank);
+
+    int rookIndex = Board.getIndex(pieces, rookFrom);
+    pieces.get(rookIndex).setPos(rookTo);
+    board.board[rank][rookTo.file].putRook(isWhite, pieces.get(rookIndex));
+    board.board[rank][rookFrom.file].empty();
+  }
+
+  private static void handlePromotion(Board board, Move move, ArrayList<Piece> pieces) {
+    int promotionIndex = Board.getIndex(pieces, move.toCoord);
+    pieces.remove(promotionIndex);
+    move.promotionPiece.setPos(move.toCoord);
+    pieces.add(move.promotionPiece);
+    board.board[move.toCoord.rank][move.toCoord.file].empty();
+    board.board[move.toCoord.rank][move.toCoord.file].putPiece(move.promotionPiece);
+  }
+
+  private static void finalizeMove(Board board, Move move, ArrayList<Piece> pieces, int pieceIndex) {
+    ((King) board.blackPieces.get(0)).unCheck();
+    ((King) board.whitePieces.get(0)).unCheck();
+
+    String pieceName = move.piece.getName();
+
+    if (pieceName.equals("Pawn") && !move.isPromotion) {
+      Pawn pawn = (Pawn) board.board[move.toCoord.rank][move.toCoord.file].piece;
+      pawn.growUp();
+      ((Pawn) pieces.get(pieceIndex)).growUp();
+
+      int rankDiff = Math.abs(move.toCoord.rank - move.fromCoord.rank);
+      if (rankDiff == 2) {
+        pawn.setEnPassantable();
+        ((Pawn) pieces.get(pieceIndex)).setEnPassantable();
+      }
+    } else if (pieceName.equals("Rook")) {
+      ((Rook) board.board[move.toCoord.rank][move.toCoord.file].piece).moved();
+    } else if (pieceName.equals("King")) {
+      ((King) board.board[move.toCoord.rank][move.toCoord.file].piece).moved();
+      ((King) pieces.get(pieceIndex)).moved();
+    }
+
+    move.piece.setPossibleMoves(move.piece.generateMoves(move.piece.getPos(), board.board));
+  }
+
+  public static void undoMove(Board chessBoard, Move move, boolean isWhite) {
+    ArrayList<Piece> activePieces = isWhite ? chessBoard.whitePieces : chessBoard.blackPieces;
+    ArrayList<Piece> opponentPieces = isWhite ? chessBoard.blackPieces : chessBoard.whitePieces;
+
+    int pieceIndex = Board.getIndex(activePieces, move.toCoord);
+
+    // 1. Restore piece position
+    chessBoard.board[move.fromCoord.rank][move.fromCoord.file].putPiece(move.piece);
+    chessBoard.board[move.toCoord.rank][move.toCoord.file].empty();
+    activePieces.get(pieceIndex).setPos(move.fromCoord);
+
+    // 2. Restore captured piece
+    if (move.isCapture) {
+      if (move.isEnPassant) {
+        chessBoard.board[move.capturablePiece.getPos().rank][move.capturablePiece.getPos().file]
+            .putPiece(move.capturablePiece);
+      } else {
+        opponentPieces.add(move.capturablePiece);
+      }
+    }
+
+    // 3. Undo castling
+    if (move.isCastle) {
+      undoCastling(chessBoard, move, isWhite, activePieces);
+    }
+
+    // 4. Undo promotion
+    if (move.isPromotion) {
+      undoPromotion(chessBoard, move, activePieces, isWhite);
+    }
+
+    // 5. Reset piece states
+    resetPieceStates(chessBoard, move, isWhite);
+  }
+
+  private static void undoCastling(Board board, Move move, boolean isWhite,ArrayList<Piece> pieces) {
+    int rank = isWhite ? 0 : 7;
+    boolean isShortCastle = move.toCoord.file == 1;
+
+    Coordinate rookFrom = new Coordinate(isShortCastle ? 2 : 4, rank);
+    Coordinate rookTo = new Coordinate(isShortCastle ? 0 : 7, rank);
+
+    int rookIndex = Board.getIndex(pieces, rookFrom);
+    pieces.get(rookIndex).setPos(rookTo);
+    board.board[rank][rookTo.file].putRook(isWhite, pieces.get(rookIndex));
+    board.board[rank][rookFrom.file].empty();
+  }
+
+  private static void undoPromotion(Board board, Move move,ArrayList<Piece> pieces, boolean isWhite) {
+    int pieceIndex = Board.getIndex(pieces, move.toCoord);
+    pieces.remove(pieceIndex);
+    pieces.add(new Pawn(move.toCoord, isWhite));
+  }
+
+  private static void resetPieceStates(Board board, Move move, boolean isWhite) {
+    String pieceName = move.piece.getName();
+
+    if (pieceName.equals("Pawn")) {
+      Pawn pawn = (Pawn) board.board[move.fromCoord.rank][move.fromCoord.file].piece;
+      pawn.enPassantable = false;
+    } else if (pieceName.equals("King")) {
+      King king = (King) board.board[move.fromCoord.rank][move.fromCoord.file].piece;
+      king.hasMoved = false;
+    }
+
+    if (move.isCheck) {
+      King opponentKing = isWhite ?
+          (King) board.blackPieces.get(0) :
+          (King) board.whitePieces.get(0);
+      opponentKing.unCheck();
+    }
+  }
+
+  public static ArrayList<Move> generateMoves(Board board, boolean isWhite) {
     ArrayList<Move> moves = new ArrayList<>();
-    if (isWhite) {
-      for (Piece piece : ChessBoard.whitePieces) {
-        if (!piece.isPinned()) {
-          ArrayList<Move> filteredMoves = filterMoves(piece.generateMoves(piece.getPos(), ChessBoard.board));
-          for (Move aMove : filteredMoves) {
-            if (aMove.isPromotion) {
-              ArrayList<Move> promotionMoves = new ArrayList<>();
-              Move knightPromotion = new Move(aMove.fromCoord, aMove.toCoord,"Pawn", aMove.isCapture, true);
-              if (aMove.isCapture){
-                knightPromotion.setCapture(aMove.capturablePiece);
-              }
-              knightPromotion.setPromotion(new Knight(aMove.fromCoord, true));
-              Move BishopPromotion = new Move(aMove.fromCoord, aMove.toCoord,"Pawn", aMove.isCapture, true);
-              BishopPromotion.setPromotion(new Bishop(aMove.toCoord, true));
-              if (aMove.isCapture){
-                BishopPromotion.setCapture(aMove.capturablePiece);
-              }
-              Move RookPromotion = new Move(aMove.fromCoord, aMove.toCoord,"Pawn", aMove.isCapture, true);
-              RookPromotion.setPromotion(new Rook(aMove.fromCoord, true));
-              if (aMove.isCapture){
-                RookPromotion.setCapture(aMove.capturablePiece);
-              }
-              Move QueenPromotion = new Move(aMove.fromCoord, aMove.toCoord,"Pawn", aMove.isCapture, true);
-              QueenPromotion.setPromotion(new Queen(aMove.fromCoord, true));
-              if (aMove.isCapture){
-                QueenPromotion.setCapture(aMove.capturablePiece);
-              }
-              promotionMoves.add(knightPromotion);
-              promotionMoves.add(BishopPromotion);
-              promotionMoves.add(RookPromotion);
-              promotionMoves.add(QueenPromotion);
-              moves.addAll(promotionMoves);
-            } else {
-              moves.add(aMove);
-            }
-          }
-        }
-      }
-    } else {
-      for (Piece piece : ChessBoard.blackPieces) {
-        if (!piece.isPinned()) {
-          ArrayList<Move> filteredMoves = filterMoves(piece.generateMoves(piece.getPos(), ChessBoard.board));
-          for (Move aMove : filteredMoves) {
-            if (aMove.isPromotion) {
-              ArrayList<Move> promotionMoves = new ArrayList<>();
-              Move knightPromotion = new Move(aMove.fromCoord, aMove.toCoord,"Pawn", aMove.isCapture, false);
-              knightPromotion.setPromotion(new Knight(aMove.toCoord, false));
-              if (aMove.isCapture){
-                knightPromotion.setCapture(aMove.capturablePiece);
-              }
-              Move BishopPromotion = new Move(aMove.fromCoord, aMove.toCoord,"Pawn", aMove.isCapture, false);
-              BishopPromotion.setPromotion(new Bishop(aMove.toCoord, false));
-              if (aMove.isCapture){
-                BishopPromotion.setCapture(aMove.capturablePiece);
-              }
-              Move RookPromotion = new Move(aMove.fromCoord, aMove.toCoord,"Pawn", aMove.isCapture, false);
-              RookPromotion.setPromotion(new Rook(aMove.fromCoord, false));
-              if (aMove.isCapture){
-                RookPromotion.setCapture(aMove.capturablePiece);
-              }
-              Move QueenPromotion = new Move(aMove.fromCoord, aMove.toCoord,"Pawn", aMove.isCapture, false);
-              QueenPromotion.setPromotion(new Queen(aMove.fromCoord, false));
-              if (aMove.isCapture){
-                QueenPromotion.setCapture(aMove.capturablePiece);
-              }
-              promotionMoves.add(knightPromotion);
-              promotionMoves.add(BishopPromotion);
-              promotionMoves.add(RookPromotion);
-              promotionMoves.add(QueenPromotion);
-              moves.addAll(promotionMoves);
-            } else {
-              moves.add(aMove);
-            }
-          }
+    ArrayList<Piece> pieces = isWhite ? board.whitePieces : board.blackPieces;
+
+    for (Piece piece : pieces) {
+      if (piece.isPinned()) continue;
+
+      ArrayList<Move> filteredMoves = filterMoves(piece.generateMoves(piece.getPos(), board.board));
+
+      for (Move move : filteredMoves) {
+        if (move.isPromotion) {
+          moves.addAll(generatePromotionMoves(move, isWhite));
+        } else {
+          moves.add(move);
         }
       }
     }
     return moves;
   }
 
-  /**
-   * Generates the possible moves if the player's king is double checked.  (Only king moves)
-   * @param chessBoard
-   * @param possibleMoves
-   */
-  public static ArrayList<Move> generateMovesDoubleCheck(Board chessBoard, ArrayList<Move> possibleMoves, boolean isWhite) {
-    ArrayList<Move> possibleMovesCheck = new ArrayList<>();
-    ArrayList<Coordinate> checkingAve1;
-    ArrayList<Coordinate> checkingAve2;
-    if (isWhite){
-      checkingAve1 = ((King)chessBoard.whitePieces.get(0)).getCheckingAve();
-      checkingAve2 = ((King)chessBoard.whitePieces.get(0)).getCheckingAve2();
-    } else {
-      checkingAve1 = ((King)chessBoard.blackPieces.get(0)).getCheckingAve();
-      checkingAve2 = ((King)chessBoard.blackPieces.get(0)).getCheckingAve2();
-    }
-    boolean inCheckingAve = false;
-    for (Move mv : possibleMoves) {
-      if (mv.piece.getName().equals("King")) {
-        if (mv.piece.getColor()) {
-          if (chessBoard.board[mv.toCoord.rank][mv.toCoord.file].blackAttackers.size()==0) {
-            for (Coordinate coord : checkingAve1){
-              if (mv.toCoord.rank == coord.rank && mv.toCoord.file == coord.file) {
-                inCheckingAve = true;
-                break;
-              }
-            }
-            for (Coordinate coord : checkingAve2){
-              if (mv.toCoord.rank == coord.rank && mv.toCoord.file == coord.file) {
-                inCheckingAve = true;
-                break;
-              }
-            }
-            if (!inCheckingAve) {
-              possibleMovesCheck.add(mv);
-            }
-            inCheckingAve = false;
-          }
-        } else {
-          if (chessBoard.board[mv.toCoord.rank][mv.toCoord.file].whiteAttackers.size()==0) {
-            for (Coordinate coord : checkingAve1){
-              if (mv.toCoord.rank == coord.rank && mv.toCoord.file == coord.file) {
-                inCheckingAve = true;
-                break;
-              }
-            } for (Coordinate coord : checkingAve2){
-              if (mv.toCoord.rank == coord.rank && mv.toCoord.file == coord.file) {
-                inCheckingAve = true;
-                break;
-              }
-            }
-            if (!inCheckingAve) {
-              possibleMovesCheck.add(mv);
-            }
-            inCheckingAve = false;
-          }
-        }
-      }else {
-        continue;
+  private static ArrayList<Move> generatePromotionMoves(Move move, boolean isWhite) {
+    ArrayList<Move> promotionMoves = new ArrayList<>();
+    Piece[] promotionPieces = {
+        new Knight(move.toCoord, isWhite),
+        new Bishop(move.toCoord, isWhite),
+        new Rook(move.toCoord, isWhite),
+        new Queen(move.toCoord, isWhite)
+    };
+
+    for (Piece promotionPiece : promotionPieces) {
+      Move promotionMove = new Move(move.fromCoord, move.toCoord, "Pawn", move.isCapture, true);
+      promotionMove.setPromotion(promotionPiece);
+      if (move.isCapture) {
+        promotionMove.setCapture(move.capturablePiece);
       }
+      promotionMoves.add(promotionMove);
     }
-    return possibleMovesCheck;
+
+    return promotionMoves;
   }
 
+  public static ArrayList<Move> generateMovesDoubleCheck(Board board, ArrayList<Move> possibleMoves, boolean isWhite) {
+    ArrayList<Move> validMoves = new ArrayList<>();
+    King king = (King) (isWhite ? board.whitePieces.get(0) : board.blackPieces.get(0));
+    ArrayList<Coordinate> checkingAve1 = king.getCheckingAve();
+    ArrayList<Coordinate> checkingAve2 = king.getCheckingAve2();
 
-  /**
-   * Generates all the possible moves if the player is in check. (Take the checking piece, block the checking avenue or Move the king)
-   * @param chessBoard
-   * @param possibleMoves
-   * @return
-   */
-  public static ArrayList<Move> generateMovesCheck(Board chessBoard, ArrayList<Move> possibleMoves, boolean isWhite){
-    Coordinate checkerLoc;
-    Piece checkingPiece;
-    Coordinate kingLoc;
-    ArrayList<Coordinate> checkingAve = new ArrayList<>();
-    boolean inCheckingAve = false;
-    //PART 1: GET CHECKING INFO
-    if (isWhite) {
-      checkerLoc = ((King)chessBoard.whitePieces.get(0)).checkerLoc;
-      checkingPiece = chessBoard.board[checkerLoc.rank][checkerLoc.file].piece;
-      checkingAve = ((King)chessBoard.whitePieces.get(0)).getCheckingAve();
-      if (checkingPiece == null) {
-        checkingPiece = chessBoard.board[checkerLoc.rank][checkerLoc.file].piece;
+    for (Move move : possibleMoves) {
+      if (!move.piece.getName().equals("King")) continue;
+
+      boolean isAttacked = isWhite ?
+          board.board[move.toCoord.rank][move.toCoord.file].blackAttackers.size() > 0 :
+          board.board[move.toCoord.rank][move.toCoord.file].whiteAttackers.size() > 0;
+
+      if (isAttacked) continue;
+
+      boolean inCheckingAve = isInCheckingAvenue(move.toCoord, checkingAve1) ||
+          isInCheckingAvenue(move.toCoord, checkingAve2);
+
+      if (!inCheckingAve) {
+        validMoves.add(move);
       }
-      kingLoc = new Coordinate(chessBoard.whitePieces.get(0).getPos().file, chessBoard.whitePieces.get(0).getPos().rank);
-    } else {
-      checkerLoc = ((King)chessBoard.blackPieces.get(0)).checkerLoc;
-      checkingPiece = chessBoard.board[checkerLoc.rank][checkerLoc.file].piece;
-      kingLoc = new Coordinate(chessBoard.blackPieces.get(0).getPos().file, chessBoard.blackPieces.get(0).getPos().rank);
-      checkingAve = ((King)chessBoard.blackPieces.get(0)).getCheckingAve();
     }
-    ArrayList<Move> possibleMovesCheck = new ArrayList<Move>();
-    ArrayList<Coordinate> CheckingAvenue = getCheckingAvenue(checkingPiece,checkerLoc, kingLoc);
+
+    return validMoves;
+  }
+
+  public static ArrayList<Move> generateMovesCheck(Board board, ArrayList<Move> possibleMoves, boolean isWhite) {
+    King king = (King) (isWhite ? board.whitePieces.get(0) : board.blackPieces.get(0));
+    Coordinate checkerLoc = king.checkerLoc;
+    Piece checkingPiece = board.board[checkerLoc.rank][checkerLoc.file].piece;
+    Coordinate kingLoc = king.getPos();
+
+    ArrayList<Coordinate> checkingAvenue = getCheckingAvenue(checkingPiece, checkerLoc, kingLoc);
     ArrayList<Coordinate> trimmedCheckingAvenue = getCheckingAvenueTrimmed(checkingPiece, checkerLoc, kingLoc);
-    //PART 2: ITERATE AND FILTER THE MOVES.
-    for (Move mv : possibleMoves) {
-      if (mv.piece.getName().equals("King")) {
-        if (isWhite) {
-          if (chessBoard.board[mv.toCoord.rank][mv.toCoord.file].blackAttackers.size() > 0) {
-            continue;
-          }
-        } else {
-          if (chessBoard.board[mv.toCoord.rank][mv.toCoord.file].whiteAttackers.size() > 0) {
-            continue;
-          }
+    ArrayList<Move> validMoves = new ArrayList<>();
+
+    for (Move move : possibleMoves) {
+      if (move.piece.getName().equals("King")) {
+        if (isKingMoveValid(board, move, checkingAvenue, isWhite)) {
+          validMoves.add(move);
         }
-          //PART 1: IF THE KING STEPS OUT OF THE CHECKING AVENUE.
-          boolean awayFromCheck=true;
-          //1.1: The King moves off of the checking avenue.
-          for (Coordinate checkCell: CheckingAvenue) {
-            if (mv.toCoord.file == checkCell.file && mv.toCoord.rank == checkCell.rank) {
-              awayFromCheck = false;
-              break;
-            }
-          }
-          if (awayFromCheck) {
-            possibleMovesCheck.add(mv);
-          }
-          //Part 2: The King captures the checking piece.
-          if (mv.isCapture) {
-            if (chessBoard.board[mv.toCoord.rank][mv.toCoord.file].piece.equals(checkingPiece)) {
-              possibleMovesCheck.add(mv);
-            }
-          }
-        } else {
-          boolean blocksCheck = false;
-          for (Coordinate crd:trimmedCheckingAvenue) {
-            if (crd.file == mv.toCoord.file && crd.rank == mv.toCoord.rank) {
-              blocksCheck = true;
-              break;
-            }
-          }
-          if (blocksCheck) {
-            possibleMovesCheck.add(mv);
+      } else {
+        if (isInCheckingAvenue(move.toCoord, trimmedCheckingAvenue)) {
+          validMoves.add(move);
         }
       }
     }
-    return possibleMovesCheck;
+
+    return validMoves;
+  }
+
+  private static boolean isKingMoveValid(Board board, Move move, ArrayList<Coordinate> checkingAvenue, boolean isWhite) {
+    boolean isAttacked = isWhite ?
+        board.board[move.toCoord.rank][move.toCoord.file].blackAttackers.size() > 0 :
+        board.board[move.toCoord.rank][move.toCoord.file].whiteAttackers.size() > 0;
+
+    return !isAttacked && !isInCheckingAvenue(move.toCoord, checkingAvenue);
+  }
+
+  private static boolean isInCheckingAvenue(Coordinate coord, ArrayList<Coordinate> avenue) {
+    return avenue.stream().anyMatch(c -> c.rank == coord.rank && c.file == coord.file);
   }
 
   private static ArrayList<Coordinate> getCheckingAvenueTrimmed(Piece checkingPiece, Coordinate checkerLoc, Coordinate kingLoc) {
-    ArrayList<Coordinate> checkingAvenue = new ArrayList<>();
-    if (checkingPiece.getName().equals("Knight") || checkingPiece.getName().equals("Pawn")) {
-      checkingAvenue.add(checkerLoc);
-      checkingAvenue.add(kingLoc);
+    ArrayList<Coordinate> avenue = new ArrayList<>();
+    avenue.add(checkerLoc);
 
-      //'LONG RANGE' PIECES (ROOK, BISHOP, QUEEN)
-    }else {
-      checkingAvenue.add(checkerLoc); //Note: square of the checking piece is also added to checkingAvenue
-      //Case 1: Down the same file.
-      if (checkerLoc.file==kingLoc.file) {
-        if (checkerLoc.rank>kingLoc.rank) {
-          Coordinate tempLoc = new Coordinate(checkerLoc.file,checkerLoc.rank-1);
-          while (tempLoc.rank > 0 && tempLoc.rank > kingLoc.rank) {
-            checkingAvenue.add(tempLoc);
-            tempLoc = new Coordinate(tempLoc.file,tempLoc.rank-1);
-          }
-          //Case 1.1 Up the same rank.
-        }else {
-          Coordinate tempLoc = new Coordinate(checkerLoc.file, checkerLoc.rank+1);
-          while (tempLoc.rank < 8 && tempLoc.rank < kingLoc.rank) {
-            checkingAvenue.add(tempLoc);
-            tempLoc = new Coordinate(tempLoc.file,tempLoc.rank+1);
-          }
-        }
-        //Case 2: Along the same rank.
-      }else if (checkerLoc.rank==kingLoc.rank) {
-        //2.1 down the file
-        if (checkerLoc.file>kingLoc.file) {
-          Coordinate tempLoc = new Coordinate(checkerLoc.file-1,checkerLoc.rank);
-          while (tempLoc.file > 0 && tempLoc.file > kingLoc.file) {
-            checkingAvenue.add(tempLoc);
-            tempLoc = new Coordinate(tempLoc.file-1,tempLoc.rank);
-          }
-          //2.2: Up the file.
-        }else {
-          Coordinate tempLoc = new Coordinate(checkerLoc.file+1, checkerLoc.rank);
-          while (tempLoc.file < 8 && tempLoc.file < kingLoc.file) {
-            checkingAvenue.add(tempLoc);
-            tempLoc = new Coordinate(tempLoc.file+1,tempLoc.rank);
-          }
-        }
-      }
-      //Same Diagonal //TODO: EXTEND THE CHECKING AVENUE BY ONE.
-      else if((checkerLoc.file+checkerLoc.rank)==kingLoc.file+kingLoc.rank) {
-        if (checkerLoc.rank>kingLoc.rank) {
-          Coordinate temp = new Coordinate(checkerLoc.file+1, checkerLoc.rank-1);
-          while (temp.rank > 0 && temp.rank > kingLoc.rank) {
-            checkingAvenue.add(temp);
-            temp = new Coordinate(temp.file+1,temp.rank-1);
-          }
-        }else {
-          Coordinate temp = new Coordinate(checkerLoc.file-1, checkerLoc.rank+1);
-          while (temp.rank < 8 && temp.rank < kingLoc.rank) {
-            checkingAvenue.add(temp);
-            temp = new Coordinate(temp.file-1,temp.rank+1);
-          }
-        }
-      }
-      else if((checkerLoc.file-checkerLoc.rank)==kingLoc.file-kingLoc.rank) {
-        if (checkerLoc.rank>kingLoc.rank) {
-          Coordinate temp = new Coordinate(checkerLoc.file-1, checkerLoc.rank-1);
-          while (temp.rank > 0 && temp.rank > kingLoc.rank) {
-            checkingAvenue.add(temp);
-            temp = new Coordinate(temp.file-1,temp.rank-1);
-          }
-        }else {
-          Coordinate temp = new Coordinate(checkerLoc.file+1, checkerLoc.rank+1);
-          while (temp.rank < 8 && temp.rank < kingLoc.rank) {
-            checkingAvenue.add(temp);
-            temp = new Coordinate(temp.file+1,temp.rank+1);
-          }
-        }
-      }
+    if (checkingPiece.getName().equals("Knight") || checkingPiece.getName().equals("Pawn")) {
+      avenue.add(kingLoc);
+      return avenue;
     }
-    return checkingAvenue;
+
+    addCoordinatesBetween(avenue, checkerLoc, kingLoc, false);
+    return avenue;
   }
 
-  /**
-   * Returns all the Cells along the Checking Avenue.  (All cells between the King and Checking piece)
-   * @param checkingPiece
-   * @param checkerLoc
-   * @param kingLoc
-   * @return
-   */
   public static ArrayList<Coordinate> getCheckingAvenue(Piece checkingPiece, Coordinate checkerLoc, Coordinate kingLoc) {
-    ArrayList<Coordinate> checkingAvenue = new ArrayList<>();
+    ArrayList<Coordinate> avenue = new ArrayList<>();
+    avenue.add(checkerLoc);
+
     if (checkingPiece.getName().equals("Knight") || checkingPiece.getName().equals("Pawn")) {
-      checkingAvenue.add(checkerLoc);
-      checkingAvenue.add(kingLoc);
-
-      //'LONG RANGE' PIECES (ROOK, BISHOP, QUEEN)
-    }else {
-      checkingAvenue.add(checkerLoc); //Note: square of the checking piece is also added to checkingAvenue
-      //Case 1: Down the same file.
-      if (checkerLoc.file==kingLoc.file) {
-        if (checkerLoc.rank>kingLoc.rank) {
-          Coordinate tempLoc = new Coordinate(checkerLoc.file,checkerLoc.rank-1);
-          while (tempLoc.rank >= 0 && tempLoc.rank >= kingLoc.rank-1) {
-            checkingAvenue.add(tempLoc);
-            tempLoc = new Coordinate(tempLoc.file,tempLoc.rank-1);
-          }
-          //Case 1.1 Up the same rank.
-        }else {
-          Coordinate tempLoc = new Coordinate(checkerLoc.file, checkerLoc.rank+1);
-          while (tempLoc.rank < 8 && tempLoc.rank <= kingLoc.rank + 1) {
-            checkingAvenue.add(tempLoc);
-            tempLoc = new Coordinate(tempLoc.file,tempLoc.rank+1);
-          }
-        }
-      //Case 2: Along the same rank.
-      }else if (checkerLoc.rank==kingLoc.rank) {
-        //2.1 down the file
-        if (checkerLoc.file>kingLoc.file) {
-          Coordinate tempLoc = new Coordinate(checkerLoc.file-1,checkerLoc.rank);
-          while (tempLoc.file >= 0 && tempLoc.file >= kingLoc.file - 1) {
-            checkingAvenue.add(tempLoc);
-            tempLoc = new Coordinate(tempLoc.file-1,tempLoc.rank);
-          }
-          //2.2: Up the file.
-        }else {
-          Coordinate tempLoc = new Coordinate(checkerLoc.file+1, checkerLoc.rank);
-          while (tempLoc.file < 8 && tempLoc.file <= kingLoc.file + 1) {
-            checkingAvenue.add(tempLoc);
-            tempLoc = new Coordinate(tempLoc.file+1,tempLoc.rank);
-          }
-        }
-      }
-      //Same Diagonal
-      else if((checkerLoc.file+checkerLoc.rank)==kingLoc.file+kingLoc.rank) {
-        if (checkerLoc.rank>kingLoc.rank) {
-          Coordinate temp = new Coordinate(checkerLoc.file+1, checkerLoc.rank-1);
-          while (temp.rank >= 0 && temp.rank >= kingLoc.rank - 1) {
-            checkingAvenue.add(temp);
-            temp = new Coordinate(temp.file+1,temp.rank-1);
-          }
-        }else {
-          Coordinate temp = new Coordinate(checkerLoc.file-1, checkerLoc.rank+1);
-          while (temp.rank < 8 && temp.rank <= kingLoc.rank + 1) {
-            checkingAvenue.add(temp);
-            temp = new Coordinate(temp.file-1,temp.rank+1);
-          }
-        }
-      }
-      else if((checkerLoc.file-checkerLoc.rank)==kingLoc.file-kingLoc.rank) {
-        if (checkerLoc.rank>kingLoc.rank) {
-          Coordinate temp = new Coordinate(checkerLoc.file-1, checkerLoc.rank-1);
-          while (temp.rank >= 0 && temp.rank >= kingLoc.rank - 1) {
-            checkingAvenue.add(temp);
-            temp = new Coordinate(temp.file-1,temp.rank-1);
-          }
-        }else {
-          Coordinate temp = new Coordinate(checkerLoc.file+1, checkerLoc.rank+1);
-          while (temp.rank < 8 && temp.rank <= kingLoc.rank + 1) {
-            checkingAvenue.add(temp);
-            temp = new Coordinate(temp.file+1,temp.rank+1);
-          }
-        }
-      }
+      avenue.add(kingLoc);
+      return avenue;
     }
-    return checkingAvenue;
+
+    addCoordinatesBetween(avenue, checkerLoc, kingLoc, true);
+    return avenue;
   }
 
-  /**
-   * Iterates over all the pieces and updates the Cell's of the board and sets pieces to Pinned/Reveal Checkers.
-   * ALSO SETS CHECKS IF A KING CAN BE CAPTURED.
-   * @param ChessBoard
-   * @return
-   */
-  public static Board updateBoardMeta(Board ChessBoard) {
-    ChessBoard = clearBoard(ChessBoard);
-    for (Piece piece : ChessBoard.whitePieces) {
-      ArrayList<Move> rawMoves = piece.generateMoves(piece.getPos(), ChessBoard.board);
-      for (Move mv : rawMoves) {
-        if (mv.piece==null || (mv.piece.getName().equals("Pawn") && !(mv.coverMove || mv.protectionMove ||mv.isCapture))) {
-          //Extend the checking avenue one beyond the king so that that square is not available on black next Move
-          //1. If the move is a protection move. Update the board, the boards piece and the Piece.
-        }else if (mv.protectionMove) {
-          ChessBoard.board[mv.toCoord.rank][mv.toCoord.file].addAttacker(mv.piece);
-          ChessBoard.board[mv.toCoord.rank][mv.toCoord.file].piece.addProtector(mv.piece);
+  private static void addCoordinatesBetween(ArrayList<Coordinate> avenue, Coordinate from, Coordinate to, boolean extended) {
+    int fileDiff = Integer.compare(to.file, from.file);
+    int rankDiff = Integer.compare(to.rank, from.rank);
 
-          if (mv.isReveal) {
-            int revealIndex = Board.getIndex(ChessBoard.whitePieces, mv.getRevealLoc());
-            ChessBoard.whitePieces.get(revealIndex).setReveal();
-          }
-          if (mv.isRevealQueen) {
-            int revealIndex = Board.getIndex(ChessBoard.whitePieces, mv.getRevealQueenLocation());
-            ChessBoard.whitePieces.get(revealIndex).setRevealQueen();
-          }
-          //2 If the move is a capture.  Update the board.
-        }else if (mv.isCapture){
-          //2.1 If the captured piece is a King, then set the opponent to in Check!!
-          if (mv.capturablePiece.getName().equals("King")){
-            ((King)ChessBoard.blackPieces.get(0)).setCheck(mv.fromCoord, getCheckingAvenue(mv.piece, mv.fromCoord, ChessBoard.blackPieces.get(0).getPos()));
-          }
-            ChessBoard.board[mv.capturablePiece.getPos().rank][mv.capturablePiece.getPos().file].addAttacker(mv.piece);
-            ChessBoard.board[mv.capturablePiece.getPos().rank][mv.capturablePiece.getPos().file].piece.addAttacker(mv.piece);
+    Coordinate current = new Coordinate(from.file + fileDiff, from.rank + rankDiff);
+    int limit = extended ? (to.rank + rankDiff) : to.rank;
 
-          //2.2: If the Piece is currently X-Ray's the King through an adversary piece then set the opponent's piece to pinned
-          if (mv.isPin) {
-            int pinnedIndex = Board.getIndex(ChessBoard.blackPieces, mv.getPinLoc());
-            ChessBoard.blackPieces.get(pinnedIndex).setPin(mv.pinAvenue, mv.piece.getPos());
-            ((King)ChessBoard.blackPieces.get(0)).setXRay(piece);
-          }
-          if (mv.isPinQueen) {
-            int pinnedIndex = Board.getIndex(ChessBoard.blackPieces, mv.getQueenPinLoc());
-            ChessBoard.blackPieces.get(pinnedIndex).setQueenPin();
-          }
-          //3: Otherwise (Not in contact with a piece, add an attacker to this square.)
-        }else {
-          ChessBoard.board[mv.toCoord.rank][mv.toCoord.file].addAttacker(mv.piece);
-        }
+    if (fileDiff == 0) { // Same file
+      while (current.rank != limit && current.rank >= 0 && current.rank < 8) {
+        avenue.add(current);
+        current = new Coordinate(current.file, current.rank + rankDiff);
+      }
+    } else if (rankDiff == 0) { // Same rank
+      limit = extended ? (to.file + fileDiff) : to.file;
+      while (current.file != limit && current.file >= 0 && current.file < 8) {
+        avenue.add(current);
+        current = new Coordinate(current.file + fileDiff, current.rank);
+      }
+    } else { // Diagonal
+      while (current.rank != limit && current.rank >= 0 && current.rank < 8) {
+        avenue.add(current);
+        current = new Coordinate(current.file + fileDiff, current.rank + rankDiff);
       }
     }
-    for (Piece piece : ChessBoard.blackPieces) {
-      ArrayList<Move> rawMoves = piece.generateMoves(piece.getPos(), ChessBoard.board);
-      for (Move mv : rawMoves) {
-
-        if (mv.piece==null || (mv.piece.getName().equals("Pawn") && !(mv.coverMove || mv.protectionMove ||mv.isCapture))) {
-          continue;
-          //1 IF the move is a protection move. Update the board, the boards piece and the Piece.
-        }else if (mv.protectionMove) {
-          ChessBoard.board[mv.toCoord.rank][mv.toCoord.file].addAttacker(mv.piece);
-          ChessBoard.board[mv.toCoord.rank][mv.toCoord.file].piece.addProtector(mv.piece);
-
-          //2 IF the move is a capture.  Update the board, the Piece
-        }else if (mv.isCapture){
-          //CONVERT TO MOVE.capturablePiece.location!!
-          //2.1 If the captured piece is a King, then set the opponent to in Check!!
-          if (mv.capturablePiece.getName().equals("King")){
-            ((King)ChessBoard.whitePieces.get(0)).setCheck(mv.fromCoord, getCheckingAvenue(mv.piece, mv.fromCoord, ChessBoard.whitePieces.get(0).getPos()));
-          }
-            ChessBoard.board[mv.capturablePiece.getPos().rank][mv.capturablePiece.getPos().file].addAttacker(mv.piece);
-            ChessBoard.board[mv.capturablePiece.getPos().rank][mv.capturablePiece.getPos().file].piece.addAttacker(mv.piece);
-            //2.1: If the Move is currently pinning a piece (X-Ray's the King through an adversary piece) then set the opponent's piece to pinned
-          if (mv.isPin) {
-            int pinnedIndex = Board.getIndex(ChessBoard.whitePieces, mv.getPinLoc());
-            ChessBoard.whitePieces.get(pinnedIndex).setPin(mv.pinAvenue, mv.piece.getPos());
-            ((King)ChessBoard.whitePieces.get(0)).setXRay(piece);
-          }
-          //3: Otherwise (Not in contact with a piece, add an attacker to this square.
-        }else {
-          ChessBoard.board[mv.toCoord.rank][mv.toCoord.file].addAttacker(mv.piece);
-        }
-      }
-    }
-    return ChessBoard;
   }
-  /**
-   * Resets the lists of attackers and protectors.
-   * @param ChessBoard
-   * @return
-   */
-  public static Board clearBoard(Board ChessBoard){
-    for (int i=0; i<8; i++) {
-      for (int j=0; j<8; j++) {
-        ChessBoard.board[i][j].blackAttackers = new ArrayList<Piece>();
-        ChessBoard.board[i][j].whiteAttackers = new ArrayList<Piece>();
-        if (!ChessBoard.board[i][j].PieceStatus.equals(Status.EMPTY))
-          ChessBoard.board[i][j].piece.reset();
+
+  public static Board updateBoardMeta(Board board) {
+    clearBoard(board);
+    updatePiecesMeta(board, board.whitePieces, true);
+    updatePiecesMeta(board, board.blackPieces, false);
+    return board;
+  }
+
+  private static void updatePiecesMeta(Board board,ArrayList<Piece> pieces, boolean isWhite) {
+    ArrayList<Piece> opponentPieces = isWhite ? board.blackPieces : board.whitePieces;
+
+    for (Piece piece : pieces) {
+      ArrayList<Move> rawMoves = piece.generateMoves(piece.getPos(), board.board);
+
+      for (Move move : rawMoves) {
+        if (shouldSkipMove(move)) continue;
+
+        if (move.protectionMove) {
+          handleProtectionMove(board, move);
+        } else if (move.isCapture) {
+          handleCaptureMetadata(board, move, opponentPieces, isWhite);
+        } else {
+          board.board[move.toCoord.rank][move.toCoord.file].addAttacker(move.piece);
+        }
       }
     }
-    for (Piece piece : ChessBoard.whitePieces) {
-      piece.reset();
+  }
+
+  private static boolean shouldSkipMove(Move move) {
+    return move.piece == null ||
+        (move.piece.getName().equals("Pawn") &&
+            !(move.coverMove || move.protectionMove || move.isCapture));
+  }
+
+  private static void handleProtectionMove(Board board, Move move) {
+    board.board[move.toCoord.rank][move.toCoord.file].addAttacker(move.piece);
+    board.board[move.toCoord.rank][move.toCoord.file].piece.addProtector(move.piece);
+
+    // Determine which piece list to use based on the moving piece's color
+    ArrayList<Piece> revealPieces = move.piece.getColor() ? board.whitePieces : board.blackPieces;
+
+    if (move.isReveal) {
+      int revealIndex = Board.getIndex(revealPieces, move.getRevealLoc());
+      if (revealIndex != -1) {
+        revealPieces.get(revealIndex).setReveal();
+      }
     }
-    for (Piece piece : ChessBoard.blackPieces) {
-      piece.reset();
+    if (move.isRevealQueen) {
+      int revealIndex = Board.getIndex(revealPieces, move.getRevealQueenLocation());
+      if (revealIndex != -1) {
+        revealPieces.get(revealIndex).setRevealQueen();
+      }
     }
-    return ChessBoard;
+  }
+
+  private static void handleCaptureMetadata(Board board, Move move,ArrayList<Piece> opponentPieces, boolean isWhite) {
+    Coordinate capturePos = move.capturablePiece.getPos();
+
+    if (move.capturablePiece.getName().equals("King")) {
+      King opponentKing = (King) opponentPieces.get(0);
+      opponentKing.setCheck(move.fromCoord, getCheckingAvenue(move.piece, move.fromCoord, opponentKing.getPos()));
+    }
+
+    board.board[capturePos.rank][capturePos.file].addAttacker(move.piece);
+    board.board[capturePos.rank][capturePos.file].piece.addAttacker(move.piece);
+
+    if (move.isPin) {
+      int pinnedIndex = Board.getIndex(opponentPieces, move.getPinLoc());
+      opponentPieces.get(pinnedIndex).setPin(move.pinAvenue, move.piece.getPos());
+      King opponentKing = (King) opponentPieces.get(0);
+      opponentKing.setXRay(move.piece);
+    }
+
+    if (move.isPinQueen) {
+      int pinnedIndex = Board.getIndex(opponentPieces, move.getQueenPinLoc());
+      opponentPieces.get(pinnedIndex).setQueenPin();
+    }
+  }
+
+  public static Board clearBoard(Board board) {
+    for (int i = 0; i < 8; i++) {
+      for (int j = 0; j < 8; j++) {
+        board.board[i][j].blackAttackers = new ArrayList<>();
+        board.board[i][j].whiteAttackers = new ArrayList<>();
+        if (!board.board[i][j].PieceStatus.equals(Status.EMPTY)) {
+          board.board[i][j].piece.reset();
+        }
+      }
+    }
+
+    board.whitePieces.forEach(Piece::reset);
+    board.blackPieces.forEach(Piece::reset);
+
+    return board;
   }
 
   public static Agent getAgent(String name, boolean isWhite) {
-    switch(name) {
+    switch (name) {
       case "Random":
         return new Randy(AgentType.RANDY, isWhite);
       case "FishStock":
         return new FishStock(AgentType.FISHSTOCK, isWhite);
       default:
         return new Human(AgentType.HUMAN, isWhite);
-      }
     }
-    public static ArrayList<Move> filterMoves (ArrayList<Move> rawMoves) {
-      ArrayList<Move> filteredMoves = new ArrayList<>();
-      for (Move move : rawMoves) {
-        if (move.protectionMove || move.coverMove) {
-          continue;
-        } else {
-          filteredMoves.add(move);
-        }
-      }
-      return filteredMoves;
-    }
+  }
 
+  public static ArrayList<Move> filterMoves(ArrayList<Move> rawMoves) {
+    return rawMoves.stream()
+        .filter(move -> !(move.protectionMove || move.coverMove))
+        .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
+  }
 
-  /**
-   * Copies a board
-   *
-   * @param ChessBoard
-   * @return
-   */
-  public static Board copyBoard(Board ChessBoard) {
+  public static Board copyBoard(Board chessBoard) {
     ArrayList<Piece> copyWhitePieces = new ArrayList<>();
     ArrayList<Piece> copyBlackPieces = new ArrayList<>();
-    Cell [][] copyBoard = new Cell[8][8];
+    Cell[][] copyBoard = new Cell[8][8];
+
     for (int i = 0; i < 8; i++) {
-      for (int j=0; j<8; j++){
-        copyBoard[i][j] = Cell.copyCell(ChessBoard.board[i][j]);
+      for (int j = 0; j < 8; j++) {
+        copyBoard[i][j] = Cell.copyCell(chessBoard.board[i][j]);
+
         if (copyBoard[i][j].PieceStatus.equals(Status.WHITE)) {
-          if (copyBoard[i][j].piece.getName().equals("King")) {
-            copyWhitePieces.add(0, copyBoard[i][j].piece);
-          } else {
-            copyWhitePieces.add(copyBoard[i][j].piece);
-          }
+          addPieceToList(copyWhitePieces, copyBoard[i][j].piece);
         } else if (copyBoard[i][j].PieceStatus.equals(Status.BLACK)) {
-          if (copyBoard[i][j].piece.getName().equals("King")) {
-            copyBlackPieces.add(0, copyBoard[i][j].piece);
-          } else {
-            copyBlackPieces.add(copyBoard[i][j].piece);
-          }
+          addPieceToList(copyBlackPieces, copyBoard[i][j].piece);
         }
       }
     }
+
     return new Board(copyBoard, copyWhitePieces, copyBlackPieces);
   }
-  public static boolean isDeadPosition(List<Piece> whitesPieces, List<Piece> blackPieces) {
-    boolean isWhiteDead = false;
-    boolean isBlackDead = false;
-    if (whitesPieces.size()==1) {
-      isWhiteDead = true;
-    } else if (whitesPieces.size() == 2) {
-      if (whitesPieces.get(1).getName().equals("Bishop")
-          || whitesPieces.get(1).getName().equals("Knight")){
-        if (blackPieces.size() == 1) {
-          isWhiteDead = true;
-        }
-      }
-    }
-    if (blackPieces.size()==1) {
-      isBlackDead = true;
-    } else if (blackPieces.size() == 2) {
-      if (blackPieces.get(1).getName().equals("Bishop")
-          || blackPieces.get(1).getName().equals("Knight")){
-        if (whitesPieces.size() == 1) {
-          isBlackDead = true;
-        }
-      }
-    }
-    return isWhiteDead && isBlackDead;
-  }
 
-  /**
-   * Counts the number of a specified piece in the list.
-   * @param pieceName
-   * @param pieces
-   * @return
-   */
-  public static int countPieces(String pieceName, List<Piece> pieces) {
-    int count = 0;
-    switch (pieceName) {
-      case "Pawn":
-        for (Piece p : pieces) {
-          if (p.getName().equals("Pawn")) {
-            count++;
-          }
-        }
-        break;
-      case "Rook":
-        for (Piece p : pieces) {
-          if (p.getName().equals("Rook")) {
-            count++;
-          }
-        }
-        break;
-      case "Knight":
-        for (Piece p : pieces) {
-          if (p.getName().equals("Knight")) {
-            count++;
-          }
-        }
-        break;
-      case "Bishop":
-        for (Piece p : pieces) {
-          if (p.getName().equals("Bishop")) {
-            count++;
-          }
-        }
-        break;
-      case "Queen":
-        for (Piece p : pieces) {
-          if (p.getName().equals("Queen")) {
-            count++;
-          }
-        }
-        break;
-      default:
-        return 1;
-    }
-    return count;
-  }
-  public static int getSecondHighestValue(List<Piece> pieces) {
-    List<Piece> sortedPieces = new ArrayList<>();
-    Collections.sort(pieces, new Comparator<Piece>() {
-      @Override
-      public int compare(Piece p1, Piece p2) {
-        return Integer.compare(p2.getValue(), p1.getValue());
-      }
-    });
-    sortedPieces = pieces;
-
-    if (sortedPieces.size() >= 2) {
-      return sortedPieces.get(1).getValue();
+  private static void addPieceToList(ArrayList<Piece> pieces, Piece piece) {
+    if (piece.getName().equals("King")) {
+      pieces.add(0, piece);
     } else {
-      return 0;
+      pieces.add(piece);
     }
+  }
+
+  public static boolean isDeadPosition(ArrayList<Piece> whitePieces,ArrayList<Piece> blackPieces) {
+    return isInsufficientMaterial(whitePieces, blackPieces) &&
+        isInsufficientMaterial(blackPieces, whitePieces);
+  }
+
+  private static boolean isInsufficientMaterial(List<Piece> pieces,ArrayList<Piece> opponentPieces) {
+    if (pieces.size() == 1) return true;
+
+    if (pieces.size() == 2) {
+      String pieceName = pieces.get(1).getName();
+      return (pieceName.equals("Bishop") || pieceName.equals("Knight")) &&
+          opponentPieces.size() == 1;
+    }
+
+    return false;
+  }
+
+  public static int countPieces(String pieceName,ArrayList<Piece> pieces) {
+    return (int) pieces.stream()
+        .filter(p -> p.getName().equals(pieceName))
+        .count();
+  }
+
+  public static int getSecondHighestValue(List<Piece> pieces) {
+    ArrayList<Piece> sortedPieces = new ArrayList<>(pieces);
+    sortedPieces.sort(Comparator.comparingInt(Piece::getValue).reversed());
+    return sortedPieces.size() >= 2 ? sortedPieces.get(1).getValue() : 0;
   }
 }
