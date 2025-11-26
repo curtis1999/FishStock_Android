@@ -27,6 +27,8 @@ public class GameManager extends AppCompatActivity
   // Game state
   private Game game;
   private Board board;
+  private Board displayBoard;
+  private int currentBoardIndex; // Index of the Current board being displayed
   private Agent player1;
   private Agent adversary;
   private Piece selectedPiece;
@@ -46,7 +48,8 @@ public class GameManager extends AppCompatActivity
   private TextView whiteScore;
   private TextView blackScore;
   private Button flipBoardButton;
-
+  private Button leftArrow;
+  private Button rightArrow;
 
   // Captured piece counters
   private Map<String, TextView> whiteCapturedCounters = new HashMap<>();
@@ -93,7 +96,8 @@ public class GameManager extends AppCompatActivity
         }
       }, 1000);
     }
-
+    currentBoardIndex = 0;
+    displayBoard = board;
     setupBoardClickListeners();
   }
 
@@ -303,7 +307,8 @@ public class GameManager extends AppCompatActivity
     Button undo = findViewById(R.id.undo);
     Button draw = findViewById(R.id.draw);
     flipBoardButton = findViewById(R.id.flipBoard);
-
+    rightArrow = findViewById(R.id.rightarrow);
+    leftArrow = findViewById(R.id.leftarrow);
     resign.setOnClickListener(v -> {
       Intent intent = new Intent(GameManager.this, MainActivity.class);
       startActivity(intent);
@@ -316,6 +321,24 @@ public class GameManager extends AppCompatActivity
       });
     }
     draw.setOnClickListener(v -> handleDrawOffer());
+    leftArrow.setOnClickListener(v -> {
+      if (currentBoardIndex > 0) {
+        currentBoardIndex--;
+        displayBoard = game.boardStates.get(currentBoardIndex);
+        updateBoard(displayBoard, boardFlipped);
+        updateButtonStates();
+      }
+    });
+    // Right arrow - go forward in history
+    rightArrow.setOnClickListener(v -> {
+      if (currentBoardIndex < game.boardStates.size() - 1) {
+        currentBoardIndex++;
+        displayBoard = game.boardStates.get(currentBoardIndex);
+        updateBoard(displayBoard, boardFlipped);
+        updateButtonStates();
+      }
+    });
+    updateButtonStates();
 
     flipBoardButton.setOnClickListener(v -> flipBoard());
 
@@ -323,6 +346,17 @@ public class GameManager extends AppCompatActivity
     if (bothAgents()) {
       flipBoardButton.setVisibility(View.GONE);
     }
+  }
+  private void updateButtonStates() {
+    // Disable left arrow if at the beginning
+    leftArrow.setEnabled(currentBoardIndex > 0);
+
+    // Disable right arrow if at the current game state
+    rightArrow.setEnabled(currentBoardIndex < game.boardStates.size() - 1);
+
+    // Optional: Change button appearance when disabled
+    leftArrow.setAlpha(currentBoardIndex > 0 ? 1.0f : 0.5f);
+    rightArrow.setAlpha(currentBoardIndex < game.boardStates.size() - 1 ? 1.0f : 0.5f);
   }
 
   /**
@@ -595,6 +629,9 @@ public class GameManager extends AppCompatActivity
     }
 
     game.boardStates.add(GameService.copyBoard(board));
+    displayBoard = GameService.copyBoard(board);
+    currentBoardIndex = game.boardStates.size()-1;
+    updateButtonStates();
 
     // Check for game over
     if (postMoveChecks(board, isWhite)) {
@@ -742,10 +779,12 @@ public class GameManager extends AppCompatActivity
 
     // Check 3: Checkmate, stalemate
     if (whiteMoved) {
-      return checkBlackStatus();
-    } else {
-      return checkWhiteStatus();
+      if (checkBlackStatus() || checkWhiteStatus()) {
+        updateBoard(board, boardFlipped);
+        return true;
+      }
     }
+    return false;
   }
 
   /**

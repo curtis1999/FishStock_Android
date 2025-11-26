@@ -48,5 +48,9 @@ public class Game implements Serializable {
 /*
 TODOS 1: Add test to promotion checkmate (Not entering the Game Over Dialogue)
 2: Factor draw potential into the pieces evaluation.  (AGENT WILL GET INTO A LOOP LEADING TO DRAW BY REPETITION WHEN IT IS WINNING)
-3: The winning/losing message is inverted when you are playing as black
+3: Update undo so it can only be applied one
+4: Update board position then Game Over Dialogue
+5: Fix the piece counter (esp human v human)
+6: Make flip each move for human v human optional
+7: Left Right arrows (only affects display)
  */
