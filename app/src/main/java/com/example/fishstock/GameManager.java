@@ -71,7 +71,11 @@ public class GameManager extends AppCompatActivity
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_game);
 
-    initializeGame();
+    try {
+      initializeGame();
+    } catch (CloneNotSupportedException e) {
+      e.printStackTrace();
+    }
     initializeUI();
     setupButtonListeners();
 
@@ -172,7 +176,7 @@ public class GameManager extends AppCompatActivity
   /**
    * Initializes the game board and agents.
    */
-  private void initializeGame() {
+  private void initializeGame() throws CloneNotSupportedException {
     this.board = new Board();
     GameService.updateBoardMeta(board);
 
@@ -468,7 +472,13 @@ public class GameManager extends AppCompatActivity
     for (int row = 0; row < 8; row++) {
       for (int col = 0; col < 8; col++) {
         ImageButton button = (ImageButton) getButtonFromCoord(new Coordinate(col, row), boardFlipped);
-        button.setOnClickListener(v -> handleSquareClick(button));
+        button.setOnClickListener(v -> {
+          try {
+            handleSquareClick(button);
+          } catch (CloneNotSupportedException e) {
+            e.printStackTrace();
+          }
+        });
       }
     }
   }
@@ -476,7 +486,7 @@ public class GameManager extends AppCompatActivity
   /**
    * Main handler for board square clicks.
    */
-  private void handleSquareClick(ImageButton button) {
+  private void handleSquareClick(ImageButton button) throws CloneNotSupportedException {
     Coordinate coord = getCoordFromButton(button, boardFlipped);
     Cell cell = board.board[coord.rank][coord.file];
 
@@ -498,7 +508,7 @@ public class GameManager extends AppCompatActivity
   /**
    * Handles clicking on an empty square.
    */
-  private void handleEmptySquareClick(Coordinate coord) {
+  private void handleEmptySquareClick(Coordinate coord) throws CloneNotSupportedException {
     if (selectedPiece != null && isLegalMove(coord, board)) {
       Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), false, isWhite);
       executePlayerMove(move);
@@ -508,7 +518,7 @@ public class GameManager extends AppCompatActivity
   /**
    * Handles clicking on an opponent's piece (capture).
    */
-  private void handleCaptureSquareClick(Coordinate coord) {
+  private void handleCaptureSquareClick(Coordinate coord) throws CloneNotSupportedException {
     if (selectedPiece != null && isLegalMove(coord, board)) {
       Piece capturedPiece = board.board[coord.rank][coord.file].piece;
       Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), true, isWhite);
@@ -610,7 +620,7 @@ public class GameManager extends AppCompatActivity
     }
   }
 
-  private void executePlayerMove(Move move) {
+  private void executePlayerMove(Move move) throws CloneNotSupportedException {
     move = updateMove(move);
 
     if (move.isPromotion) {
@@ -625,7 +635,7 @@ public class GameManager extends AppCompatActivity
   /**
    * Makes a move and continues the game flow.
    */
-  private void makeMoveAndContinue(Move move) {
+  private void makeMoveAndContinue(Move move) throws CloneNotSupportedException {
     GameService.makeMove(board, move, isWhite);
     GameService.updateBoardMeta(board);
 
@@ -780,7 +790,7 @@ public class GameManager extends AppCompatActivity
    * Performs post-move checks for game-ending conditions.
    * Returns true if game is over.
    */
-  private boolean postMoveChecks(Board board, boolean whiteMoved) {
+  private boolean postMoveChecks(Board board, boolean whiteMoved) throws CloneNotSupportedException {
     // Check 1: Insufficient material
     if (GameService.isDeadPosition(board.whitePieces, board.blackPieces)) {
       showGameOver("DRAW BY INSUFFICIENT MATERIAL", 0);
@@ -806,7 +816,7 @@ public class GameManager extends AppCompatActivity
   /**
    * Checks black's status after white moves.
    */
-  private boolean checkBlackStatus() {
+  private boolean checkBlackStatus() throws CloneNotSupportedException {
     blacksPotentialMoves = GameService.generateMoves(board, false);
 
     King blackKing = (King) board.blackPieces.get(0);
@@ -842,7 +852,7 @@ public class GameManager extends AppCompatActivity
   /**
    * Checks white's status after black moves.
    */
-  private boolean checkWhiteStatus() {
+  private boolean checkWhiteStatus() throws CloneNotSupportedException {
     whitesPotentialMoves = GameService.generateMoves(board, true);
 
     King whiteKing = (King) board.whitePieces.get(0);
