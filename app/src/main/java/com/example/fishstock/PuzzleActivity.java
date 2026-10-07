@@ -1,0 +1,503 @@
+package com.example.fishstock;
+
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.Spinner;
+import android.widget.TextView;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.example.fishstock.agents.FishStock;
+import com.example.fishstock.engine.Move;
+import com.example.fishstock.engine.MoveGenerator;
+import com.example.fishstock.engine.Notation;
+import com.example.fishstock.engine.Piece;
+import com.example.fishstock.engine.Position;
+import com.example.fishstock.engine.Rules;
+import com.example.fishstock.puzzles.Puzzle;
+import com.example.fishstock.puzzles.PuzzleBook;
+import com.example.fishstock.puzzles.PuzzleGenerator;
+import com.example.fishstock.puzzles.Theme;
+import com.example.fishstock.ui.BoardRenderer;
+import com.example.fishstock.ui.PromotionDialog;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+/**
+ * Puzzles: GENERATE PUZZLE searches sample positions until it finds one where exactly one move
+ * wins, according to FishStock's evaluation (see {@link PuzzleGenerator}). Most puzzles are a
+ * sequence: play your move, the opponent's reply is played for you, then find the next one.
+ *
+ * HINT first names the idea ("Look for a fork", from the puzzle's themes), then on a second press
+ * shows which piece to move. SOLUTION plays the rest of the line. The themes are shown once the
+ * puzzle is solved.
+ *
+ * "Select theme" chooses where puzzles come from: a newly generated one (any, or endgames only),
+ * or the ready-made collection in {@link PuzzleBook} grouped by theme (Mate in 1-4, Fork, Pawn race...).
+ * For a collection group the button becomes NEXT PUZZLE and steps through the group.
+ *
+ * Opened with {@link #EXTRA_TRAINING} (TRAIN on the analysis screen), it plays that set instead:
+ * the key moments of your game, then collection puzzles on the same themes.
+ */
+public class PuzzleActivity extends AppCompatActivity {
+  private static final long REPLY_DELAY_MS = 600;
+  private static final long WRONG_MOVE_RESET_MS = 900;
+
+  private final Handler main = new Handler(Looper.getMainLooper());
+  private final ExecutorService worker = Executors.newSingleThreadExecutor();
+  private final PuzzleGenerator generator = new PuzzleGenerator(FishStock.weights(), new Random());
+  private AtomicBoolean currentStop = new AtomicBoolean(false);
+
+  private BoardRenderer board;
+  private TextView goalText;
+  private TextView feedbackText;
+  private TextView progressText;
+  private Button generateButton;
+  private Button hintButton;
+  private Button solutionButton;
+  private Spinner themeSpinner;
+  /** Menu entries: the two "new puzzle" choices, then the collection's groups. */
+  private final List<String> themeChoices = new ArrayList<>();
+  private int bookIndex = -1;
+  /** String[]: a training set, one {@link PuzzleBook#format} entry per puzzle. */
+  public static final String EXTRA_TRAINING = "training";
+  private List<Puzzle> training;
+  private int trainingIndex = -1;
+  private static final String NEW_ANY = "New puzzle (any)";
+  private static final String NEW_ENDGAME = "New endgame puzzle";
+
+  private Puzzle puzzle;
+  private Position shown;          // what is on the board now
+  private int step;                // which of the solver's moves we are waiting for (0-based)
+  private int hintLevel;           // 0 = none yet, 1 = idea shown, 2 = piece shown
+  private int selectedSquare = -1;
+  private boolean finished;        // solved or solution shown: the board no longer takes moves
+  private boolean busy;            // a move is animating or about to be undone
+  private boolean destroyed;
+  /** Every position of this puzzle so far (start, then after each move), for the arrows. */
+  private final List<Position> trail = new ArrayList<>();
+  private int trailIndex = -1;
+  private Button backButton;
+  private Button forwardButton;
+
+  @Override
+  protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    setContentView(R.layout.activity_puzzle);
+    board = new BoardRenderer(this);
+    goalText = findViewById(R.id.puzzleGoal);
+    feedbackText = findViewById(R.id.puzzleFeedback);
+    progressText = findViewById(R.id.puzzleProgress);
+    generateButton = findViewById(R.id.generatePuzzle);
+    hintButton = findViewById(R.id.puzzleHint);
+    solutionButton = findViewById(R.id.puzzleSolution);
+    themeSpinner = findViewById(R.id.themeSpinner);
+    backButton = findViewById(R.id.puzzleBack);
+    forwardButton = findViewById(R.id.puzzleForward);
+    backButton.setOnClickListener(v -> stepTrail(-1));
+    forwardButton.setOnClickListener(v -> stepTrail(+1));
+    updateNav();
+    setUpThemes();
+
+    board.setOnSquareClickListener(this::onSquareClicked);
+    generateButton.setOnClickListener(v -> nextPuzzle());
+    hintButton.setOnClickListener(v -> showHint());
+    solutionButton.setOnClickListener(v -> showSolution());
+
+    board.draw(Position.startingPosition());
+    setPuzzleButtonsEnabled(false);
+    // Nothing is searched until you ask: press GENERATE PUZZLE or pick a theme.
+    goalText.setText("Press Generate Puzzle, or pick a theme below");
+    progressText.setText("");
+
+    String[] set = getIntent().getStringArrayExtra(EXTRA_TRAINING);
+    if (set != null && set.length > 0) {
+      training = new ArrayList<>();
+      for (String e : set) {
+        Puzzle p = PuzzleBook.parse(e);
+        if (p != null) training.add(p);
+      }
+      findViewById(R.id.puzzleModeRow).setVisibility(View.GONE);
+      setTitle("Training");
+      nextPuzzle();
+    }
+  }
+
+  @Override
+  protected void onDestroy() {
+    destroyed = true;
+    currentStop.set(true);
+    worker.shutdownNow();
+    main.removeCallbacksAndMessages(null);
+    board.cancelAnimation();
+    super.onDestroy();
+  }
+
+  // ================================================================ choosing
+
+  private void setUpThemes() {
+    themeChoices.add(NEW_ANY);
+    themeChoices.add(NEW_ENDGAME);
+    List<String> labels = new ArrayList<>(themeChoices);
+    for (Map.Entry<String, List<Puzzle>> e : PuzzleBook.groups().entrySet()) {
+      themeChoices.add(e.getKey());
+      labels.add(String.format(Locale.US, "%s (%d)", e.getKey(), e.getValue().size()));
+    }
+    ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, labels);
+    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+    themeSpinner.setAdapter(adapter);
+    themeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+      private boolean first = true;
+
+      @Override
+      public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+        if (first) { // fired once when the menu is set up: don't start anything yet
+          first = false;
+          return;
+        }
+        bookIndex = -1;
+        String theme = selectedTheme();
+        if (theme.equals(NEW_ANY) || theme.equals(NEW_ENDGAME)) {
+          // Choosing a "new puzzle" option only changes what the button does.
+          generateButton.setText("Generate Puzzle");
+          return;
+        }
+        nextPuzzle(); // a collection group: show its first puzzle straight away
+      }
+
+      @Override
+      public void onNothingSelected(AdapterView<?> parent) {
+      }
+    });
+  }
+
+  private String selectedTheme() {
+    int i = themeSpinner.getSelectedItemPosition();
+    return i >= 0 && i < themeChoices.size() ? themeChoices.get(i) : NEW_ANY;
+  }
+
+  /** GENERATE PUZZLE / NEXT PUZZLE: from the generator, or the next one in the chosen group. */
+  private void nextPuzzle() {
+    if (training != null) {
+      nextTrainingPuzzle();
+      return;
+    }
+    String theme = selectedTheme();
+    if (theme.equals(NEW_ANY) || theme.equals(NEW_ENDGAME)) {
+      generateButton.setText("Generate Puzzle");
+      generate();
+      return;
+    }
+    List<Puzzle> group = PuzzleBook.groups().get(theme);
+    if (group == null || group.isEmpty()) return;
+    currentStop.set(true);
+    main.removeCallbacksAndMessages(null);
+    board.cancelAnimation();
+    bookIndex = (bookIndex + 1) % group.size();
+    generateButton.setText(group.size() > 1 ? "Next Puzzle" : "Show Again");
+    show(group.get(bookIndex));
+    progressText.setText(String.format(Locale.US, "%s: puzzle %d of %d", theme, bookIndex + 1, group.size()));
+  }
+
+  /** Training sets go in order; after the last one, NEXT PUZZLE starts the set again. */
+  private void nextTrainingPuzzle() {
+    if (training.isEmpty()) return;
+    trainingIndex++;
+    if (trainingIndex >= training.size()) {
+      trainingIndex = -1;
+      generateButton.setText("Start Again");
+      goalText.setText("Training complete! Well done.");
+      feedbackText.setText("");
+      progressText.setText(String.format(Locale.US, "%d puzzles from your game", training.size()));
+      setPuzzleButtonsEnabled(false);
+      finished = true;
+      return;
+    }
+    currentStop.set(true);
+    main.removeCallbacksAndMessages(null);
+    board.cancelAnimation();
+    generateButton.setText(trainingIndex == training.size() - 1 ? "Finish" : "Next Puzzle");
+    show(training.get(trainingIndex));
+    progressText.setText(String.format(Locale.US, "Training: puzzle %d of %d", trainingIndex + 1, training.size()));
+  }
+
+  // ================================================================ generating
+
+  private void generate() {
+    currentStop.set(true);
+    final AtomicBoolean stop = new AtomicBoolean(false);
+    currentStop = stop;
+    main.removeCallbacksAndMessages(null);
+    board.cancelAnimation();
+    puzzle = null;
+    finished = true;
+    busy = false;
+    selectedSquare = -1;
+    generateButton.setEnabled(false);
+    setPuzzleButtonsEnabled(false);
+    final PuzzleGenerator.Mode mode = selectedTheme().equals(NEW_ENDGAME) ? PuzzleGenerator.Mode.ENDGAME : PuzzleGenerator.Mode.MIXED;
+    goalText.setText(mode == PuzzleGenerator.Mode.ENDGAME ? "Looking for an endgame puzzle..." : "Looking for a puzzle...");
+    feedbackText.setText("");
+    progressText.setText("Searching");
+
+    worker.execute(() -> {
+      Puzzle found = generator.find(stop, count -> {
+        if (count % 10 != 0) return;
+        main.post(() -> {
+          if (!stop.get()) progressText.setText(String.format(Locale.US, "Searching... %d positions checked", count));
+        });
+      }, mode);
+      main.post(() -> {
+        if (destroyed || stop.get() || found == null) return;
+        show(found);
+      });
+    });
+  }
+
+  private void show(Puzzle p) {
+    puzzle = p;
+    shown = p.position();
+    trail.clear();
+    trail.add(shown.copy());
+    trailIndex = -1;
+    updateNav();
+    step = 0;
+    hintLevel = 0;
+    finished = false;
+    busy = false;
+    selectedSquare = -1;
+    board.setFlipped(!shown.whiteToMove());   // the solver plays up the board
+    board.draw(shown);
+    updateGoal();
+    feedbackText.setText("");
+    progressText.setText("");
+    generateButton.setEnabled(true);
+    setPuzzleButtonsEnabled(true);
+  }
+
+  /** "WHITE TO MOVE: Find the winning sequence (3 moves)" plus "move 2 of 3" once under way. */
+  private void updateGoal() {
+    String side = puzzle.whiteToMove() ? "WHITE" : "BLACK";
+    String text = (puzzle.title.isEmpty() ? "" : puzzle.title + "\n") + side + " TO MOVE: " + puzzle.goal();
+    if (puzzle.movesToFind() > 1 && !finished) {
+      text += String.format(Locale.US, "\nMove %d of %d", step + 1, puzzle.movesToFind());
+    }
+    goalText.setText(text);
+  }
+
+  // ================================================================ solving
+
+  private void onSquareClicked(int sq) {
+    if (puzzle == null || finished || busy) return;
+    if (selectedSquare >= 0) {
+      for (Move m : MoveGenerator.legalMovesFrom(shown, selectedSquare)) {
+        if (m.to != sq) continue;
+        if (m.isPromotion()) {
+          askPromotion(selectedSquare, sq);
+        } else {
+          tryMove(m);
+        }
+        return;
+      }
+    }
+    int piece = shown.pieceAt(sq);
+    boolean ours = Piece.isColor(piece, shown.whiteToMove());
+    selectedSquare = sq != selectedSquare && ours && !MoveGenerator.legalMovesFrom(shown, sq).isEmpty() ? sq : -1;
+    redraw();
+  }
+
+  private void askPromotion(final int from, final int to) {
+    new PromotionDialog(this, shown.whiteToMove(), type -> {
+      if (type == 0) {
+        selectedSquare = -1;
+        redraw();
+        return;
+      }
+      for (Move m : MoveGenerator.legalMovesFrom(shown, from)) {
+        if (m.to == to && m.promotion == type) {
+          tryMove(m);
+          return;
+        }
+      }
+    }).show();
+  }
+
+  private void tryMove(Move m) {
+    selectedSquare = -1;
+    final Position start = shown.copy();
+    Move expected = puzzle.solverMove(step);
+    boolean mates = isMate(start, m);
+    boolean alternative = !m.sameAs(expected) && puzzle.accepts(step, m);
+    if (m.sameAs(expected) || mates || alternative) {
+      boolean last = step == puzzle.movesToFind() - 1 || (mates && !m.sameAs(expected)) || alternative;
+      if (last) {
+        finish(start, m, alternative && !mates ? "Good, that works too. The engine's choice was "
+            + Notation.toSan(start, expected) + ". " : "Correct! ");
+        return;
+      }
+      // Right, and there is more: play it, then the opponent's reply, then wait for the next move.
+      busy = true;
+      hintLevel = 0;
+      feedbackText.setText(Notation.toSan(start, m) + " is right. Keep going!");
+      final Move reply = puzzle.replyTo(step);
+      animate(start, m, () -> main.postDelayed(() -> {
+        if (destroyed || puzzle == null || finished) return;
+        animate(shown.copy(), reply, () -> {
+          step++;
+          busy = false;
+          updateGoal();
+        });
+      }, REPLY_DELAY_MS));
+      return;
+    }
+    // Wrong: show the move, say so, then put the pieces back.
+    busy = true;
+    feedbackText.setText(Notation.toSan(start, m) + " isn't it. Try again!");
+    animate(start, m, () -> main.postDelayed(() -> {
+      if (destroyed || puzzle == null || finished) return;
+      shown = start;
+      if (trail.size() > 1) trail.remove(trail.size() - 1); // the wrong try isn't part of the puzzle
+      busy = false;
+      board.draw(shown);
+    }, WRONG_MOVE_RESET_MS));
+  }
+
+  /** First press: the idea behind the puzzle. Second press: the piece to move. */
+  private void showHint() {
+    if (puzzle == null || finished || busy) return;
+    String idea = hintIdea();
+    if (hintLevel == 0 && idea != null && step == 0) {
+      hintLevel = 1;
+      feedbackText.setText("Hint: " + idea + ".");
+      return;
+    }
+    hintLevel = 2;
+    selectedSquare = puzzle.solverMove(step).from;
+    redraw();
+    feedbackText.setText("Hint: move this piece.");
+  }
+
+  /** The most specific theme's nudge, skipping ones that would give away too little. */
+  private String hintIdea() {
+    for (Theme t : puzzle.themes) {
+      if (t == Theme.ENDGAME || t == Theme.MATE) continue; // the goal already says so
+      return t.hint;
+    }
+    return null;
+  }
+
+  private void showSolution() {
+    if (puzzle == null || finished || busy) return;
+    List<Move> rest = new ArrayList<>(puzzle.line.subList(step * 2, puzzle.line.size()));
+    finished = true;
+    setPuzzleButtonsEnabled(false);
+    updateGoal();
+    feedbackText.setText("Solution: " + explanation());
+    playMoves(shown.copy(), rest, () -> playMoves(shown.copy(), puzzle.continuation, null));
+  }
+
+  /** Solved: play the last move, show what the puzzle was about, then the expected follow-up. */
+  private void finish(Position start, Move m, String prefix) {
+    finished = true;
+    setPuzzleButtonsEnabled(false);
+    updateGoal();
+    feedbackText.setText(prefix + explanation());
+    busy = true;
+    animate(start, m, () -> {
+      if (Rules.isCheckmate(shown)) {
+        busy = false;
+        return;
+      }
+      main.postDelayed(() -> playMoves(shown.copy(), puzzle.continuation, null), REPLY_DELAY_MS);
+    });
+  }
+
+  /** "1. Nxf7+ Kg8 2. Nh6+ (mate in 2, next best move -0.20)\nThemes: Fork, Discovered check" */
+  private String explanation() {
+    String themes = puzzle.themeLabels();
+    return puzzle.lineSan() + "  (" + puzzle.scoreSummary() + ")"
+        + (themes.isEmpty() ? "" : "\nThemes: " + themes);
+  }
+
+  /** Animates moves one after another with a short pause between them. */
+  private void playMoves(final Position from, final List<Move> moves, final Runnable onDone) {
+    if (moves == null || moves.isEmpty() || destroyed || puzzle == null) {
+      busy = false;
+      if (onDone != null) onDone.run();
+      updateNav();
+      return;
+    }
+    busy = true;
+    final Move first = moves.get(0);
+    final List<Move> rest = moves.subList(1, moves.size());
+    animate(from, first, () -> main.postDelayed(() -> {
+      if (destroyed || puzzle == null) return;
+      playMoves(shown.copy(), rest, onDone);
+    }, REPLY_DELAY_MS));
+  }
+
+  /** Slides a move on the board and updates {@link #shown}. */
+  private void animate(Position before, Move m, Runnable onDone) {
+    Position after = before.copy();
+    after.makeMove(m);
+    shown = after;
+    trail.add(after.copy());
+    updateNav();
+    board.animateMove(before, m, after, () -> {
+      if (onDone != null) onDone.run();
+      updateNav();
+    });
+  }
+
+  // ================================================================ looking back
+
+  /** The arrows work once the puzzle is over (solved or solution shown) and nothing is moving. */
+  private void updateNav() {
+    boolean on = puzzle != null && finished && !busy && trail.size() > 1;
+    int at = trailIndex < 0 ? trail.size() - 1 : trailIndex;
+    backButton.setEnabled(on && at > 0);
+    forwardButton.setEnabled(on && at < trail.size() - 1);
+    backButton.setAlpha(backButton.isEnabled() ? 1f : 0.4f);
+    forwardButton.setAlpha(forwardButton.isEnabled() ? 1f : 0.4f);
+  }
+
+  private void stepTrail(int delta) {
+    if (puzzle == null || !finished || busy || trail.isEmpty()) return;
+    int at = trailIndex < 0 ? trail.size() - 1 : trailIndex;
+    at = Math.max(0, Math.min(trail.size() - 1, at + delta));
+    trailIndex = at;
+    board.draw(trail.get(at));
+    progressText.setText(at == 0 ? "Start position" : String.format(Locale.US, "After move %d of %d", at, trail.size() - 1));
+    updateNav();
+  }
+
+  private static boolean isMate(Position pos, Move m) {
+    Position p = pos.copy();
+    p.makeMove(m);
+    return Rules.isCheckmate(p);
+  }
+
+  private void redraw() {
+    board.draw(shown);
+    if (selectedSquare >= 0) board.highlight(shown, selectedSquare, MoveGenerator.legalMovesFrom(shown, selectedSquare));
+  }
+
+  private void setPuzzleButtonsEnabled(boolean enabled) {
+    hintButton.setEnabled(enabled);
+    solutionButton.setEnabled(enabled);
+    hintButton.setAlpha(enabled ? 1f : 0.5f);
+    solutionButton.setAlpha(enabled ? 1f : 0.5f);
+  }
+}

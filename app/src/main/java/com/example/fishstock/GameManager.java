@@ -1,1129 +1,635 @@
 package com.example.fishstock;
 
-import androidx.appcompat.app.AppCompatActivity;
-
+import android.content.Context;
 import android.content.Intent;
-import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.view.View;
 import android.widget.Button;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.example.fishstock.Agents.*;
-import com.example.fishstock.Pieces.*;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.example.fishstock.agents.Agent;
+import com.example.fishstock.agents.AgentFactory;
+import com.example.fishstock.agents.AgentSpec;
+import com.example.fishstock.agents.Human;
+import com.example.fishstock.engine.Game;
+import com.example.fishstock.engine.GameResult;
+import com.example.fishstock.engine.Move;
+import com.example.fishstock.engine.MoveGenerator;
+import com.example.fishstock.engine.Piece;
+import com.example.fishstock.engine.Position;
+import com.example.fishstock.engine.Square;
+import com.example.fishstock.eval.Evaluator;
+import com.example.fishstock.eval.WeightedEvaluator;
+import com.example.fishstock.ui.AgentStore;
+import com.example.fishstock.ui.BoardRenderer;
+import com.example.fishstock.ui.GameOverDialog;
+import com.example.fishstock.ui.PromotionDialog;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-public class GameManager extends AppCompatActivity
-    implements PromotionDialog.OnPromotionMoveListener, GameOverDialog.OnGameOverMoveListener {
+/**
+ * The game screen. Holds a {@link Game} (the rules) and two {@link Agent}s (the players) and
+ * keeps the board, counters and messages in step with them.
+ *
+ * Agents think on a background thread, so the screen stays responsive and the board is
+ * always drawn before the "game over" box appears.
+ */
+public class GameManager extends AppCompatActivity {
+  public static final String EXTRA_AGENT_TYPE = "agentType";
+  public static final String EXTRA_CUSTOM_AGENT = "customAgent";
+  public static final String EXTRA_IS_WHITE = "isWhite";
+  public static final String EXTRA_HARD_MODE = "isHardMode";
+  /** Set to an agent name to watch agent vs agent (this agent plays White). */
+  public static final String EXTRA_PLAYER1_TYPE = "player1Type";
+  /** Human vs human: turn the board to face the side to move after each move (default true). */
 
-  // Game state
-  private Game game;
-  private Board board;
-  private Board displayBoard;
-  private int currentBoardIndex; // Index of the Current board being displayed
-  private Agent player1;
-  private Agent adversary;
-  private Piece selectedPiece;
-  private boolean isWhite;
-  private boolean boardFlipped = false; // Tracks current board orientation
-  private boolean isHardMode;
-  private boolean canUndo = true;
-  // Move tracking
-  private ArrayList<Piece> capturedPiecesWhite = new ArrayList<>();
-  private ArrayList<Piece> capturedPiecesBlack = new ArrayList<>();
-  private ArrayList<Move> blacksPotentialMoves = new ArrayList<>();
-  private ArrayList<Move> whitesPotentialMoves = new ArrayList<>();
+  /** Agents accept a draw offer when they think they are at least this many pawns worse. */
+  private static final double ACCEPT_DRAW_BELOW = -1.5;
+  /** Fast agents still wait this long so you can see their move coming. */
+  private static final long MIN_AGENT_MOVE_MS = 600;
+  private static final long FIRST_MOVE_DELAY_MS = 1000;
 
-  // UI elements
+  private enum Mode { HUMAN_VS_AGENT, HUMAN_VS_HUMAN, AGENT_VS_AGENT }
+
+  // ---- game state
+  private final Game game = new Game();
+  private Agent whitePlayer;
+  private Agent blackPlayer;
+  private Mode mode;
+  private boolean humanIsWhite;
+  private boolean hardMode;
+  private String opponentName;
+  private AgentSpec opponentSpec;
+
+  // ---- interaction state
+  private int viewPly;              // which position is on screen (arrows can step back)
+  private int selectedSquare = -1;
+  // Pre-move: chosen while the agent thinks, played as soon as it's legal on your turn.
+  private int premoveSelect = -1;
+  private int premoveFrom = -1;
+  private int premoveTo = -1;
+  private static final int PREMOVE_TINT = 0x663F7FD9;
+  private static final long PREMOVE_DELAY_MS = 120;
+  private boolean undoAvailable;
+  private boolean gameOverShown;
+
+  // ---- thinking
+  private final ExecutorService thinker = Executors.newSingleThreadExecutor();
+  private final Handler main = new Handler(Looper.getMainLooper());
+  private AtomicBoolean currentStop;
+  private boolean thinking;
+  private boolean destroyed;
+
+  // ---- views
+  private BoardRenderer board;
   private TextView messageText;
-  private TextView checkStatusBlack;
-  private TextView checkStatusWhite;
-  private TextView whiteScore;
-  private TextView blackScore;
-  private Button flipBoardButton;
+  private TextView checkStatusTop;
+  private TextView checkStatusBottom;
+  private TextView topScore;
+  private TextView bottomScore;
+  private Button undoButton;
   private Button leftArrow;
   private Button rightArrow;
-  private Button undo;
 
-  // Captured piece counters
-  private Map<String, TextView> whiteCapturedCounters = new HashMap<>();
-  private Map<String, TextView> blackCapturedCounters = new HashMap<>();
-
-  // Piece values for scoring
-  private static final Map<String, Integer> PIECE_VALUES = new HashMap<String, Integer>() {{
-    put("Pawn", 1);
-    put("Knight", 3);
-    put("Bishop", 3);
-    put("Rook", 5);
-    put("Queen", 9);
-  }};
+  private static final int[] COUNTER_TYPES = {Piece.PAWN, Piece.KNIGHT, Piece.BISHOP, Piece.ROOK, Piece.QUEEN};
+  private TextView[] topCounters;
+  private TextView[] bottomCounters;
+  private ImageView[] topIcons;
+  private ImageView[] bottomIcons;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_game);
-
-    try {
-      initializeGame();
-    } catch (CloneNotSupportedException e) {
-      e.printStackTrace();
-    }
-    initializeUI();
-    setupButtonListeners();
-
-    // If player is black and adversary is not human, show initial position then make adversary move
-    if (!isWhite && !adversary.getName().equals("Human")) {
-      // Show initial board state
-      flipBoard();
-      updateBoard(board, isWhite);
-
-      // Wait 1 second then make adversary's first move
-      new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
-        @Override
-        public void run() {
-          makeAdversaryMove();
-        }
-      }, 1000);
-    } else if (bothAgents()) {
-      // Agent vs Agent game - start the game loop
-      updateBoard(board, isWhite);
-      new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
-        @Override
-        public void run() {
-          startAgentVsAgentGame();
-        }
-      }, 1000);
-    }
-    currentBoardIndex = 0;
-    displayBoard = board;
-    setupBoardClickListeners();
+    readPlayers();
+    bindViews();
+    board.setFlipped(mode == Mode.HUMAN_VS_AGENT && !humanIsWhite);
+    board.setOnSquareClickListener(this::onSquareClicked);
+    refresh();
+    if (currentPlayer().isHuman()) return;
+    main.postDelayed(new Runnable() {
+      @Override
+      public void run() {
+        startAgentTurn();
+      }
+    }, FIRST_MOVE_DELAY_MS);
   }
 
-  /**
-   * Checks if both players are agents (not human)
-   */
-  private boolean bothAgents() {
-    return !player1.getName().equals("Human") && !adversary.getName().equals("Human");
+  @Override
+  protected void onDestroy() {
+    destroyed = true;
+    cancelThinking();
+    thinker.shutdownNow();
+    main.removeCallbacksAndMessages(null);
+    super.onDestroy();
   }
 
-  /**
-   * Starts the agent vs agent game loop
-   */
-  private void startAgentVsAgentGame() {
-    if (game.isGameOver) {
+  // ================================================================ setup
+
+  private void readPlayers() {
+    Intent intent = getIntent();
+    hardMode = intent.getBooleanExtra(EXTRA_HARD_MODE, false);
+    humanIsWhite = intent.getBooleanExtra(EXTRA_IS_WHITE, true);
+    String player1 = intent.getStringExtra(EXTRA_PLAYER1_TYPE);
+    String agentType = intent.getStringExtra(EXTRA_AGENT_TYPE);
+    String custom = intent.getStringExtra(EXTRA_CUSTOM_AGENT);
+
+    opponentSpec = custom != null ? AgentSpec.parse(custom) : AgentSpec.byName(agentType);
+    opponentName = opponentSpec.name;
+    Agent opponent = AgentFactory.create(opponentSpec, true);
+
+    if (player1 != null && !player1.equals("Human")) {
+      mode = Mode.AGENT_VS_AGENT;
+      whitePlayer = AgentFactory.create(AgentSpec.byName(player1), true);
+      blackPlayer = opponent;
+      humanIsWhite = true;
+    } else if (opponent.isHuman()) {
+      mode = Mode.HUMAN_VS_HUMAN;
+      whitePlayer = new Human();
+      blackPlayer = new Human();
+      humanIsWhite = true;
+    } else {
+      mode = Mode.HUMAN_VS_AGENT;
+      whitePlayer = humanIsWhite ? new Human() : opponent;
+      blackPlayer = humanIsWhite ? opponent : new Human();
+    }
+  }
+
+  private void bindViews() {
+    board = new BoardRenderer(this);
+    messageText = findViewById(R.id.welcomeMessage);
+    checkStatusTop = findViewById(R.id.checkStatusTop);
+    checkStatusBottom = findViewById(R.id.checkStatusBottom);
+    topScore = findViewById(R.id.topScore);
+    bottomScore = findViewById(R.id.BottomScore);
+
+    topCounters = new TextView[] {find(R.id.numCapturedTopPawns), find(R.id.numCapturedTopKnights),
+        find(R.id.numCapturedTopBishops), find(R.id.numCapturedTopRooks), find(R.id.numCapturedTopQueens)};
+    bottomCounters = new TextView[] {find(R.id.numCapturedBottomPawns), find(R.id.numCapturedBottomKnights),
+        find(R.id.numCapturedBottomBishops), find(R.id.numCapturedBottomRooks), find(R.id.numCapturedBottomQueens)};
+    topIcons = new ImageView[] {findViewById(R.id.topCapturedPawns), findViewById(R.id.topCapturedKnights),
+        findViewById(R.id.topCapturedBishops), findViewById(R.id.topCapturedRooks), findViewById(R.id.topCapturedQueens)};
+    bottomIcons = new ImageView[] {findViewById(R.id.bottomCapturedPawns), findViewById(R.id.bottomCapturedKnights),
+        findViewById(R.id.bottomCapturedBishops), findViewById(R.id.bottomCapturedRooks), findViewById(R.id.bottomCapturedQueens)};
+
+    TextView player1Name = findViewById(R.id.player1);
+    TextView player2Name = findViewById(R.id.player2);
+    switch (mode) {
+      case AGENT_VS_AGENT:
+        player1Name.setText(whitePlayer.name());
+        player2Name.setText(blackPlayer.name());
+        break;
+      case HUMAN_VS_HUMAN:
+        player1Name.setText("Player1");
+        player2Name.setText("Player2");
+        break;
+      default:
+        player1Name.setText("Player");
+        player2Name.setText(opponentName);
+    }
+
+    Button resign = findViewById(R.id.resign);
+    Button draw = findViewById(R.id.draw);
+    Button flip = findViewById(R.id.flipBoard);
+    undoButton = findViewById(R.id.undo);
+    leftArrow = findViewById(R.id.leftarrow);
+    rightArrow = findViewById(R.id.rightarrow);
+
+    resign.setOnClickListener(v -> onResign());
+    draw.setOnClickListener(v -> onDrawOffer());
+    undoButton.setOnClickListener(v -> onUndo());
+    flip.setOnClickListener(v -> onFlip());
+    leftArrow.setOnClickListener(v -> stepView(-1));
+    rightArrow.setOnClickListener(v -> stepView(+1));
+    if (mode == Mode.AGENT_VS_AGENT) {
+      flip.setVisibility(View.GONE);
+      draw.setVisibility(View.GONE);
+    }
+  }
+
+  private TextView find(int id) {
+    return findViewById(id);
+  }
+
+  // ================================================================ turn handling
+
+  private Agent currentPlayer() {
+    return game.whiteToMove() ? whitePlayer : blackPlayer;
+  }
+
+  private void onSquareClicked(int sq) {
+    if (game.isOver()) return;
+    if (mode == Mode.HUMAN_VS_AGENT && !currentPlayer().isHuman() && viewPly == game.plyCount()) {
+      onPremoveTap(sq);
       return;
     }
-
-    try {
-      // Determine whose turn it is
-      boolean whiteTurn = game.whitesMovesLog.size() == game.blacksMovesLog.size();
-      Agent currentAgent = whiteTurn ?
-          (isWhite ? player1 : adversary) :
-          (isWhite ? adversary : player1);
-
-      ArrayList<Move> currentMoves = whiteTurn ? whitesPotentialMoves : blacksPotentialMoves;
-      ArrayList<Move> opponentMoves = whiteTurn ? blacksPotentialMoves : whitesPotentialMoves;
-
-      Move agentMove = currentAgent.getMove(board, currentMoves, opponentMoves);
-
-      // Handle capture
-      if (agentMove.isCapture) {
-        updateCaptureUI(agentMove.capturablePiece, whiteTurn);
-      }
-
-      GameService.makeMove(board, agentMove, whiteTurn);
-      GameService.updateBoardMeta(board);
-
-      // Log move
-      if (whiteTurn) {
-        game.whitesMovesLog.add(agentMove);
-      } else {
-        game.blacksMovesLog.add(agentMove);
-      }
-
-      game.boardStates.add(GameService.copyBoard(board));
-      updateBoard(board, boardFlipped);
-
-      // Check for game over
-      if (postMoveChecks(board, whiteTurn)) {
-        game.isGameOver = true;
-        return;
-      }
-
-      messageText.setText(whiteTurn ? "BLACK TO MOVE" : "WHITE TO MOVE");
-
-      // Continue the game loop
-      new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
-        @Override
-        public void run() {
-          startAgentVsAgentGame();
-        }
-      }, 1000);
-
-    } catch (CloneNotSupportedException e) {
-      e.printStackTrace();
+    if (thinking || !currentPlayer().isHuman()) return;
+    if (viewPly != game.plyCount()) {
+      // Looking at an old position: a tap brings you back to the game.
+      viewPly = game.plyCount();
+      refresh();
+      return;
     }
-  }
-
-  /**
-   * Initializes the game board and agents.
-   */
-  private void initializeGame() throws CloneNotSupportedException {
-    this.board = new Board();
-    GameService.updateBoardMeta(board);
-
-    whitesPotentialMoves = GameService.generateMoves(board, true);
-    blacksPotentialMoves = GameService.generateMoves(board, false);
-    this.isHardMode = getIntent().getBooleanExtra("isHardMode", false);
-    this.isWhite = getIntent().getBooleanExtra("isWhite", false);
-    String player1Type = getIntent().getStringExtra("player1Type");
-    String adversaryType = getIntent().getStringExtra("agentType");
-
-    // Handle agent vs agent
-    if (player1Type != null && !player1Type.equals("Human")) {
-      this.player1 = initializeAgent(player1Type, true);
-      this.adversary = initializeAgent(adversaryType, false);
-    } else {
-      this.adversary = initializeAgent(adversaryType, !isWhite);
-      this.player1 = new Human(AgentType.HUMAN, isWhite);
-    }
-
-    if (isWhite) {
-      this.game = new Game(board, player1.type, adversary.type);
-    } else {
-      this.game = new Game(board, adversary.type, player1.type);
-    }
-
-    this.game.boardStates.add(GameService.copyBoard(this.board));
-    if(!isWhite && !adversary.getName().equals("Human")){
-      updateBoard(board, true);
-    } else {
-      updateBoard(board, !isWhite);
-    }
-
-  }
-
-  /**
-   * Initializes all UI elements and sets up captured piece displays.
-   */
-  private void initializeUI() {
-    messageText = findViewById(R.id.welcomeMessage);
-
-    // Setup player names
-    TextView adversaryName = findViewById(R.id.player2);
-    TextView playerName = findViewById(R.id.player1);
-
-    if (bothAgents()) {
-      playerName.setText(player1.getName());
-      adversaryName.setText(adversary.getName());
-    } else if (adversary.getName().equals("Human")) {
-      adversaryName.setText("Player2");
-      playerName.setText("Player1");
-    } else {
-      adversaryName.setText(adversary.getName());
-      playerName.setText("Player");
-    }
-
-    // Setup score and check status displays based on perspective
-    setupPerspectiveBasedUI();
-
-    // Setup captured piece counters
-    setupCapturedPieceCounters();
-  }
-
-  /**
-   * Sets up UI elements based on player perspective (white or black).
-   */
-  private void setupPerspectiveBasedUI() {
-    if (!boardFlipped) {
-      checkStatusBlack = findViewById(R.id.checkStatusTop);
-      checkStatusWhite = findViewById(R.id.checkStatusBottom);
-      whiteScore = findViewById(R.id.BottomScore);
-      blackScore = findViewById(R.id.topScore);
-    } else {
-      // Flip the perspective for black player
-      checkStatusBlack = findViewById(R.id.checkStatusBottom);
-      checkStatusWhite = findViewById(R.id.checkStatusTop);
-      whiteScore = findViewById(R.id.topScore);
-      blackScore = findViewById(R.id.BottomScore);
-
-      // Update captured piece images
-      updateCapturedPieceImages();
-    }
-  }
-
-  /**
-   * Updates captured piece icons when playing from black's perspective.
-   */
-  private void updateCapturedPieceImages() {
-    // Black pieces on top
-    ((ImageView) findViewById(R.id.topCapturedPawns)).setImageResource(R.drawable.black_pawn);
-    ((ImageView) findViewById(R.id.topCapturedBishops)).setImageResource(R.drawable.black_bishop);
-    ((ImageView) findViewById(R.id.topCapturedKnights)).setImageResource(R.drawable.black_knight);
-    ((ImageView) findViewById(R.id.topCapturedRooks)).setImageResource(R.drawable.black_rook);
-    ((ImageView) findViewById(R.id.topCapturedQueens)).setImageResource(R.drawable.black_queen);
-
-    // White pieces on bottom
-    ((ImageView) findViewById(R.id.bottomCapturedPawns)).setImageResource(R.drawable.white_pawn);
-    ((ImageView) findViewById(R.id.bottomCapturedBishops)).setImageResource(R.drawable.white_bishop);
-    ((ImageView) findViewById(R.id.bottomCapturedKnights)).setImageResource(R.drawable.white_knight);
-    ((ImageView) findViewById(R.id.bottomCapturedRooks)).setImageResource(R.drawable.whie_rook);
-    ((ImageView) findViewById(R.id.bottomCapturedQueens)).setImageResource(R.drawable.white_queen);
-  }
-
-  /**
-   * Sets up maps for captured piece counters based on perspective.
-   */
-  private void setupCapturedPieceCounters() {
-    String topPrefix = !boardFlipped ? "numCapturedTop" : "numCapturedBottom";
-    String bottomPrefix = !boardFlipped ? "numCapturedBottom" : "numCapturedTop";
-
-    // Black captured pieces (displayed on top for white, bottom for black)
-    blackCapturedCounters.put("Pawn", findViewById(getResources().getIdentifier(bottomPrefix + "Pawns", "id", getPackageName())));
-    blackCapturedCounters.put("Rook", findViewById(getResources().getIdentifier(bottomPrefix + "Rooks", "id", getPackageName())));
-    blackCapturedCounters.put("Knight", findViewById(getResources().getIdentifier(bottomPrefix + "Knights", "id", getPackageName())));
-    blackCapturedCounters.put("Bishop", findViewById(getResources().getIdentifier(bottomPrefix + "Bishops", "id", getPackageName())));
-    blackCapturedCounters.put("Queen", findViewById(getResources().getIdentifier(bottomPrefix + "Queens", "id", getPackageName())));
-
-    // White captured pieces
-    whiteCapturedCounters.put("Pawn", findViewById(getResources().getIdentifier(topPrefix + "Pawns", "id", getPackageName())));
-    whiteCapturedCounters.put("Rook", findViewById(getResources().getIdentifier(topPrefix + "Rooks", "id", getPackageName())));
-    whiteCapturedCounters.put("Knight", findViewById(getResources().getIdentifier(topPrefix + "Knights", "id", getPackageName())));
-    whiteCapturedCounters.put("Bishop", findViewById(getResources().getIdentifier(topPrefix + "Bishops", "id", getPackageName())));
-    whiteCapturedCounters.put("Queen", findViewById(getResources().getIdentifier(topPrefix + "Queens", "id", getPackageName())));
-  }
-
-  /**
-   * Sets up button click listeners for game controls.
-   */
-  private void setupButtonListeners() {
-    Button resign = findViewById(R.id.resign);
-    undo = findViewById(R.id.undo);
-    Button draw = findViewById(R.id.draw);
-    flipBoardButton = findViewById(R.id.flipBoard);
-    rightArrow = findViewById(R.id.rightarrow);
-    leftArrow = findViewById(R.id.leftarrow);
-    resign.setOnClickListener(v -> {
-      Intent intent = new Intent(GameManager.this, MainActivity.class);
-      startActivity(intent);
-    });
-      undo.setOnClickListener(v -> {
-        if (isHardMode || !canUndo) {
-          undo.setTextColor(Color.GRAY);
-          undo.setAlpha(0.5f);
+    Position pos = game.position();
+    if (selectedSquare >= 0) {
+      List<Move> targets = MoveGenerator.legalMovesFrom(pos, selectedSquare);
+      for (Move m : targets) {
+        if (m.to == sq) {
+          final int from = selectedSquare;
+          if (game.isPromotionMove(from, sq)) {
+            askPromotion(from, sq);
+          } else {
+            playHumanMove(m);
+          }
           return;
         }
-        else {
-          board = game.getPreviousBoard();
-          GameService.updateBoardMeta(board);
-          updateBoard(board, boardFlipped);
-          undo.setEnabled(canUndo);
-          undo.setAlpha(canUndo ? 1.0f : 0.5f);
-          canUndo = false;
-          undo.setTextColor(Color.GRAY);
-          undo.setAlpha(0.5f);
+      }
+    }
+    int piece = pos.pieceAt(sq);
+    if (sq != selectedSquare && Piece.isColor(piece, pos.whiteToMove())
+        && !MoveGenerator.legalMovesFrom(pos, sq).isEmpty()) {
+      selectedSquare = sq;
+    } else {
+      selectedSquare = -1;
+    }
+    drawBoard();
+  }
+
+  /**
+   * During the agent's turn: tap one of your pieces, then a square, to queue a pre-move. Tapping
+   * again (or anywhere once a pre-move is queued) cancels it. Promotions become queens.
+   */
+  private void onPremoveTap(int sq) {
+    if (premoveFrom >= 0) {
+      clearPremove();
+      messageText.setText("PRE-MOVE CANCELLED");
+      drawBoard();
+      return;
+    }
+    Position pos = game.position();
+    boolean own = Piece.isColor(pos.pieceAt(sq), humanIsWhite);
+    if (premoveSelect < 0 || own) {
+      premoveSelect = own && sq != premoveSelect ? sq : -1;
+    } else {
+      premoveFrom = premoveSelect;
+      premoveTo = sq;
+      premoveSelect = -1;
+      messageText.setText("PRE-MOVE: " + Square.name(premoveFrom) + "-" + Square.name(premoveTo));
+    }
+    drawBoard();
+  }
+
+  private void clearPremove() {
+    premoveSelect = -1;
+    premoveFrom = -1;
+    premoveTo = -1;
+  }
+
+  /** Called when it becomes the human's turn: plays the queued pre-move if it is legal now. */
+  private void tryPremove() {
+    if (premoveFrom < 0) {
+      premoveSelect = -1;
+      return;
+    }
+    int from = premoveFrom;
+    int to = premoveTo;
+    clearPremove();
+    Move m = game.isPromotionMove(from, to) ? game.findMove(from, to, Piece.QUEEN) : game.findMove(from, to, 0);
+    if (m == null) {
+      messageText.setText("PRE-MOVE NOT POSSIBLE NOW");
+      drawBoard();
+      return;
+    }
+    final Move premove = m;
+    main.postDelayed(() -> {
+      if (destroyed || game.isOver() || !currentPlayer().isHuman() || viewPly != game.plyCount()) return;
+      playHumanMove(premove);
+    }, PREMOVE_DELAY_MS);
+  }
+
+  private void askPromotion(final int from, final int to) {
+    new PromotionDialog(this, game.whiteToMove(), type -> {
+      if (type == 0) {
+        selectedSquare = -1;
+        drawBoard();
+        return;
+      }
+      Move m = game.findMove(from, to, type);
+      if (m != null) playHumanMove(m);
+    }).show();
+  }
+
+  private void playHumanMove(Move m) {
+    if (!hardMode && mode != Mode.AGENT_VS_AGENT) undoAvailable = true;
+    playMove(m);
+  }
+
+  /** Plays a move, animates it, then hands the turn to the next player. */
+  private void playMove(Move m) {
+    Position before = game.position().copy();
+    game.play(m);
+    viewPly = game.plyCount();
+    selectedSquare = -1;
+    updateLabels();
+    board.animateMove(before, m, game.position(), this::afterMove);
+  }
+
+  private void afterMove() {
+    if (destroyed) return;
+    refresh();
+    if (game.isOver()) {
+      showGameOver();
+      return;
+    }
+    if (!currentPlayer().isHuman()) startAgentTurn();
+    else if (mode == Mode.HUMAN_VS_AGENT) tryPremove();
+  }
+
+  private void startAgentTurn() {
+    if (destroyed || game.isOver() || thinking) return;
+    final Agent agent = currentPlayer();
+    if (agent.isHuman()) return;
+    thinking = true;
+    final AtomicBoolean stop = new AtomicBoolean(false);
+    currentStop = stop;
+    final Position snapshot = game.position().copy();
+    final List<Long> history = new ArrayList<>(game.positionHistory());
+    final long started = SystemClock.uptimeMillis();
+    updateLabels();
+    thinker.execute(() -> {
+      Move chosen;
+      try {
+        chosen = agent.chooseMove(snapshot, history, stop);
+      } catch (RuntimeException e) {
+        chosen = null;
+      }
+      final Move move = chosen;
+      long wait = Math.max(0, MIN_AGENT_MOVE_MS - (SystemClock.uptimeMillis() - started));
+      main.postDelayed(() -> {
+        if (destroyed || stop.get()) return;
+        thinking = false;
+        Move legal = move == null ? null : game.findMove(move.from, move.to, move.promotion);
+        if (legal == null) {
+          // Should never happen; fall back to any legal move rather than freezing the game.
+          List<Move> moves = game.legalMoves();
+          if (moves.isEmpty()) return;
+          legal = moves.get(0);
         }
-      });
-    draw.setOnClickListener(v -> handleDrawOffer());
-    leftArrow.setOnClickListener(v -> {
-      if (currentBoardIndex > 0) {
-        currentBoardIndex--;
-        displayBoard = game.boardStates.get(currentBoardIndex);
-        updateBoard(displayBoard, boardFlipped);
-        updateButtonStates();
-      }
+        playMove(legal);
+      }, wait);
     });
-    // Right arrow - go forward in history
-    rightArrow.setOnClickListener(v -> {
-      if (currentBoardIndex < game.boardStates.size() - 1) {
-        currentBoardIndex++;
-        displayBoard = game.boardStates.get(currentBoardIndex);
-        updateBoard(displayBoard, boardFlipped);
-        updateButtonStates();
+  }
+
+  private void cancelThinking() {
+    if (currentStop != null) currentStop.set(true);
+    thinking = false;
+  }
+
+  // ================================================================ buttons
+
+  private void onUndo() {
+    clearPremove();
+    if (hardMode || !undoAvailable || mode == Mode.AGENT_VS_AGENT || game.isOver()) return;
+    if (game.plyCount() == 0) return;
+    if (mode == Mode.HUMAN_VS_AGENT) {
+      boolean humanToMove = currentPlayer().isHuman();
+      if (!humanToMove) {
+        // The agent is about to reply (or thinking): take back just the human's move.
+        cancelThinking();
+        board.cancelAnimation();
+        game.undo();
+      } else if (game.plyCount() >= 2) {
+        board.cancelAnimation();
+        game.undo();                  // the agent's reply
+        game.undo();                  // and the human's move
+      } else {
+        return;
       }
-    });
-    updateButtonStates();
-
-    flipBoardButton.setOnClickListener(v -> flipBoard());
-
-    // Hide flip button for agent vs agent games
-    if (bothAgents()) {
-      flipBoardButton.setVisibility(View.GONE);
-    }
-  }
-  private void updateButtonStates() {
-    // Disable left arrow if at the beginning
-    leftArrow.setEnabled(currentBoardIndex > 0);
-
-    // Disable right arrow if at the current game state
-    rightArrow.setEnabled(currentBoardIndex < game.boardStates.size() - 1);
-
-    // Optional: Change button appearance when disabled
-    leftArrow.setAlpha(currentBoardIndex > 0 ? 1.0f : 0.5f);
-    rightArrow.setAlpha(currentBoardIndex < game.boardStates.size() - 1 ? 1.0f : 0.5f);
-  }
-
-  /**
-   * Flips the board orientation
-   */
-  private void flipBoard() {
-    boardFlipped = !boardFlipped;
-
-    // Clear any selected piece
-    if (selectedPiece != null) {
-      clearPieceHighlights();
-      selectedPiece = null;
-    }
-
-    // Re-setup UI elements for new orientation
-    setupPerspectiveBasedUI();
-    setupCapturedPieceCounters();
-
-    // Update captured piece images if needed
-    if (boardFlipped) {
-      updateCapturedPieceImages();
     } else {
-      // Reset to normal orientation images
-      ((ImageView) findViewById(R.id.topCapturedPawns)).setImageResource(R.drawable.black_pawn);
-      ((ImageView) findViewById(R.id.topCapturedBishops)).setImageResource(R.drawable.black_bishop);
-      ((ImageView) findViewById(R.id.topCapturedKnights)).setImageResource(R.drawable.black_knight);
-      ((ImageView) findViewById(R.id.topCapturedRooks)).setImageResource(R.drawable.black_rook);
-      ((ImageView) findViewById(R.id.topCapturedQueens)).setImageResource(R.drawable.black_queen);
-
-      ((ImageView) findViewById(R.id.bottomCapturedPawns)).setImageResource(R.drawable.white_pawn);
-      ((ImageView) findViewById(R.id.bottomCapturedBishops)).setImageResource(R.drawable.white_bishop);
-      ((ImageView) findViewById(R.id.bottomCapturedKnights)).setImageResource(R.drawable.white_knight);
-      ((ImageView) findViewById(R.id.bottomCapturedRooks)).setImageResource(R.drawable.whie_rook);
-      ((ImageView) findViewById(R.id.bottomCapturedQueens)).setImageResource(R.drawable.white_queen);
+      board.cancelAnimation();
+      game.undo();
     }
-
-    // Redraw the board
-    updateBoard(board, boardFlipped);
-
-    // Update captured counters
-    updateAllCapturedCounters();
+    undoAvailable = false;            // one undo per move you make
+    viewPly = game.plyCount();
+    selectedSquare = -1;
+    refresh();
   }
 
-  /**
-   * Updates all captured piece counters after board flip
-   */
-  private void updateAllCapturedCounters() {
-    // Reset all counters to 0
-    for (TextView counter : whiteCapturedCounters.values()) {
-      if (counter != null) counter.setText("0");
-    }
-    for (TextView counter : blackCapturedCounters.values()) {
-      if (counter != null) counter.setText("0");
-    }
-
-    // Re-count captured pieces
-    for (Piece piece : capturedPiecesWhite) {
-      TextView counter = whiteCapturedCounters.get(piece.getName());
-      if (counter != null) {
-        int count = Integer.parseInt(counter.getText().toString());
-        counter.setText(String.valueOf(count + 1));
-      }
-    }
-
-    for (Piece piece : capturedPiecesBlack) {
-      TextView counter = blackCapturedCounters.get(piece.getName());
-      if (counter != null) {
-        int count = Integer.parseInt(counter.getText().toString());
-        counter.setText(String.valueOf(count + 1));
-      }
-    }
+  private void onFlip() {
+    board.setFlipped(!board.isFlipped());
+    refresh();
   }
 
-  /**
-   * Handles draw offer logic.
-   */
-  private void handleDrawOffer() {
-    int playerScore = isWhite ?
-        Integer.parseInt(whiteScore.getText().toString()) :
-        Integer.parseInt(blackScore.getText().toString());
-
-    if (playerScore >= 0) {
-      messageText.setText("DECLINED");
-    } else {
+  private void onDrawOffer() {
+    if (game.isOver()) return;
+    if (mode == Mode.HUMAN_VS_HUMAN) {
+      askOpponentAboutDraw();
+      return;
+    }
+    Agent agent = humanIsWhite ? blackPlayer : whitePlayer;
+    Evaluator ev = agent.evaluator() != null ? agent.evaluator() : WeightedEvaluator.withDefaults();
+    double agentView = ev.evaluateFor(game.position(), !humanIsWhite);
+    if (agentView < ACCEPT_DRAW_BELOW) {
       messageText.setText("ACCEPTED");
-      GameOverDialog ggDialog = new GameOverDialog(this, 0, isWhite, adversary.getName(), game);
-      ggDialog.setOnGameOverListener(this);
-      ggDialog.show();
+      endGame(GameResult.DRAW_AGREED);
+    } else {
+      messageText.setText("DECLINED");
     }
   }
 
-  /**
-   * Sets up click listeners for all board squares.
-   */
-  private void setupBoardClickListeners() {
-    // Disable clicks for agent vs agent games
-    if (bothAgents()) {
+  /** Two players on one phone: the other player has to accept the draw. */
+  private void askOpponentAboutDraw() {
+    String offering = game.whiteToMove() ? "White" : "Black";
+    String other = game.whiteToMove() ? "Black" : "White";
+    new AlertDialog.Builder(this)
+        .setTitle("DRAW OFFER")
+        .setMessage(offering + " offers a draw.\n" + other + ", do you accept?")
+        .setCancelable(false)
+        .setPositiveButton("ACCEPT", (d, which) -> {
+          messageText.setText("DRAW ACCEPTED");
+          endGame(GameResult.DRAW_AGREED);
+        })
+        .setNegativeButton("DECLINE", (d, which) -> messageText.setText("DRAW DECLINED"))
+        .show();
+  }
+
+  private void onResign() {
+    if (mode == Mode.AGENT_VS_AGENT || game.isOver()) {
+      goToMainMenu();
       return;
     }
-
-    for (int row = 0; row < 8; row++) {
-      for (int col = 0; col < 8; col++) {
-        ImageButton button = (ImageButton) getButtonFromCoord(new Coordinate(col, row), boardFlipped);
-        button.setOnClickListener(v -> {
-          try {
-            handleSquareClick(button);
-          } catch (CloneNotSupportedException e) {
-            e.printStackTrace();
-          }
-        });
-      }
-    }
+    boolean whiteResigns = mode == Mode.HUMAN_VS_HUMAN ? game.whiteToMove() : humanIsWhite;
+    endGame(whiteResigns ? GameResult.WHITE_RESIGNS : GameResult.BLACK_RESIGNS);
   }
 
-  /**
-   * Main handler for board square clicks.
-   */
-  private void handleSquareClick(ImageButton button) throws CloneNotSupportedException {
-    Coordinate coord = getCoordFromButton(button, boardFlipped);
-    Cell cell = board.board[coord.rank][coord.file];
-
-    // Case 1: Empty square - making a non-capturing move
-    if (cell.PieceStatus == Status.EMPTY) {
-      handleEmptySquareClick(coord);
-    }
-    // Case 2: Opponent's piece - making a capturing move
-    else if ((cell.PieceStatus == Status.BLACK && isWhite) ||
-        (cell.PieceStatus == Status.WHITE && !isWhite)) {
-      handleCaptureSquareClick(coord);
-    }
-    // Case 3: Own piece - selecting/deselecting
-    else {
-      handleOwnPieceClick(coord, cell);
-    }
+  private void endGame(GameResult result) {
+    cancelThinking();
+    board.cancelAnimation();
+    game.end(result);
+    viewPly = game.plyCount();
+    refresh();
+    showGameOver();
   }
 
-  /**
-   * Handles clicking on an empty square.
-   */
-  private void handleEmptySquareClick(Coordinate coord) throws CloneNotSupportedException {
-    if (selectedPiece != null && isLegalMove(coord, board)) {
-      Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), false, isWhite);
-      executePlayerMove(move);
-    }
+  private void stepView(int delta) {
+    int target = viewPly + delta;
+    if (target < 0 || target > game.plyCount()) return;
+    viewPly = target;
+    selectedSquare = -1;
+    refresh();
   }
 
-  /**
-   * Handles clicking on an opponent's piece (capture).
-   */
-  private void handleCaptureSquareClick(Coordinate coord) throws CloneNotSupportedException {
-    if (selectedPiece != null && isLegalMove(coord, board)) {
-      Piece capturedPiece = board.board[coord.rank][coord.file].piece;
-      Move move = new Move(selectedPiece.getPos(), coord, selectedPiece.getName(), true, isWhite);
-      move.setCapture(capturedPiece);
+  // ================================================================ game over
 
-      updateCaptureUI(capturedPiece, isWhite);
-      executePlayerMove(move);
-    }
-  }
-
-  /**
-   * Handles clicking on player's own piece (select/deselect).
-   */
-  private void handleOwnPieceClick(Coordinate coord, Cell cell) {
-    // Deselect previous piece
-    if (selectedPiece != null) {
-      clearPieceHighlights();
-    }
-
-    // Select new piece if different from current
-    if (selectedPiece == null || !cell.piece.equals(selectedPiece)) {
-      selectPiece(coord, cell);
-    } else {
-      selectedPiece = null;
-    }
-  }
-
-  /**
-   * Selects a piece and highlights its legal moves.
-   */
-  private void selectPiece(Coordinate coord, Cell cell) {
-    // Check if piece is pinned
-    if (isWhite) {
-      int index = Board.getIndex(board.whitePieces, coord);
-      if (index >= 0) {
-        Piece piece = board.whitePieces.get(index);
-        if (piece.isPinned()) {
-          return; // Can't select pinned piece
+  private void showGameOver() {
+    if (gameOverShown) return;
+    gameOverShown = true;
+    final GameResult r = game.result();
+    if (mode == Mode.HUMAN_VS_AGENT) new AgentStore(this).recordResult(opponentName, r.scoreFor(humanIsWhite));
+    // Let the final position appear on screen before the box covers it.
+    main.postDelayed(() -> {
+      if (destroyed) return;
+      new GameOverDialog(GameManager.this, headline(r), GameOverDialog.describe(r), new GameOverDialog.Listener() {
+        @Override
+        public void onExit() {
+          goToMainMenu();
         }
-      }
-    }
 
-    selectedPiece = cell.piece;
-
-    // Highlight selected piece
-    ImageButton pieceButton = (ImageButton) getButtonFromCoord(selectedPiece.getPos(), boardFlipped);
-    pieceButton.setColorFilter(Color.YELLOW, PorterDuff.Mode.OVERLAY);
-
-    // Highlight legal moves
-    ArrayList<Move> legalMoves = selectedPiece.generateMoves(coord, board.board);
-    for (Move move : GameService.filterMoves(legalMoves)) {
-      if (isLegalMove(move.toCoord, board)) {
-        highlightLegalMove(move);
-      }
-    }
-  }
-
-  /**
-   * Highlights a legal move destination square.
-   */
-  private void highlightLegalMove(Move move) {
-    ImageButton button = (ImageButton) getButtonFromCoord(move.toCoord, boardFlipped);
-    Cell targetCell = board.board[move.toCoord.rank][move.toCoord.file];
-
-    if (targetCell.PieceStatus == Status.EMPTY) {
-      // Highlight empty squares
-      if (targetCell.isLight) {
-        button.setImageResource(R.drawable.white_empty_selected);
-      } else {
-        button.setImageResource(R.drawable.black_empty_selected);
-      }
-    } else if ((isWhite && targetCell.PieceStatus == Status.BLACK) ||
-        (!isWhite && targetCell.PieceStatus == Status.WHITE)) {
-      // Highlight capturable pieces
-      button.setColorFilter(Color.RED, PorterDuff.Mode.OVERLAY);
-    }
-  }
-
-  /**
-   * Clears all piece and move highlights.
-   */
-  private void clearPieceHighlights() {
-    if (selectedPiece == null) return;
-
-    // Clear selected piece highlight
-    ImageButton pieceButton = (ImageButton) getButtonFromCoord(selectedPiece.getPos(), boardFlipped);
-    pieceButton.setColorFilter(null);
-
-    // Clear move highlights
-    for (Move move : GameService.filterMoves(selectedPiece.generateMoves(selectedPiece.getPos(), board.board))) {
-      ImageButton button = (ImageButton) getButtonFromCoord(move.toCoord, boardFlipped);
-      Cell cell = board.board[move.toCoord.rank][move.toCoord.file];
-
-      if (cell.PieceStatus == Status.EMPTY) {
-        button.setImageResource(cell.isLight ? R.drawable.empty_light : R.drawable.empty_dark);
-      } else {
-        button.setColorFilter(null);
-      }
-    }
-  }
-
-  private void executePlayerMove(Move move) throws CloneNotSupportedException {
-    move = updateMove(move);
-
-    if (move.isPromotion) {
-      PromotionDialog promotionDialog = new PromotionDialog(this, board, move, isWhite);
-      promotionDialog.setOnPromotionMoveListener(this);
-      promotionDialog.show();
-    } else {
-      makeMoveAndContinue(move);
-    }
-  }
-
-  /**
-   * Makes a move and continues the game flow.
-   */
-  private void makeMoveAndContinue(Move move) throws CloneNotSupportedException {
-    GameService.makeMove(board, move, isWhite);
-    GameService.updateBoardMeta(board);
-
-    // Log move
-    if (isWhite) {
-      game.whitesMovesLog.add(move);
-    } else {
-      game.blacksMovesLog.add(move);
-    }
-
-    game.boardStates.add(GameService.copyBoard(board));
-    displayBoard = GameService.copyBoard(board);
-    currentBoardIndex = game.boardStates.size()-1;
-    updateButtonStates();
-    if (!isHardMode) {
-      canUndo = true;
-      undo.setEnabled(true);
-      undo.setTextColor(Color.BLACK); // Or your original color
-      undo.setAlpha(1.0f);
-
-
-    }
-
-    // Check for game over
-    if (postMoveChecks(board, isWhite)) {
-      return;
-    }
-
-    // Update turn message
-    messageText.setText(isWhite ? "BLACK TO MOVE" : "WHITE TO MOVE");
-
-    // Adversary's turn
-    if (!adversary.getName().equals("Human")) {
-      makeAdversaryMove();
-    } else {
-      // Switch perspective for human vs human
-      isWhite = !isWhite;
-      flipBoard();
-    }
-  }
-
-  /**
-   * Makes the adversary's move.
-   */
-  private void makeAdversaryMove() {
-    try {
-      ArrayList<Move> playersMoves = GameService.generateMoves(board, isWhite);
-      Move adversaryMove;
-
-      if (isWhite) {
-        adversaryMove = adversary.getMove(board, blacksPotentialMoves, playersMoves);
-      } else {
-        adversaryMove = adversary.getMove(board, whitesPotentialMoves, playersMoves);
-      }
-
-      // Handle capture
-      if (adversaryMove.isCapture) {
-        updateCaptureUI(adversaryMove.capturablePiece, !isWhite);
-      }
-
-      GameService.makeMove(board, adversaryMove, !isWhite);
-      GameService.updateBoardMeta(board);
-
-      // Log move
-      if (isWhite) {
-        game.blacksMovesLog.add(adversaryMove);
-      } else {
-        game.whitesMovesLog.add(adversaryMove);
-      }
-
-      game.boardStates.add(GameService.copyBoard(board));
-      updateBoard(board, boardFlipped);
-      postMoveChecks(board, !isWhite);
-
-      messageText.setText(isWhite ? "WHITE TO MOVE" : "BLACK TO MOVE");
-
-    } catch (CloneNotSupportedException e) {
-      e.printStackTrace();
-    }
-  }
-
-  /**
-   * Updates UI when a piece is captured.
-   */
-  private void updateCaptureUI(Piece capturedPiece, boolean capturedByWhite) {
-    String pieceName = capturedPiece.getName();
-    int pieceValue = 0;
-    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-      pieceValue = PIECE_VALUES.getOrDefault(pieceName, 0);
-    }
-
-    // Add to captured pieces list
-    if (capturedByWhite) {
-      capturedPiecesBlack.add(capturedPiece);
-      incrementCapturedCounter(blackCapturedCounters.get(pieceName));
-      updateScores(-pieceValue, pieceValue);
-    } else {
-      capturedPiecesWhite.add(capturedPiece);
-      incrementCapturedCounter(whiteCapturedCounters.get(pieceName));
-      updateScores(pieceValue, -pieceValue);
-    }
-  }
-
-  /**
-   * Increments a captured piece counter.
-   */
-  private void incrementCapturedCounter(TextView counter) {
-    if (counter != null) {
-      int currentCount = Integer.parseInt(counter.getText().toString());
-      counter.setText(String.valueOf(currentCount + 1));
-    }
-  }
-
-  /**
-   * Updates material score displays.
-   */
-  private void updateScores(int whiteChange, int blackChange) {
-    int currentWhiteScore = Integer.parseInt(whiteScore.getText().toString());
-    int currentBlackScore = Integer.parseInt(blackScore.getText().toString());
-
-    whiteScore.setText(String.valueOf(currentWhiteScore + whiteChange));
-    blackScore.setText(String.valueOf(currentBlackScore + blackChange));
-  }
-
-  /**
-   * Updates move metadata for special moves (castling, en passant, promotion).
-   */
-  private Move updateMove(Move move) {
-    // Castling
-    if (move.piece.getName().equals("King") &&
-        Math.abs(move.toCoord.file - move.fromCoord.file) == 2) {
-      move.setCastle();
-    }
-    // Promotion
-    else if (move.piece.getName().equals("Pawn") &&
-        ((isWhite && move.toCoord.rank == 7) || (!isWhite && move.toCoord.rank == 0))) {
-      move.setPromotion(new Queen(move.toCoord, move.piece.getColor()));
-    }
-    // En passant
-    else if (move.piece.getName().equals("Pawn") &&
-        Math.abs(move.toCoord.file - move.fromCoord.file) == 1 &&
-        board.board[move.toCoord.rank][move.toCoord.file].PieceStatus == Status.EMPTY) {
-      move.setEnPassant();
-      int captureRank = isWhite ? move.toCoord.rank - 1 : move.toCoord.rank + 1;
-      move.setCapture(board.board[captureRank][move.toCoord.file].piece);
-    }
-
-    return move;
-  }
-
-  /**
-   * Performs post-move checks for game-ending conditions.
-   * Returns true if game is over.
-   */
-  private boolean postMoveChecks(Board board, boolean whiteMoved) throws CloneNotSupportedException {
-    // Check 1: Insufficient material
-    if (GameService.isDeadPosition(board.whitePieces, board.blackPieces)) {
-      showGameOver("DRAW BY INSUFFICIENT MATERIAL", 0);
-      return true;
-    }
-
-    // Check 2: Threefold repetition
-    if (GameService.isRepetition(game.boardStates, board)) {
-      showGameOver("DRAW BY REPETITION", 0);
-      return true;
-    }
-
-    // Check 3: Checkmate, stalemate
-    if (whiteMoved) {
-      if (checkBlackStatus() || checkWhiteStatus()) {
-        updateBoard(board, boardFlipped);
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /**
-   * Checks black's status after white moves.
-   */
-  private boolean checkBlackStatus() throws CloneNotSupportedException {
-    blacksPotentialMoves = GameService.generateMoves(board, false);
-
-    King blackKing = (King) board.blackPieces.get(0);
-
-    if (blackKing.isDoubleChecked) {
-      checkStatusBlack.setText("DOUBLE CHECK!!");
-      blacksPotentialMoves = GameService.generateMovesDoubleCheck(board, blacksPotentialMoves, false);
-      if (blacksPotentialMoves.isEmpty()) {
-        showGameOver("CHECKMATE!! PLAYER 1 WINS", 1);
-        return true;
-      }
-    } else if (blackKing.isChecked) {
-      checkStatusBlack.setText("CHECK!");
-      blacksPotentialMoves = GameService.generateMovesCheck(board, blacksPotentialMoves, false);
-      if (blacksPotentialMoves.isEmpty()) {
-        showGameOver("CHECKMATE!! PLAYER 1 WINS", 1);
-        return true;
-      }
-    } else {
-      checkStatusWhite.setText("");
-      if (blacksPotentialMoves.isEmpty()) {
-        showGameOver("STALEMATE. THE GAME ENDS IN A DRAW", 0);
-        return true;
-      }
-      updateBoard(board, boardFlipped);
-      selectedPiece = null;
-    }
-
-    updateEndgameStatus();
-    return false;
-  }
-
-  /**
-   * Checks white's status after black moves.
-   */
-  private boolean checkWhiteStatus() throws CloneNotSupportedException {
-    whitesPotentialMoves = GameService.generateMoves(board, true);
-
-    King whiteKing = (King) board.whitePieces.get(0);
-
-    if (whiteKing.isDoubleChecked) {
-      checkStatusWhite.setText("DOUBLE CHECK!!");
-      whitesPotentialMoves = GameService.generateMovesDoubleCheck(board, whitesPotentialMoves, true);
-      if (whitesPotentialMoves.isEmpty()) {
-        showGameOver("CHECKMATE!! PLAYER 1 LOSES", -1);
-        return true;
-      }
-    } else if (whiteKing.isChecked) {
-      checkStatusWhite.setText("CHECK!");
-      whitesPotentialMoves = GameService.generateMovesCheck(board, whitesPotentialMoves, true);
-      if (whitesPotentialMoves.isEmpty()) {
-        showGameOver("CHECKMATE!! PLAYER 1 LOSES", -1);
-        return true;
-      }
-    } else {
-      checkStatusBlack.setText("");
-      if (whitesPotentialMoves.isEmpty()) {
-        showGameOver("STALEMATE. THE GAME ENDS IN A DRAW", 0);
-        return true;
-      }
-      updateBoard(board, boardFlipped);
-    }
-
-    updateEndgameStatus();
-    return false;
-  }
-
-  /**
-   * Shows game over dialog.
-   */
-  private void showGameOver(String message, int result) {
-    messageText.setText(message);
-    GameOverDialog dialog = new GameOverDialog(this, result, isWhite, adversary.getName(), game);
-    dialog.setOnGameOverListener(this);
-    dialog.show();
-  }
-
-  /**
-   * Updates endgame flag if entering endgame.
-   */
-  private void updateEndgameStatus() {
-    if (!game.isEndGame && isEndGame(board)) {
-      game.isEndGame = true;
-    }
-  }
-
-  /**
-   * Determines if the position is an endgame.
-   */
-  public static boolean isEndGame(Board board) {
-    // No queens = endgame
-    boolean hasWhiteQueen = false;
-    boolean hasBlackQueen = false;
-
-    for (Piece piece : board.whitePieces) {
-      if (piece.getName().equals("Queen")) {
-        hasWhiteQueen = true;
-        break;
-      }
-    }
-
-    for (Piece piece : board.blackPieces) {
-      if (piece.getName().equals("Queen")) {
-        hasBlackQueen = true;
-        break;
-      }
-    }
-
-    if (!hasWhiteQueen && !hasBlackQueen) {
-      return true;
-    }
-
-    // Limited minor and major pieces = endgame
-    int whiteMinorMajor = Simple.countByType(board.whitePieces, "Rook")
-        + Simple.countByType(board.whitePieces, "Bishop")
-        + Simple.countByType(board.whitePieces, "Knight");
-
-    int blackMinorMajor = Simple.countByType(board.blackPieces, "Rook")
-        + Simple.countByType(board.blackPieces, "Bishop")
-        + Simple.countByType(board.blackPieces, "Knight");
-
-    return whiteMinorMajor < 5 || blackMinorMajor < 5;
-  }
-
-  /**
-   * Creates an agent based on the agent type string.
-   */
-  public static Agent initializeAgent(String agentName, boolean isWhite) {
-    switch (agentName) {
-      case "Randy":
-        return new Randy(AgentType.RANDY, isWhite);
-      case "Simple":
-        return new Simple(AgentType.SIMPLE, isWhite);
-      case "MinMax":
-        return new MinMax(AgentType.MINMAX, isWhite);
-      case "FishStock":
-        return new FishStock(AgentType.FISHSTOCK, isWhite);
-      default:
-        return new Human(AgentType.HUMAN, isWhite);
-    }
-  }
-
-  /**
-   * Checks if a move to the given coordinate is legal.
-   */
-  private boolean isLegalMove(Coordinate coord, Board board) {
-    if (selectedPiece == null) {
-      return false;
-    }
-
-    King ourKing = isWhite ?
-        (King) board.whitePieces.get(0) :
-        (King) board.blackPieces.get(0);
-
-    ArrayList<Move> legalMoves;
-
-    // Handle check situations
-    if (ourKing.isDoubleChecked) {
-      legalMoves = isWhite ?
-          GameService.generateMovesDoubleCheck(board, whitesPotentialMoves, true) :
-          GameService.generateMovesDoubleCheck(board, blacksPotentialMoves, false);
-    } else if (ourKing.isChecked) {
-      legalMoves = isWhite ?
-          GameService.generateMovesCheck(board, whitesPotentialMoves, true) :
-          GameService.generateMovesCheck(board, blacksPotentialMoves, false);
-    } else {
-      legalMoves = GameService.filterMoves(selectedPiece.generateMoves(selectedPiece.getPos(), board.board));
-    }
-
-    // Check if the coordinate matches any legal move
-    for (Move move : legalMoves) {
-      if (Coordinate.compareCoords(move.toCoord, coord) &&
-          move.piece.getName().equals(selectedPiece.getName())) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * Converts a coordinate to the corresponding button view.
-   */
-  private ImageView getButtonFromCoord(Coordinate coord, boolean flipped) {
-    int resId;
-    if (!flipped) {
-      resId = getResources().getIdentifier(
-          "button" + (7 - coord.rank) + (7 - coord.file),
-          "id",
-          getPackageName());
-    } else {
-      resId = getResources().getIdentifier(
-          "button" + coord.rank + coord.file,
-          "id",
-          getPackageName());
-    }
-    return findViewById(resId);
-  }
-
-  /**
-   * Extracts coordinate from a button's resource ID.
-   */
-  private Coordinate getCoordFromButton(View button, boolean flipped) {
-    String buttonId = getResources().getResourceEntryName(button.getId());
-    int rank;
-    int file;
-
-    if (!flipped) {
-      rank = 7 - (buttonId.charAt(6) - '0');
-      file = 7 - (buttonId.charAt(7) - '0');
-    } else {
-      rank = buttonId.charAt(6) - '0';
-      file = buttonId.charAt(7) - '0';
-    }
-
-    return new Coordinate(file, rank);
-  }
-
-  /**
-   * Updates the entire board display.
-   */
-  public void updateBoard(Board board, boolean flipped) {
-    if (!flipped) {
-      for (int rank = 0; rank < 8; rank++) {
-        for (int file = 0; file < 8; file++) {
-          updateCellImage(board.board[rank][file], rank, file, flipped);
+        @Override
+        public void onAnalyze() {
+          openAnalysis();
         }
-      }
-    } else {
-      for (int rank = 7; rank >= 0; rank--) {
-        for (int file = 7; file >= 0; file--) {
-          updateCellImage(board.board[rank][file], rank, file, flipped);
+
+        @Override
+        public void onPlayAgain() {
+          playAgain();
         }
+      }).show();
+    }, 700);
+  }
+
+  private String headline(GameResult r) {
+    if (r.isDraw()) return "DRAW :|";
+    if (mode == Mode.HUMAN_VS_AGENT) return r.scoreFor(humanIsWhite) > 0 ? "YOU WIN!! :)" : "YOU LOSE  :(";
+    return r.whiteWon() ? "WHITE WINS!!" : "BLACK WINS!!";
+  }
+
+  private void goToMainMenu() {
+    Intent intent = new Intent(this, MainActivity.class);
+    intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+    startActivity(intent);
+    finish();
+  }
+
+  private void playAgain() {
+    Intent intent = newGameIntent(this, opponentSpec, !humanIsWhite, hardMode);
+    startActivity(intent);
+    finish();
+  }
+
+  private void openAnalysis() {
+    StringBuilder uci = new StringBuilder();
+    for (Move m : game.moves()) uci.append(m.toUci()).append(' ');
+    Intent intent = new Intent(this, GameAnalysis.class);
+    intent.putExtra(GameAnalysis.EXTRA_START_FEN, game.startFen());
+    intent.putExtra(GameAnalysis.EXTRA_MOVES, uci.toString().trim());
+    // Train on the human's own mistakes (both sides' in a two-player game).
+    if (mode == Mode.HUMAN_VS_AGENT) intent.putExtra(GameAnalysis.EXTRA_TRAIN_SIDE, humanIsWhite ? 1 : -1);
+    startActivity(intent);
+  }
+
+  /** Intent that starts a game against the given opponent. */
+  public static Intent newGameIntent(Context context, AgentSpec opponent, boolean playAsWhite, boolean hardMode) {
+    Intent intent = new Intent(context, GameManager.class);
+    if (opponent.kind == AgentSpec.Kind.CUSTOM) {
+      intent.putExtra(EXTRA_AGENT_TYPE, "Custom");
+      intent.putExtra(EXTRA_CUSTOM_AGENT, opponent.serialize());
+    } else {
+      intent.putExtra(EXTRA_AGENT_TYPE, opponent.name);
+    }
+    intent.putExtra(EXTRA_IS_WHITE, opponent.kind == AgentSpec.Kind.HUMAN || playAsWhite);
+    intent.putExtra(EXTRA_HARD_MODE, hardMode);
+    return intent;
+  }
+
+  // ================================================================ drawing
+
+  /** Redraws the board and every label for the position being viewed. */
+  private void refresh() {
+    drawBoard();
+    updateLabels();
+  }
+
+  private void drawBoard() {
+    boolean live = viewPly == game.plyCount();
+    Position pos = live ? game.position() : game.positionAt(viewPly);
+    board.draw(pos);
+    if (live && selectedSquare >= 0) {
+      board.highlight(pos, selectedSquare, MoveGenerator.legalMovesFrom(pos, selectedSquare));
+    }
+    if (live) {
+      // Pre-move squares in blue.
+      int[] marks = {premoveSelect, premoveFrom, premoveTo};
+      for (int sq : marks) {
+        if (sq >= 0) board.buttonFor(sq).setColorFilter(PREMOVE_TINT, PorterDuff.Mode.SRC_ATOP);
       }
     }
   }
 
-  /**
-   * Updates a single cell's image on the board.
-   */
-  private void updateCellImage(Cell cell, int rank, int file, boolean flipped) {
-    ImageView cellImageView = getButtonFromCoord(new Coordinate(file, rank), flipped);
-    cellImageView.setColorFilter(null);
+  private void updateLabels() {
+    boolean live = viewPly == game.plyCount();
+    Position pos = live ? game.position() : game.positionAt(viewPly);
 
-    if (cell.isEmpty) {
-      cellImageView.setImageResource(
-          cell.isLight ? R.drawable.empty_light : R.drawable.empty_dark);
-      return;
+    // Message line
+    if (live && game.isOver()) messageText.setText(game.result().message);
+    else messageText.setText(pos.whiteToMove() ? "WHITE TO MOVE" : "BLACK TO MOVE");
+
+    // Who sits where: the bottom of the screen is White unless the board is flipped.
+    boolean bottomIsWhite = !board.isFlipped();
+
+    // Check labels
+    String check = "";
+    if (pos.inCheck()) check = pos.checkerCount() > 1 ? "DOUBLE CHECK!!" : "CHECK!";
+    boolean checkedIsBottom = pos.whiteToMove() == bottomIsWhite;
+    checkStatusBottom.setText(checkedIsBottom ? check : "");
+    checkStatusTop.setText(checkedIsBottom ? "" : check);
+
+    // Material score from each side's point of view
+    int balance = game.materialBalance(viewPly);
+    bottomScore.setText(String.valueOf(bottomIsWhite ? balance : -balance));
+    topScore.setText(String.valueOf(bottomIsWhite ? -balance : balance));
+
+    // Captured pieces: each player's row shows what they have taken.
+    int[][] captured = game.capturedCounts(viewPly); // [0] taken by White, [1] taken by Black
+    int[] bottomTook = captured[bottomIsWhite ? 0 : 1];
+    int[] topTook = captured[bottomIsWhite ? 1 : 0];
+    for (int i = 0; i < COUNTER_TYPES.length; i++) {
+      int type = COUNTER_TYPES[i];
+      bottomCounters[i].setText(String.valueOf(bottomTook[type]));
+      topCounters[i].setText(String.valueOf(topTook[type]));
+      bottomIcons[i].setImageResource(BoardRenderer.plainPieceDrawable(Piece.make(type, !bottomIsWhite)));
+      topIcons[i].setImageResource(BoardRenderer.plainPieceDrawable(Piece.make(type, bottomIsWhite)));
     }
 
-    // Get appropriate piece image
-    int resourceId = getPieceImageResource(cell);
-    cellImageView.setImageResource(resourceId);
-  }
-
-  /**
-   * Gets the appropriate drawable resource for a piece on a cell.
-   */
-  private int getPieceImageResource(Cell cell) {
-    String color = cell.isWhite ? "white" : "black";
-    String square = cell.isLight ? "light" : "dark";
-    String piece = getPieceName(cell);
-
-    String resourceName = color + "_" + piece + "_on_" + square;
-    return getResources().getIdentifier(resourceName, "drawable", getPackageName());
-  }
-
-  /**
-   * Gets the piece name from a cell.
-   */
-  private String getPieceName(Cell cell) {
-    if (cell.isKing) return "king";
-    if (cell.isQueen) return "queen";
-    if (cell.isRook) return "rook";
-    if (cell.isBishop) return "bishop";
-    if (cell.isKnight) return "knight";
-    if (cell.isPawn) return "pawn";
-    return "";
-  }
-
-  // Promotion dialog callback
-  @Override
-  public void onPromotionMove() throws CloneNotSupportedException {
-    updateBoard(board, boardFlipped);
-
-    // Adversary responds to promotion
-    if (!adversary.getName().equals("Human")) {
-      ArrayList<Move> blackMoves = GameService.generateMoves(board, false);
-      King blackKing = (King) board.blackPieces.get(0);
-
-      if (blackKing.isDoubleChecked) {
-        blackMoves = GameService.generateMovesDoubleCheck(board, blackMoves, false);
-      } else if (blackKing.isChecked) {
-        blackMoves = GameService.generateMovesCheck(board, blackMoves, false);
-      }
-
-      Move adversaryMove = adversary.getMove(board, blackMoves, whitesPotentialMoves);
-      GameService.makeMove(board, adversaryMove, false);
-      GameService.updateBoardMeta(board);
-
-      postMoveChecks(board, false);
-    }
-  }
-
-  // Game over dialog callback
-  @Override
-  public void onGameOver() {
-    // Handle game over actions if needed
+    // Buttons
+    boolean canUndo = !hardMode && undoAvailable && mode != Mode.AGENT_VS_AGENT && !game.isOver();
+    undoButton.setEnabled(canUndo);
+    undoButton.setAlpha(canUndo ? 1.0f : 0.5f);
+    leftArrow.setEnabled(viewPly > 0);
+    leftArrow.setAlpha(viewPly > 0 ? 1.0f : 0.5f);
+    rightArrow.setEnabled(viewPly < game.plyCount());
+    rightArrow.setAlpha(viewPly < game.plyCount() ? 1.0f : 0.5f);
   }
 }

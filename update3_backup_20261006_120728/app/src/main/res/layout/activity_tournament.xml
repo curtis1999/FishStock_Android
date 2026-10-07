@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F7FDF8"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:paddingBottom="20dp"
+        android:text="Agent Tournament"
+        android:textColor="#000000"
+        android:textSize="24sp"
+        android:textStyle="bold" />
+
+    <!-- Agent 1 Selection -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="5dp"
+        android:text="Select Agent 1:"
+        android:textColor="#000000"
+        android:textSize="16sp" />
+
+    <Spinner
+        android:id="@+id/agent1Spinner"
+        android:layout_width="178dp"
+        android:layout_height="wrap_content"
+        android:minHeight="48dp"
+        android:paddingBottom="10dp" />
+
+    <!-- Agent 2 Selection -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="5dp"
+        android:text="Select Agent 2:"
+        android:textColor="#000000"
+        android:textSize="16sp" />
+
+    <Spinner
+        android:id="@+id/agent2Spinner"
+        android:layout_width="180dp"
+        android:layout_height="wrap_content"
+        android:minHeight="48dp"
+        android:paddingBottom="10dp" />
+
+    <!-- Number of Games Selection -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="5dp"
+        android:text="Number of Games:"
+        android:textColor="#000000"
+        android:textSize="16sp" />
+
+    <Spinner
+        android:id="@+id/numGamesSpinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="48dp"
+        android:paddingBottom="15dp" />
+
+    <!-- Thinking time for searching agents -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="5dp"
+        android:text="Time per move (MinMax, FishStock, custom):"
+        android:textColor="#000000"
+        android:textSize="16sp" />
+
+    <Spinner
+        android:id="@+id/thinkTimeSpinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="48dp"
+        android:paddingBottom="15dp" />
+
+    <!-- Each pair of games starts from a different opening (see arena/Openings.java) -->
+    <CheckBox
+        android:id="@+id/varyOpenings"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:checked="true"
+        android:minHeight="48dp"
+        android:text="Start games from varied openings"
+        android:textColor="#000000"
+        android:textSize="16sp" />
+
+    <!-- Make an agent and come straight back with it as Agent 1 -->
+    <Button
+        android:id="@+id/tournamentMakeAgent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Make Your Own Agent"
+        android:textSize="16sp" />
+
+    <!-- Start Tournament Button -->
+    <Button
+        android:id="@+id/startTournament"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
+        android:text="Start Tournament"
+        android:textSize="18sp" />
+
+    <!-- Exit Button -->
+    <Button
+        android:id="@+id/exitButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:backgroundTint="#808080"
+        android:text="Exit to Main Menu"
+        android:textSize="16sp" />
+
+    <!-- Progress Bar -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:visibility="gone" />
+
+    <!-- Progress Text -->
+    <TextView
+        android:id="@+id/progressText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:paddingTop="5dp"
+        android:paddingBottom="10dp"
+        android:text="Ready to start"
+        android:textColor="#000000"
+        android:textSize="14sp" />
+
+    <!-- Results Display -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:paddingTop="10dp">
+
+        <TextView
+            android:id="@+id/results"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#F0F0F0"
+            android:fontFamily="monospace"
+            android:padding="10dp"
+            android:text="Select two agents and number of games, then click Start Tournament"
+            android:textColor="#000000"
+            android:textSize="14sp" />
+    </ScrollView>
+
+    <!-- Export Button -->
+    <Button
+        android:id="@+id/exportResults"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="Share Results"
+        android:textSize="16sp"
+        android:visibility="gone" />
+
+</LinearLayout>

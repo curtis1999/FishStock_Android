@@ -1,19 +1,25 @@
-package com.example.fishstock.Agents;
+package com.example.fishstock.agents;
 
-import com.example.fishstock.Board;
-import com.example.fishstock.Move;
-import java.util.ArrayList;
+import com.example.fishstock.engine.Move;
+import com.example.fishstock.engine.Position;
 
-public class Human extends Agent{
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-  public Human(AgentType type, boolean isWhite) {
-    super(type, isWhite);
-  }
-
-  public Move getMove(Board ChessBoard, ArrayList<Move> possibleMoves, ArrayList<Move> possibleMovesAdv){
-    return null;
-  }
-  public String getName() {
+/** A person tapping the board. The game screen supplies the moves. */
+public final class Human implements Agent {
+  @Override
+  public String name() {
     return "Human";
+  }
+
+  @Override
+  public boolean isHuman() {
+    return true;
+  }
+
+  @Override
+  public Move chooseMove(Position position, List<Long> history, AtomicBoolean stop) {
+    return null;
   }
 }
