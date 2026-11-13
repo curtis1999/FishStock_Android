@@ -13,3 +13,11 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Local backups, engine-testing output and build products (not source code)
+/*_backup_*/
+/aleph0_work/
+/old_installers/
+*.jar
+/elo_*.pgn
+*.stackdump
