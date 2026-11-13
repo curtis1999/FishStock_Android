@@ -4,6 +4,18 @@
 
     <!-- Used only to ask the Lichess tablebase for perfect moves in solved endgames. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Record Game: hearing moves said aloud over the board. Asked for the first time LISTEN is pressed. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- Android 11+ only lets the app see the phone's speech recogniser and voice if it says it uses them. -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
 
     <application
         android:allowBackup="true"
@@ -63,8 +75,26 @@
                 android:value=".MainActivity" />
         </activity>
         <activity
+            android:name=".RecordGameActivity"
+            android:label="Record Game"
+            android:screenOrientation="portrait"
+            android:parentActivityName=".MainActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".MainActivity" />
+        </activity>
+        <activity
             android:name=".GameAnalysis"
             android:label="Game Analysis"
+            android:screenOrientation="portrait"
+            android:parentActivityName=".MainActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".MainActivity" />
+        </activity>
+        <activity
+            android:name=".SavedGamesActivity"
+            android:label="Saved Games"
             android:screenOrientation="portrait"
             android:parentActivityName=".MainActivity">
             <meta-data

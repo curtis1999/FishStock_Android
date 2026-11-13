@@ -22,9 +22,11 @@ import com.example.fishstock.agents.Human;
 import com.example.fishstock.engine.Game;
 import com.example.fishstock.engine.GameResult;
 import com.example.fishstock.engine.Move;
+import com.example.fishstock.engine.Odds;
 import com.example.fishstock.engine.MoveGenerator;
 import com.example.fishstock.engine.Piece;
 import com.example.fishstock.engine.Position;
+import com.example.fishstock.engine.Premoves;
 import com.example.fishstock.engine.Square;
 import com.example.fishstock.eval.Evaluator;
 import com.example.fishstock.eval.WeightedEvaluator;
@@ -50,7 +52,10 @@ public class GameManager extends AppCompatActivity {
   public static final String EXTRA_AGENT_TYPE = "agentType";
   public static final String EXTRA_CUSTOM_AGENT = "customAgent";
   public static final String EXTRA_IS_WHITE = "isWhite";
-  public static final String EXTRA_HARD_MODE = "isHardMode";
+  /** Whether take-backs are allowed (the "Enable Undos" switch on the home screen; default true). */
+  public static final String EXTRA_UNDOS = "undosEnabled";
+  /** Piece odds for the agent (see {@link Odds}), e.g. "d1,f2": it starts without its queen and f-pawn. */
+  public static final String EXTRA_ODDS = "odds";
   /** Set to an agent name to watch agent vs agent (this agent plays White). */
   public static final String EXTRA_PLAYER1_TYPE = "player1Type";
   /** Human vs human: turn the board to face the side to move after each move (default true). */
@@ -64,12 +69,13 @@ public class GameManager extends AppCompatActivity {
   private enum Mode { HUMAN_VS_AGENT, HUMAN_VS_HUMAN, AGENT_VS_AGENT }
 
   // ---- game state
-  private final Game game = new Game();
+  private Game game = new Game();
   private Agent whitePlayer;
   private Agent blackPlayer;
   private Mode mode;
   private boolean humanIsWhite;
-  private boolean hardMode;
+  private boolean undosEnabled;
+  private String odds = Odds.NONE;
   private String opponentName;
   private AgentSpec opponentSpec;
 
@@ -140,7 +146,7 @@ public class GameManager extends AppCompatActivity {
 
   private void readPlayers() {
     Intent intent = getIntent();
-    hardMode = intent.getBooleanExtra(EXTRA_HARD_MODE, false);
+    undosEnabled = intent.getBooleanExtra(EXTRA_UNDOS, true);
     humanIsWhite = intent.getBooleanExtra(EXTRA_IS_WHITE, true);
     String player1 = intent.getStringExtra(EXTRA_PLAYER1_TYPE);
     String agentType = intent.getStringExtra(EXTRA_AGENT_TYPE);
@@ -164,6 +170,12 @@ public class GameManager extends AppCompatActivity {
       mode = Mode.HUMAN_VS_AGENT;
       whitePlayer = humanIsWhite ? new Human() : opponent;
       blackPlayer = humanIsWhite ? opponent : new Human();
+      // Odds: the agent starts without some of its pieces.
+      String o = intent.getStringExtra(EXTRA_ODDS);
+      if (!Odds.isNone(o)) {
+        odds = o;
+        game = new Game(Odds.startFen(odds, !humanIsWhite));
+      }
     }
   }
 
@@ -197,7 +209,7 @@ public class GameManager extends AppCompatActivity {
         break;
       default:
         player1Name.setText("Player");
-        player2Name.setText(opponentName);
+        player2Name.setText(Odds.isNone(odds) ? opponentName : opponentName + " (odds)");
     }
 
     Button resign = findViewById(R.id.resign);
@@ -280,7 +292,10 @@ public class GameManager extends AppCompatActivity {
     }
     Position pos = game.position();
     boolean own = Piece.isColor(pos.pieceAt(sq), humanIsWhite);
-    if (premoveSelect < 0 || own) {
+    // Any square the selected piece could reach is a target, even one your own piece stands on
+    // now: that's a recapture, in case the agent takes there first.
+    boolean target = premoveSelect >= 0 && Premoves.canTarget(pos, premoveSelect, sq);
+    if (!target) {
       premoveSelect = own && sq != premoveSelect ? sq : -1;
     } else {
       premoveFrom = premoveSelect;
@@ -332,7 +347,7 @@ public class GameManager extends AppCompatActivity {
   }
 
   private void playHumanMove(Move m) {
-    if (!hardMode && mode != Mode.AGENT_VS_AGENT) undoAvailable = true;
+    if (undosEnabled && mode != Mode.AGENT_VS_AGENT) undoAvailable = true;
     playMove(m);
   }
 
@@ -401,7 +416,7 @@ public class GameManager extends AppCompatActivity {
 
   private void onUndo() {
     clearPremove();
-    if (hardMode || !undoAvailable || mode == Mode.AGENT_VS_AGENT || game.isOver()) return;
+    if (!undosEnabled || !undoAvailable || mode == Mode.AGENT_VS_AGENT || game.isOver()) return;
     if (game.plyCount() == 0) return;
     if (mode == Mode.HUMAN_VS_AGENT) {
       boolean humanToMove = currentPlayer().isHuman();
@@ -497,7 +512,10 @@ public class GameManager extends AppCompatActivity {
     if (gameOverShown) return;
     gameOverShown = true;
     final GameResult r = game.result();
-    if (mode == Mode.HUMAN_VS_AGENT) new AgentStore(this).recordResult(opponentName, r.scoreFor(humanIsWhite));
+    // Games at odds don't count towards beating an agent.
+    if (mode == Mode.HUMAN_VS_AGENT && Odds.isNone(odds)) {
+      new AgentStore(this).recordResult(opponentName, r.scoreFor(humanIsWhite));
+    }
     // Let the final position appear on screen before the box covers it.
     main.postDelayed(() -> {
       if (destroyed) return;
@@ -534,7 +552,7 @@ public class GameManager extends AppCompatActivity {
   }
 
   private void playAgain() {
-    Intent intent = newGameIntent(this, opponentSpec, !humanIsWhite, hardMode);
+    Intent intent = newGameIntent(this, opponentSpec, !humanIsWhite, undosEnabled, odds);
     startActivity(intent);
     finish();
   }
@@ -550,8 +568,14 @@ public class GameManager extends AppCompatActivity {
     startActivity(intent);
   }
 
-  /** Intent that starts a game against the given opponent. */
-  public static Intent newGameIntent(Context context, AgentSpec opponent, boolean playAsWhite, boolean hardMode) {
+  /** Intent that starts a game against the given opponent, with no odds. */
+  public static Intent newGameIntent(Context context, AgentSpec opponent, boolean playAsWhite, boolean undosEnabled) {
+    return newGameIntent(context, opponent, playAsWhite, undosEnabled, Odds.NONE);
+  }
+
+  /** Intent that starts a game against the given opponent; {@code odds} as in {@link Odds}. */
+  public static Intent newGameIntent(Context context, AgentSpec opponent, boolean playAsWhite, boolean undosEnabled,
+      String odds) {
     Intent intent = new Intent(context, GameManager.class);
     if (opponent.kind == AgentSpec.Kind.CUSTOM) {
       intent.putExtra(EXTRA_AGENT_TYPE, "Custom");
@@ -560,7 +584,8 @@ public class GameManager extends AppCompatActivity {
       intent.putExtra(EXTRA_AGENT_TYPE, opponent.name);
     }
     intent.putExtra(EXTRA_IS_WHITE, opponent.kind == AgentSpec.Kind.HUMAN || playAsWhite);
-    intent.putExtra(EXTRA_HARD_MODE, hardMode);
+    intent.putExtra(EXTRA_UNDOS, undosEnabled);
+    if (opponent.kind != AgentSpec.Kind.HUMAN && !Odds.isNone(odds)) intent.putExtra(EXTRA_ODDS, odds);
     return intent;
   }
 
@@ -624,7 +649,7 @@ public class GameManager extends AppCompatActivity {
     }
 
     // Buttons
-    boolean canUndo = !hardMode && undoAvailable && mode != Mode.AGENT_VS_AGENT && !game.isOver();
+    boolean canUndo = undosEnabled && undoAvailable && mode != Mode.AGENT_VS_AGENT && !game.isOver();
     undoButton.setEnabled(canUndo);
     undoButton.setAlpha(canUndo ? 1.0f : 0.5f);
     leftArrow.setEnabled(viewPly > 0);

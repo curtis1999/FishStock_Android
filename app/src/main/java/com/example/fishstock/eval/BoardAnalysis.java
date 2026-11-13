@@ -1,6 +1,7 @@
 package com.example.fishstock.eval;
 
 import com.example.fishstock.engine.Attacks;
+import com.example.fishstock.engine.Bitboards;
 import com.example.fishstock.engine.Piece;
 import com.example.fishstock.engine.Position;
 import com.example.fishstock.engine.Square;
@@ -26,30 +27,88 @@ import com.example.fishstock.engine.Square;
  *     {@link #rooksConnected}, {@link #hasBishopPair}, and game {@link #phase}.
  *
  * All square arguments are 0..63 (a1 = 0). "side" booleans are true for White.
+ *
+ * Internally everything is bitboards ({@link Bitboards}): sets of squares as 64-bit numbers, so
+ * "is any enemy pawn ahead on the neighbouring files" is one AND with a precomputed mask. How many
+ * pieces attack each square is kept as a "bit-sliced counter": counts[k] holds bit k of every
+ * square's count, so adding a piece's attacks to all 64 counters is a handful of operations.
+ * The answers are exactly those of the original square-by-square version.
  */
 public final class BoardAnalysis {
   private static final int W = 0;
   private static final int B = 1;
 
+  // Precomputed masks, [side][sq].
+  /** Squares ahead of sq on its file. */
+  private static final long[][] FORWARD = new long[2][64];
+  /** Squares ahead on the file and the two neighbouring files (passed pawn test). */
+  private static final long[][] PASSED_SPAN = new long[2][64];
+  /** Squares ahead on the two neighbouring files only (outpost test). */
+  private static final long[][] ADJ_AHEAD = new long[2][64];
+  /** Beside, or one rank behind on a neighbouring file (connected pawn test). */
+  private static final long[][] CONNECT = new long[2][64];
+  /** Neighbouring files, on the same rank or behind (backward pawn test). */
+  private static final long[][] ADJ_BEHIND_OR_LEVEL = new long[2][64];
+  private static final long[] ADJ_FILES = new long[8];
+
+  static {
+    for (int f = 0; f < 8; f++) {
+      if (f > 0) ADJ_FILES[f] |= Bitboards.FILE[f - 1];
+      if (f < 7) ADJ_FILES[f] |= Bitboards.FILE[f + 1];
+    }
+    for (int sq = 0; sq < 64; sq++) {
+      int f = Square.file(sq);
+      int r = Square.rank(sq);
+      for (int side = 0; side < 2; side++) {
+        boolean white = side == W;
+        long ahead = 0;
+        long levelOrBehind = 0;
+        for (int rr = 0; rr < 8; rr++) {
+          if (white ? rr > r : rr < r) ahead |= Bitboards.RANK[rr];
+          if (white ? rr <= r : rr >= r) levelOrBehind |= Bitboards.RANK[rr];
+        }
+        FORWARD[side][sq] = ahead & Bitboards.FILE[f];
+        ADJ_AHEAD[side][sq] = ahead & ADJ_FILES[f];
+        PASSED_SPAN[side][sq] = ahead & (ADJ_FILES[f] | Bitboards.FILE[f]);
+        ADJ_BEHIND_OR_LEVEL[side][sq] = levelOrBehind & ADJ_FILES[f];
+        long c = Bitboards.RANK[r] & ADJ_FILES[f];
+        int behind = white ? r - 1 : r + 1;
+        if (behind >= 0 && behind < 8) c |= Bitboards.RANK[behind] & ADJ_FILES[f];
+        CONNECT[side][sq] = c;
+      }
+    }
+  }
+
   private final Position pos;
   private final int[] board = new int[64];
   private final double[] pieceValues; // indexed by piece type, king = 100 for exchange maths
 
-  private final int[][] attackCount = new int[2][64];
-  private final int[][] pawnAttackCount = new int[2][64];
+  private final long occ;
+  private final long[] occSide = new long[2];
+  /** pawns[side], and every piece type: piecesOf[side][type]. */
+  private final long[][] piecesOf = new long[2][7];
+
+  /** Bit-sliced attack counters per side: bit k of the count on each square. */
+  private final long[][] counts = new long[2][5];
+  /** Squares attacked at least once. */
+  private final long[] attacked = new long[2];
+  /** Pawn attacks towards the left and right file (a square can be hit by one of each). */
+  private final long[] pawnLeft = new long[2];
+  private final long[] pawnRight = new long[2];
+  private final long[] pawnAttacks = new long[2];
   private final int[] mobility = new int[64];
-  private final boolean[] pinnedToKing = new boolean[64];
-  private final boolean[] pinnedToQueen = new boolean[64];
-  private final boolean[] revealChecker = new boolean[64];
-  private final boolean[] revealQueenAttacker = new boolean[64];
+  private long pinnedToKing;
+  private long pinnedToQueen;
+  private long revealChecker;
+  private long revealQueenAttacker;
   private final int[][] pawnsOnFile = new int[2][8];
   private final int[] nonPawnMaterialCount = new int[2]; // knights+bishops+rooks+queens
   private final int phase;
-  // Version 2: attacks by piece type, and how hard each king is attacked.
-  private final int[][] knightAttack = new int[2][64];
-  private final int[][] bishopAttack = new int[2][64];
-  private final int[][] rookAttack = new int[2][64];
-  private final int[][] queenAttack = new int[2][64];
+  // Version 2: squares attacked by each piece type, and how hard each king is attacked.
+  private final long[] knightAttack = new long[2];
+  private final long[] bishopAttack = new long[2];
+  private final long[] rookAttack = new long[2];
+  private final long[] queenAttack = new long[2];
   private final int[] kingAttackUnits = new int[2];   // against this side's king
   private final int[] kingAttackers = new int[2];
 
@@ -59,88 +118,123 @@ public final class BoardAnalysis {
     pieceValues = new double[] {0, w.get(Term.PAWN_VALUE), w.get(Term.KNIGHT_VALUE),
         w.get(Term.BISHOP_VALUE), w.get(Term.ROOK_VALUE), w.get(Term.QUEEN_VALUE), 100.0};
 
+    occSide[W] = pos.occupancy(true);
+    occSide[B] = pos.occupancy(false);
+    occ = occSide[W] | occSide[B];
+    for (int side = 0; side < 2; side++) {
+      for (int t = Piece.PAWN; t <= Piece.KING; t++) piecesOf[side][t] = pos.pieces(t, side == W);
+    }
+
     int ph = 0;
-    for (int sq = 0; sq < 64; sq++) {
-      int p = board[sq];
-      if (p == Piece.EMPTY) continue;
-      int side = p > 0 ? W : B;
-      switch (Piece.type(p)) {
-        case Piece.PAWN:
-          pawnsOnFile[side][Square.file(sq)]++;
-          for (int t : Attacks.PAWN_ATTACKS[side][sq]) {
-            pawnAttackCount[side][t]++;
-            attackCount[side][t]++;
-          }
-          break;
-        case Piece.KNIGHT:
-        case Piece.BISHOP:
-          ph += 1;
-          nonPawnMaterialCount[side]++;
-          break;
-        case Piece.ROOK:
-          ph += 2;
-          nonPawnMaterialCount[side]++;
-          break;
-        case Piece.QUEEN:
-          ph += 4;
-          nonPawnMaterialCount[side]++;
-          break;
-        default:
-          break;
-      }
+    for (int side = 0; side < 2; side++) {
+      long[] p = piecesOf[side];
+      int minors = Long.bitCount(p[Piece.KNIGHT]) + Long.bitCount(p[Piece.BISHOP]);
+      int rooks = Long.bitCount(p[Piece.ROOK]);
+      int queens = Long.bitCount(p[Piece.QUEEN]);
+      ph += minors + 2 * rooks + 4 * queens;
+      nonPawnMaterialCount[side] = minors + rooks + queens;
+      for (int f = 0; f < 8; f++) pawnsOnFile[side][f] = Long.bitCount(p[Piece.PAWN] & Bitboards.FILE[f]);
     }
     phase = Math.min(24, ph);
 
+    // Pawn attacks (a pawn on the a- or h-file attacks only one square).
+    long notA = ~Bitboards.FILE[0];
+    long notH = ~Bitboards.FILE[7];
+    long wp = piecesOf[W][Piece.PAWN];
+    long bp = piecesOf[B][Piece.PAWN];
+    pawnLeft[W] = (wp & notA) << 7;
+    pawnRight[W] = (wp & notH) << 9;
+    pawnLeft[B] = (bp & notA) >>> 9;
+    pawnRight[B] = (bp & notH) >>> 7;
+    for (int side = 0; side < 2; side++) {
+      pawnAttacks[side] = pawnLeft[side] | pawnRight[side];
+      addAttacks(side, pawnLeft[side]);
+      addAttacks(side, pawnRight[side]);
+    }
+
     // Piece attacks and mobility (mobility = squares not held by own pieces nor guarded by enemy pawns).
-    for (int sq = 0; sq < 64; sq++) {
-      int p = board[sq];
-      int type = Piece.type(p);
-      if (p == Piece.EMPTY || type == Piece.PAWN) continue;
-      int side = p > 0 ? W : B;
+    for (int side = 0; side < 2; side++) {
       int enemy = 1 - side;
-      int enemyKing = pos.kingSquare(enemy == W);
-      int[][] typeAttack = type == Piece.KNIGHT ? knightAttack : type == Piece.BISHOP ? bishopAttack
-          : type == Piece.ROOK ? rookAttack : type == Piece.QUEEN ? queenAttack : null;
-      boolean hitsKingZone = false;
-      int mob = 0;
-      if (type == Piece.KNIGHT || type == Piece.KING) {
-        int[] targets = type == Piece.KNIGHT ? Attacks.KNIGHT[sq] : Attacks.KING[sq];
-        for (int t : targets) {
-          attackCount[side][t]++;
-          if (typeAttack != null) typeAttack[side][t]++;
-          if (Square.distance(t, enemyKing) <= 1) hitsKingZone = true;
-          if (!isOwn(board[t], side) && pawnAttackCount[enemy][t] == 0) mob++;
+      long enemyKingZone = Bitboards.KING_ZONE[pos.kingSquare(enemy == W)];
+      long safe = ~occSide[side] & ~pawnAttacks[enemy];
+      long pieces = occSide[side] & ~piecesOf[side][Piece.PAWN];
+      while (pieces != 0) {
+        int sq = Long.numberOfTrailingZeros(pieces);
+        pieces &= pieces - 1;
+        int type = Piece.type(board[sq]);
+        long att;
+        switch (type) {
+          case Piece.KNIGHT:
+            att = Bitboards.KNIGHT[sq];
+            knightAttack[side] |= att;
+            break;
+          case Piece.BISHOP:
+            att = Bitboards.bishopAttacks(sq, occ);
+            bishopAttack[side] |= att;
+            break;
+          case Piece.ROOK:
+            att = Bitboards.rookAttacks(sq, occ);
+            rookAttack[side] |= att;
+            break;
+          case Piece.QUEEN:
+            att = Bitboards.queenAttacks(sq, occ);
+            queenAttack[side] |= att;
+            break;
+          default:
+            att = Bitboards.KING[sq];
+            break;
         }
-      } else {
-        for (int d = 0; d < 8; d++) {
-          if (!Attacks.slidesAlong(type, d)) continue;
-          for (int t : Attacks.RAYS[sq][d]) {
-            attackCount[side][t]++;
-            typeAttack[side][t]++;
-            if (Square.distance(t, enemyKing) <= 1) hitsKingZone = true;
-            if (!isOwn(board[t], side) && pawnAttackCount[enemy][t] == 0) mob++;
-            if (board[t] != Piece.EMPTY) break;
-          }
+        addAttacks(side, att);
+        mobility[sq] = Long.bitCount(att & safe);
+        if (type != Piece.KING && (att & enemyKingZone) != 0) {
+          kingAttackers[enemy]++;
+          kingAttackUnits[enemy] += type == Piece.QUEEN ? 5 : type == Piece.ROOK ? 3 : 2;
         }
       }
-      mobility[sq] = mob;
-      if (hitsKingZone && type != Piece.KING) {
-        kingAttackers[enemy]++;
-        kingAttackUnits[enemy] += type == Piece.QUEEN ? 5 : type == Piece.ROOK ? 3 : 2;
-      }
+    }
+    for (int side = 0; side < 2; side++) {
+      long[] c = counts[side];
+      attacked[side] = c[0] | c[1] | c[2] | c[3] | c[4];
     }
 
     for (int side = 0; side < 2; side++) {
       boolean white = side == W;
-      findPins(pos.kingSquare(white), white, pinnedToKing, false);
-      findReveals(pos.kingSquare(!white), white, revealChecker, false);
-      for (int sq = 0; sq < 64; sq++) {
-        if (board[sq] == Piece.make(Piece.QUEEN, white)) {
-          findPins(sq, white, pinnedToQueen, true);
-          findReveals(sq, !white, revealQueenAttacker, true);
-        }
+      pinnedToKing |= findPins(pos.kingSquare(white), white, false);
+      revealChecker |= findReveals(pos.kingSquare(!white), white, false);
+      long queens = piecesOf[side][Piece.QUEEN];
+      while (queens != 0) {
+        int sq = Long.numberOfTrailingZeros(queens);
+        queens &= queens - 1;
+        pinnedToQueen |= findPins(sq, white, true);
+        revealQueenAttacker |= findReveals(sq, !white, true);
       }
     }
+  }
+
+  /** Adds 1 to the attack count of every square in {@code b} (bit-sliced binary addition). */
+  private void addAttacks(int side, long b) {
+    long[] c = counts[side];
+    long carry = b;
+    for (int k = 0; k < c.length && carry != 0; k++) {
+      long next = c[k] & carry;
+      c[k] ^= carry;
+      carry = next;
+    }
+  }
+
+  private int countAt(int side, int sq) {
+    long[] c = counts[side];
+    int n = 0;
+    for (int k = 0; k < c.length; k++) n |= (int) ((c[k] >>> sq) & 1L) << k;
+    return n;
+  }
+
+  /** Sum of the attack counts over a set of squares. */
+  private int countOver(int side, long squares) {
+    long[] c = counts[side];
+    int n = 0;
+    for (int k = 0; k < c.length; k++) n += Long.bitCount(c[k] & squares) << k;
+    return n;
   }
 
   // ================================================================ general
@@ -181,24 +275,25 @@ public final class BoardAnalysis {
 
   /** How many pieces of the given side attack this square (direct attacks only). */
   public int attackers(int sq, boolean bySide) {
-    return attackCount[idx(bySide)][sq];
+    return countAt(idx(bySide), sq);
   }
 
-  /** How many enemy pawns attack this square. */
+  /** How many pawns of the given side attack this square. */
   public int pawnAttackers(int sq, boolean bySide) {
-    return pawnAttackCount[idx(bySide)][sq];
+    int s = idx(bySide);
+    return (int) ((pawnLeft[s] >>> sq) & 1L) + (int) ((pawnRight[s] >>> sq) & 1L);
   }
 
   /** Is the piece on sq defended by at least one friendly piece? */
   public boolean isDefended(int sq) {
     int p = board[sq];
-    return p != Piece.EMPTY && attackCount[idx(p > 0)][sq] > 0;
+    return p != Piece.EMPTY && (attacked[idx(p > 0)] & (1L << sq)) != 0;
   }
 
   /** Attacked by the enemy and not defended at all. */
   public boolean isHanging(int sq) {
     int p = board[sq];
-    return p != Piece.EMPTY && attackers(sq, p < 0) > 0 && !isDefended(sq);
+    return p != Piece.EMPTY && (attacked[idx(p < 0)] & (1L << sq)) != 0 && !isDefended(sq);
   }
 
   /**
@@ -211,51 +306,55 @@ public final class BoardAnalysis {
     int target = board[sq];
     if (target == Piece.EMPTY || Piece.type(target) == Piece.KING) return 0;
     boolean attackerSide = target < 0;
-    if (attackers(sq, attackerSide) == 0) return 0;
+    if ((attacked[idx(attackerSide)] & (1L << sq)) == 0) return 0;
 
-    int[] b = board.clone();
+    long o = occ; // pieces still on the board as the exchange goes on
     double[] gain = new double[34];
     int depth = 0;
     gain[0] = pieceValues[Piece.type(target)];
     boolean side = attackerSide;
-    int from = leastValuableAttacker(b, sq, side);
+    int from = leastValuableAttacker(o, sq, side);
     if (from < 0) return 0;
     while (from >= 0 && depth < 32) {
-      int capturer = b[from];
+      int capturer = board[from];
       depth++;
       gain[depth] = pieceValues[Piece.type(capturer)] - gain[depth - 1];
-      b[from] = Piece.EMPTY; // the capturer now stands on sq (sq itself is never scanned)
+      o &= ~(1L << from); // the capturer now stands on sq (sq itself is never looked at)
       side = !side;
-      from = leastValuableAttacker(b, sq, side);
+      from = leastValuableAttacker(o, sq, side);
     }
     while (--depth > 0) gain[depth - 1] = -Math.max(-gain[depth - 1], gain[depth]);
     return Math.max(0, gain[0]);
   }
 
-  /** Square of the cheapest piece of {@code side} attacking sq on board b, or -1. */
-  private static int leastValuableAttacker(int[] b, int sq, boolean side) {
-    int pawn = Piece.make(Piece.PAWN, side);
-    for (int from : Attacks.PAWN_ATTACKS[side ? 1 : 0][sq]) if (b[from] == pawn) return from;
-    int knight = Piece.make(Piece.KNIGHT, side);
-    for (int from : Attacks.KNIGHT[sq]) if (b[from] == knight) return from;
+  /**
+   * Square of the cheapest piece of {@code side} attacking sq with only the pieces in {@code o}
+   * on the board, or -1. Ties go to the same piece as always (a lower direction number first),
+   * so x-rays open up in a fixed order.
+   */
+  private int leastValuableAttacker(long o, int sq, boolean side) {
+    int s = idx(side);
+    long pawns = Bitboards.PAWN[side ? 1 : 0][sq] & piecesOf[s][Piece.PAWN] & o;
+    if (pawns != 0) return Long.numberOfTrailingZeros(pawns);
+    long knights = Bitboards.KNIGHT[sq] & piecesOf[s][Piece.KNIGHT] & o;
+    // Which knight doesn't matter: a knight never stands on a line through sq, so taking it
+    // off the board can't uncover a rook, bishop or queen behind it.
+    if (knights != 0) return Long.numberOfTrailingZeros(knights);
     int bestSq = -1;
     int bestType = 99;
     for (int d = 0; d < 8; d++) {
-      for (int s : Attacks.RAYS[sq][d]) {
-        int p = b[s];
-        if (p == Piece.EMPTY) continue;
-        int t = Piece.type(p);
-        if (Piece.isColor(p, side) && Attacks.slidesAlong(t, d) && t < bestType) {
-          bestType = t;
-          bestSq = s;
-        }
-        break;
+      int b = Bitboards.firstBlocker(d, sq, o);
+      if (b < 0) continue;
+      int p = board[b];
+      int t = Piece.type(p);
+      if (Piece.isColor(p, side) && Attacks.slidesAlong(t, d) && t < bestType) {
+        bestType = t;
+        bestSq = b;
       }
     }
     if (bestSq >= 0) return bestSq;
-    int king = Piece.make(Piece.KING, side);
-    for (int from : Attacks.KING[sq]) if (b[from] == king) return from;
-    return -1;
+    long king = Bitboards.KING[sq] & piecesOf[s][Piece.KING] & o;
+    return king != 0 ? Long.numberOfTrailingZeros(king) : -1;
   }
 
   // ================================================================ 2. mobility and squares
@@ -288,22 +387,22 @@ public final class BoardAnalysis {
 
   /** The piece on sq cannot leave its line without exposing its own king. */
   public boolean isPinnedToKing(int sq) {
-    return pinnedToKing[sq];
+    return (pinnedToKing & (1L << sq)) != 0;
   }
 
   /** The piece on sq shields its own queen from an enemy rook or bishop. */
   public boolean isPinnedToQueen(int sq) {
-    return pinnedToQueen[sq];
+    return (pinnedToQueen & (1L << sq)) != 0;
   }
 
   /** Moving the piece on sq would give a discovered check. */
   public boolean isRevealChecker(int sq) {
-    return revealChecker[sq];
+    return (revealChecker & (1L << sq)) != 0;
   }
 
   /** Moving the piece on sq would uncover an attack on the enemy queen. */
   public boolean isRevealQueenAttacker(int sq) {
-    return revealQueenAttacker[sq];
+    return (revealQueenAttacker & (1L << sq)) != 0;
   }
 
   /**
@@ -311,52 +410,44 @@ public final class BoardAnalysis {
    * own piece followed by an enemy slider on that line = pinned.
    * For queen pins only cheaper sliders (rook/bishop) count as pinners.
    */
-  private void findPins(int anchor, boolean white, boolean[] out, boolean queenAnchor) {
+  private long findPins(int anchor, boolean white, boolean queenAnchor) {
+    long out = 0;
     for (int d = 0; d < 8; d++) {
-      int shield = -1;
-      for (int s : Attacks.RAYS[anchor][d]) {
-        int p = board[s];
-        if (p == Piece.EMPTY) continue;
-        if (shield < 0) {
-          if (Piece.isColor(p, white) && Piece.type(p) != Piece.KING) {
-            shield = s;
-            continue;
-          }
-          break;
-        }
-        int t = Piece.type(p);
-        if (Piece.isColor(p, !white) && Attacks.slidesAlong(t, d) && (!queenAnchor || t != Piece.QUEEN)) {
-          out[shield] = true;
-        }
-        break;
+      int shield = Bitboards.firstBlocker(d, anchor, occ);
+      if (shield < 0) continue;
+      int p = board[shield];
+      if (!Piece.isColor(p, white) || Piece.type(p) == Piece.KING) continue;
+      int behind = Bitboards.firstBlocker(d, shield, occ);
+      if (behind < 0) continue;
+      int q = board[behind];
+      int t = Piece.type(q);
+      if (Piece.isColor(q, !white) && Attacks.slidesAlong(t, d) && (!queenAnchor || t != Piece.QUEEN)) {
+        out |= 1L << shield;
       }
     }
+    return out;
   }
 
   /**
    * From the enemy {@code target} (king or queen) look along every line: a piece of side
    * {@code attackerWhite} followed by that side's slider = the first piece is a reveal piece.
    */
-  private void findReveals(int target, boolean attackerWhite, boolean[] out, boolean queenTarget) {
+  private long findReveals(int target, boolean attackerWhite, boolean queenTarget) {
+    long out = 0;
     for (int d = 0; d < 8; d++) {
-      int front = -1;
-      for (int s : Attacks.RAYS[target][d]) {
-        int p = board[s];
-        if (p == Piece.EMPTY) continue;
-        if (front < 0) {
-          if (Piece.isColor(p, attackerWhite) && Piece.type(p) != Piece.KING) {
-            front = s;
-            continue;
-          }
-          break;
-        }
-        int t = Piece.type(p);
-        if (Piece.isColor(p, attackerWhite) && Attacks.slidesAlong(t, d) && (!queenTarget || t != Piece.QUEEN)) {
-          out[front] = true;
-        }
-        break;
+      int front = Bitboards.firstBlocker(d, target, occ);
+      if (front < 0) continue;
+      int p = board[front];
+      if (!Piece.isColor(p, attackerWhite) || Piece.type(p) == Piece.KING) continue;
+      int behind = Bitboards.firstBlocker(d, front, occ);
+      if (behind < 0) continue;
+      int q = board[behind];
+      int t = Piece.type(q);
+      if (Piece.isColor(q, attackerWhite) && Attacks.slidesAlong(t, d) && (!queenTarget || t != Piece.QUEEN)) {
+        out |= 1L << front;
       }
     }
+    return out;
   }
 
   // ================================================================ 4. king safety
@@ -389,21 +480,13 @@ public final class BoardAnalysis {
 
   /** Sum of enemy attacks on the king's square and the squares around it. */
   public int kingZoneAttacks(boolean side) {
-    int k = pos.kingSquare(side);
-    int enemy = idx(!side);
-    int n = attackCount[enemy][k];
-    for (int s : Attacks.KING[k]) n += attackCount[enemy][s];
-    return n;
+    return countOver(idx(!side), Bitboards.KING_ZONE[pos.kingSquare(side)]);
   }
 
   /** Squares the king could step to that are empty or enemy-held and not attacked. */
   public int kingEscapeSquares(boolean side) {
     int k = pos.kingSquare(side);
-    int n = 0;
-    for (int s : Attacks.KING[k]) {
-      if (!isOwn(board[s], idx(side)) && attackCount[idx(!side)][s] == 0) n++;
-    }
-    return n;
+    return Long.bitCount(Bitboards.KING[k] & ~occSide[idx(side)] & ~attacked[idx(!side)]);
   }
 
   /** Enemy rooks/bishops/queens lined up with the king with one or two pieces in between. */
@@ -412,15 +495,16 @@ public final class BoardAnalysis {
     int n = 0;
     for (int d = 0; d < 8; d++) {
       int blockers = 0;
-      for (int s : Attacks.RAYS[k][d]) {
+      int s = Bitboards.firstBlocker(d, k, occ);
+      while (s >= 0) {
         int p = board[s];
-        if (p == Piece.EMPTY) continue;
         if (Piece.isColor(p, !side) && Attacks.slidesAlong(Piece.type(p), d)) {
           if (blockers >= 1 && blockers <= 2) n++;
           break;
         }
         blockers++;
         if (blockers > 2) break;
+        s = Bitboards.firstBlocker(d, s, occ);
       }
     }
     return n;
@@ -444,52 +528,28 @@ public final class BoardAnalysis {
 
   /** No enemy pawn ahead on this file or the neighbouring files. */
   public boolean isPassedPawn(int sq) {
-    int p = board[sq];
-    boolean white = p > 0;
-    int f = Square.file(sq);
-    int r = Square.rank(sq);
-    int enemyPawn = Piece.make(Piece.PAWN, !white);
-    for (int ff = f - 1; ff <= f + 1; ff++) {
-      if (ff < 0 || ff > 7 || pawnsOnFile(!white, ff) == 0) continue;
-      for (int rr = white ? r + 1 : r - 1; rr >= 0 && rr < 8; rr += white ? 1 : -1) {
-        if (board[Square.of(ff, rr)] == enemyPawn) return false;
-      }
-    }
-    return true;
+    boolean white = board[sq] > 0;
+    return (PASSED_SPAN[idx(white)][sq] & piecesOf[idx(!white)][Piece.PAWN]) == 0;
   }
 
   /** No friendly pawns on the neighbouring files. */
   public boolean isIsolatedPawn(int sq) {
     boolean white = board[sq] > 0;
-    int f = Square.file(sq);
-    return pawnsOnFile(white, f - 1) == 0 && pawnsOnFile(white, f + 1) == 0;
+    return (ADJ_FILES[Square.file(sq)] & piecesOf[idx(white)][Piece.PAWN]) == 0;
   }
 
   /** Another friendly pawn stands ahead of this one on the same file. */
   public boolean isDoubledPawn(int sq) {
     int p = board[sq];
     boolean white = p > 0;
-    int f = Square.file(sq);
-    if (pawnsOnFile(white, f) < 2) return false;
-    for (int rr = Square.rank(sq) + (white ? 1 : -1); rr >= 0 && rr < 8; rr += white ? 1 : -1) {
-      if (board[Square.of(f, rr)] == p) return true;
-    }
-    return false;
+    return (FORWARD[idx(white)][sq] & pos.pieces(p)) != 0;
   }
 
   /** A friendly pawn stands beside it or defends it. */
   public boolean isConnectedPawn(int sq) {
     int p = board[sq];
     boolean white = p > 0;
-    int f = Square.file(sq);
-    int r = Square.rank(sq);
-    int behind = white ? r - 1 : r + 1;
-    for (int ff = f - 1; ff <= f + 1; ff += 2) {
-      if (ff < 0 || ff > 7) continue;
-      if (board[Square.of(ff, r)] == p) return true;
-      if (behind >= 0 && behind < 8 && board[Square.of(ff, behind)] == p) return true;
-    }
-    return false;
+    return (CONNECT[idx(white)][sq] & pos.pieces(p)) != 0;
   }
 
   /**
@@ -499,23 +559,16 @@ public final class BoardAnalysis {
   public boolean isBackwardPawn(int sq) {
     int p = board[sq];
     boolean white = p > 0;
-    int f = Square.file(sq);
-    int r = Square.rank(sq);
     if (isIsolatedPawn(sq)) return false;
-    for (int ff = f - 1; ff <= f + 1; ff += 2) {
-      if (ff < 0 || ff > 7) continue;
-      for (int rr = 0; rr < 8; rr++) {
-        if (board[Square.of(ff, rr)] == p && (white ? rr <= r : rr >= r)) return false;
-      }
-    }
+    if ((ADJ_BEHIND_OR_LEVEL[idx(white)][sq] & pos.pieces(p)) != 0) return false;
     int stop = sq + (white ? 8 : -8);
-    return stop >= 0 && stop < 64 && pawnAttackCount[idx(!white)][stop] > 0;
+    return stop >= 0 && stop < 64 && (pawnAttacks[idx(!white)] & (1L << stop)) != 0;
   }
 
   /** Defended by a friendly pawn. */
   public boolean isPawnProtected(int sq) {
     int p = board[sq];
-    return p != Piece.EMPTY && pawnAttackCount[idx(p > 0)][sq] > 0;
+    return p != Piece.EMPTY && (pawnAttacks[idx(p > 0)] & (1L << sq)) != 0;
   }
 
   /** Moves needed to reach the last rank (1 = on the 7th). */
@@ -536,11 +589,9 @@ public final class BoardAnalysis {
   public boolean isUnstoppablePawn(int sq) {
     boolean white = board[sq] > 0;
     if (nonPawnPieceCount(!white) > 0 || !isPassedPawn(sq)) return false;
+    if ((FORWARD[idx(white)][sq] & occ) != 0) return false;
     int f = Square.file(sq);
     int promo = Square.of(f, white ? 7 : 0);
-    for (int s = sq + (white ? 8 : -8); s >= 0 && s < 64; s += white ? 8 : -8) {
-      if (board[s] != Piece.EMPTY) return false;
-    }
     int movesNeeded = ranksToPromotion(sq);
     if (Square.relativeRank(sq, white) == 1) movesNeeded--; // double step available
     int enemyKing = pos.kingSquare(!white);
@@ -569,13 +620,9 @@ public final class BoardAnalysis {
   public int pawnRaceWinner() {
     int fw = Integer.MAX_VALUE;
     int fb = Integer.MAX_VALUE;
-    for (int sq = 0; sq < 64; sq++) {
-      if (Piece.type(board[sq]) != Piece.PAWN) continue;
-      int n = movesToPromoteUnstoppable(sq);
-      if (n < 0) continue;
-      if (board[sq] > 0) fw = Math.min(fw, n);
-      else fb = Math.min(fb, n);
-    }
+    // Only a side facing a bare king (and pawns) can have an unstoppable pawn.
+    if (nonPawnMaterialCount[B] == 0) fw = fastestUnstoppable(piecesOf[W][Piece.PAWN]);
+    if (nonPawnMaterialCount[W] == 0) fb = fastestUnstoppable(piecesOf[B][Piece.PAWN]);
     if (fw == Integer.MAX_VALUE && fb == Integer.MAX_VALUE) return 0;
     boolean whiteMoves = pos.whiteToMove();
     // Plies until each side's queen appears.
@@ -586,6 +633,17 @@ public final class BoardAnalysis {
     return 0;
   }
 
+  private int fastestUnstoppable(long pawns) {
+    int best = Integer.MAX_VALUE;
+    while (pawns != 0) {
+      int sq = Long.numberOfTrailingZeros(pawns);
+      pawns &= pawns - 1;
+      int n = movesToPromoteUnstoppable(sq);
+      if (n >= 0) best = Math.min(best, n);
+    }
+    return best;
+  }
+
   // ================================================================ outposts and placement
 
   /**
@@ -593,21 +651,11 @@ public final class BoardAnalysis {
    * and no enemy pawn on a neighbouring file can ever advance to attack it.
    */
   public boolean isOutpost(int sq) {
-    int p = board[sq];
-    boolean white = p > 0;
+    boolean white = board[sq] > 0;
     int rel = Square.relativeRank(sq, white);
     if (rel < 3 || rel > 5) return false;
     if (!isPawnProtected(sq)) return false;
-    int f = Square.file(sq);
-    int r = Square.rank(sq);
-    int enemyPawn = Piece.make(Piece.PAWN, !white);
-    for (int ff = f - 1; ff <= f + 1; ff += 2) {
-      if (ff < 0 || ff > 7) continue;
-      for (int rr = white ? r + 1 : r - 1; rr >= 0 && rr < 8; rr += white ? 1 : -1) {
-        if (board[Square.of(ff, rr)] == enemyPawn) return false;
-      }
-    }
-    return true;
+    return (ADJ_AHEAD[idx(white)][sq] & piecesOf[idx(!white)][Piece.PAWN]) == 0;
   }
 
   /** Outpost on the 6th rank (deep in enemy territory). */
@@ -623,16 +671,8 @@ public final class BoardAnalysis {
   }
 
   public boolean hasBishopPair(boolean side) {
-    int bishop = Piece.make(Piece.BISHOP, side);
-    boolean light = false;
-    boolean dark = false;
-    for (int sq = 0; sq < 64; sq++) {
-      if (board[sq] == bishop) {
-        if (Square.isLight(sq)) light = true;
-        else dark = true;
-      }
-    }
-    return light && dark;
+    long b = piecesOf[idx(side)][Piece.BISHOP];
+    return (b & Bitboards.LIGHT_SQUARES) != 0 && (b & ~Bitboards.LIGHT_SQUARES) != 0;
   }
 
   /** No pawns of either colour on this piece's file. */
@@ -655,16 +695,13 @@ public final class BoardAnalysis {
 
   /** Two rooks of this side see each other along a rank or file. */
   public boolean rooksConnected(boolean side) {
-    int rook = Piece.make(Piece.ROOK, side);
-    for (int sq = 0; sq < 64; sq++) {
-      if (board[sq] != rook) continue;
-      for (int d = 0; d < 4; d++) {
-        for (int s : Attacks.RAYS[sq][d]) {
-          if (board[s] == Piece.EMPTY) continue;
-          if (board[s] == rook) return true;
-          break;
-        }
-      }
+    long rooks = piecesOf[idx(side)][Piece.ROOK];
+    if (Long.bitCount(rooks) < 2) return false;
+    long r = rooks;
+    while (r != 0) {
+      int sq = Long.numberOfTrailingZeros(r);
+      r &= r - 1;
+      if ((Bitboards.rookAttacks(sq, occ) & rooks) != 0) return true;
     }
     return false;
   }
@@ -679,56 +716,42 @@ public final class BoardAnalysis {
     return (type == Piece.KNIGHT && (f == 1 || f == 6)) || (type == Piece.BISHOP && (f == 2 || f == 5));
   }
 
+  private static final long KNIGHT_HOMES = (1L << 1) | (1L << 6) | (1L << 57) | (1L << 62);
+  private static final long BISHOP_HOMES = (1L << 2) | (1L << 5) | (1L << 58) | (1L << 61);
+
   public int undevelopedMinors(boolean side) {
-    int n = 0;
-    for (int sq = 0; sq < 64; sq++) {
-      if (Piece.isColor(board[sq], side) && isUndevelopedMinor(sq)) n++;
-    }
-    return n;
+    int s = idx(side);
+    long backRank = Bitboards.RANK[side ? 0 : 7];
+    return Long.bitCount(piecesOf[s][Piece.KNIGHT] & KNIGHT_HOMES & backRank)
+        + Long.bitCount(piecesOf[s][Piece.BISHOP] & BISHOP_HOMES & backRank);
   }
 
   /** The queen has left d1/d8. */
   public boolean queenHasLeftHome(boolean side) {
-    int queen = Piece.make(Piece.QUEEN, side);
+    long queens = piecesOf[idx(side)][Piece.QUEEN];
     int home = Square.of(3, side ? 0 : 7);
-    if (board[home] == queen) return false;
-    for (int sq = 0; sq < 64; sq++) if (board[sq] == queen) return true;
-    return false;
+    return queens != 0 && (queens & (1L << home)) == 0;
   }
 
   // ================================================================ version 2 detectors
 
   /** Enemy knights, bishops, rooks and queens attacked by our pawns. */
   public int threatsByPawn(boolean side) {
-    int n = 0;
-    for (int sq = 0; sq < 64; sq++) {
-      int p = board[sq];
-      if (Piece.isColor(p, !side) && Piece.type(p) != Piece.PAWN && Piece.type(p) != Piece.KING
-          && pawnAttackCount[idx(side)][sq] > 0) n++;
-    }
-    return n;
+    long[] e = piecesOf[idx(!side)];
+    long targets = e[Piece.KNIGHT] | e[Piece.BISHOP] | e[Piece.ROOK] | e[Piece.QUEEN];
+    return Long.bitCount(targets & pawnAttacks[idx(side)]);
   }
 
   /** Enemy rooks and queens attacked by our knights or bishops. */
   public int threatsByMinor(boolean side) {
-    int n = 0;
+    long[] e = piecesOf[idx(!side)];
     int s = idx(side);
-    for (int sq = 0; sq < 64; sq++) {
-      int p = board[sq];
-      int t = Piece.type(p);
-      if (Piece.isColor(p, !side) && (t == Piece.ROOK || t == Piece.QUEEN)
-          && knightAttack[s][sq] + bishopAttack[s][sq] > 0) n++;
-    }
-    return n;
+    return Long.bitCount((e[Piece.ROOK] | e[Piece.QUEEN]) & (knightAttack[s] | bishopAttack[s]));
   }
 
   /** Enemy queens attacked by our rooks. */
   public int threatsByRook(boolean side) {
-    int n = 0;
-    for (int sq = 0; sq < 64; sq++) {
-      if (board[sq] == Piece.make(Piece.QUEEN, !side) && rookAttack[idx(side)][sq] > 0) n++;
-    }
-    return n;
+    return Long.bitCount(piecesOf[idx(!side)][Piece.QUEEN] & rookAttack[idx(side)]);
   }
 
   /**
@@ -747,30 +770,22 @@ public final class BoardAnalysis {
     int k = pos.kingSquare(side);
     int s = idx(side);
     int e = 1 - s;
-    int n = 0;
-    for (int t : Attacks.KNIGHT[k]) {
-      if (!isOwn(board[t], e) && knightAttack[e][t] > 0 && attackCount[s][t] == 0) n++;
-    }
-    for (int d = 0; d < 8; d++) {
-      for (int t : Attacks.RAYS[k][d]) {
-        if (isOwn(board[t], e)) break;
-        int sliders = d < 4 ? rookAttack[e][t] : bishopAttack[e][t];
-        sliders += queenAttack[e][t];
-        if (sliders > 0 && attackCount[s][t] == 0) n++;
-        if (board[t] != Piece.EMPTY) break;
-      }
-    }
+    long free = ~occSide[e] & ~attacked[s];
+    int n = Long.bitCount(Bitboards.KNIGHT[k] & free & knightAttack[e]);
+    n += Long.bitCount(Bitboards.rookAttacks(k, occ) & free & (rookAttack[e] | queenAttack[e]));
+    n += Long.bitCount(Bitboards.bishopAttacks(k, occ) & free & (bishopAttack[e] | queenAttack[e]));
     return n;
   }
 
   /** Squares on the c-f files, our 2nd-4th ranks, behind one of our pawns and not hit by enemy pawns. */
   public int space(boolean side) {
     int pawn = Piece.make(Piece.PAWN, side);
+    long enemyPawnAtt = pawnAttacks[idx(!side)];
     int n = 0;
     for (int f = 2; f <= 5; f++) {
       for (int rel = 1; rel <= 3; rel++) {
         int sq = Square.of(f, side ? rel : 7 - rel);
-        if (board[sq] == pawn || pawnAttackCount[idx(!side)][sq] > 0) continue;
+        if (board[sq] == pawn || (enemyPawnAtt & (1L << sq)) != 0) continue;
         for (int ahead = rel + 1; ahead <= rel + 3 && ahead <= 6; ahead++) {
           if (board[Square.of(f, side ? ahead : 7 - ahead)] == pawn) {
             n++;
@@ -785,16 +800,10 @@ public final class BoardAnalysis {
   /** Own pawns on the bishop's square colour; blocked ones count twice. */
   public int badBishopPawns(int sq) {
     boolean white = board[sq] > 0;
-    boolean light = Square.isLight(sq);
-    int pawn = Piece.make(Piece.PAWN, white);
-    int n = 0;
-    for (int s = 0; s < 64; s++) {
-      if (board[s] != pawn || Square.isLight(s) != light) continue;
-      n++;
-      int front = s + (white ? 8 : -8);
-      if (front >= 0 && front < 64 && board[front] != Piece.EMPTY) n++;
-    }
-    return n;
+    long colour = Square.isLight(sq) ? Bitboards.LIGHT_SQUARES : ~Bitboards.LIGHT_SQUARES;
+    long pawns = piecesOf[idx(white)][Piece.PAWN] & colour;
+    long blocked = pawns & (white ? occ >>> 8 : occ << 8);
+    return Long.bitCount(pawns) + Long.bitCount(blocked);
   }
 
   /** A bishop on a7/h7 (a2/h2 for Black) with an enemy pawn on b6/g6 (b3/g3) shutting it in. */
@@ -825,21 +834,16 @@ public final class BoardAnalysis {
   /** Our rook stands behind this passed pawn on its file with nothing in between. */
   public boolean isRookBehindPasser(int sq) {
     boolean white = board[sq] > 0;
-    int rook = Piece.make(Piece.ROOK, white);
-    for (int s = sq + (white ? -8 : 8); s >= 0 && s < 64; s += white ? -8 : 8) {
-      if (board[s] == Piece.EMPTY) continue;
-      return board[s] == rook;
-    }
-    return false;
+    int s = Bitboards.firstBlocker(white ? Attacks.SOUTH : Attacks.NORTH, sq, occ);
+    return s >= 0 && board[s] == Piece.make(Piece.ROOK, white);
   }
 
   /** Every square ahead of the pawn is empty and the next one isn't attacked by the enemy. */
   public boolean hasFreePath(int sq) {
     boolean white = board[sq] > 0;
     int next = sq + (white ? 8 : -8);
-    if (next < 0 || next >= 64 || attackCount[idx(!white)][next] > 0) return false;
-    for (int s = next; s >= 0 && s < 64; s += white ? 8 : -8) if (board[s] != Piece.EMPTY) return false;
-    return true;
+    if (next < 0 || next >= 64 || (attacked[idx(!white)] & (1L << next)) != 0) return false;
+    return (FORWARD[idx(white)][sq] & occ) == 0;
   }
 
   /** Enemy king's distance to the pawn's next square minus ours (each capped at 5). */
@@ -854,18 +858,12 @@ public final class BoardAnalysis {
 
   /** Number of pawns the side has. */
   public int pawnCount(boolean side) {
-    int n = 0;
-    for (int f = 0; f < 8; f++) n += pawnsOnFile[idx(side)][f];
-    return n;
+    return Long.bitCount(piecesOf[idx(side)][Piece.PAWN]);
   }
 
   // ================================================================ helpers
 
   private static int idx(boolean white) {
     return white ? W : B;
-  }
-
-  private static boolean isOwn(int piece, int side) {
-    return side == W ? piece > 0 : piece < 0;
   }
 }

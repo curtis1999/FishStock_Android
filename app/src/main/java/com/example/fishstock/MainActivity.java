@@ -17,7 +17,9 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.fishstock.agents.AgentSpec;
+import com.example.fishstock.engine.Odds;
 import com.example.fishstock.ui.AgentStore;
+import com.example.fishstock.ui.OddsDialog;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,14 +36,18 @@ import java.util.Locale;
 public class MainActivity extends AppCompatActivity {
   private static final String PREFS = "fishstock";
   private static final String KEY_LAST_OPPONENT = "last_opponent";
+  private static final String KEY_ODDS = "odds";
 
   private boolean isWhite = true;
-  private boolean isHardMode = false;
+  private boolean undosEnabled = true;
+  private String odds = Odds.NONE;
   private boolean vsHuman = false;
 
   private Spinner opponentSpinner;
   private TextView opponentDescription;
   private Button editAgent;
+  private Button oddsButton;
+  private TextView oddsDescription;
   private final List<AgentSpec> opponents = new ArrayList<>();
   private AgentStore store;
 
@@ -63,9 +69,18 @@ public class MainActivity extends AppCompatActivity {
     Button puzzles = findViewById(R.id.puzzlesButton);
     Button makeAgent = findViewById(R.id.makeAgentButton);
     Button tournament = findViewById(R.id.tournamentButton);
-    Switch hardMode = findViewById(R.id.hardModeSwitch);
+    Switch undoSwitch = findViewById(R.id.undoSwitch);
+    oddsButton = findViewById(R.id.oddsButton);
+    oddsDescription = findViewById(R.id.oddsDescription);
 
-    hardMode.setOnCheckedChangeListener((buttonView, isChecked) -> isHardMode = isChecked);
+    undoSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> undosEnabled = isChecked);
+    odds = prefs().getString(KEY_ODDS, Odds.NONE);
+    showOdds();
+    oddsButton.setOnClickListener(v -> new OddsDialog(this, !isWhite, odds).show(chosen -> {
+      odds = chosen;
+      prefs().edit().putString(KEY_ODDS, odds).apply();
+      showOdds();
+    }));
     vsAgentButton.setOnClickListener(v -> {
       vsHuman = false;
       vsAgentButton.setTextColor(Color.WHITE);
@@ -84,11 +99,13 @@ public class MainActivity extends AppCompatActivity {
       isWhite = false;
       blackSelection.setTextColor(Color.WHITE);
       whiteSelection.setTextColor(Color.BLACK);
+      showOdds();
     });
     whiteSelection.setOnClickListener(v -> {
       isWhite = true;
       blackSelection.setTextColor(Color.BLACK);
       whiteSelection.setTextColor(Color.WHITE);
+      showOdds();
     });
 
     opponentSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -117,6 +134,13 @@ public class MainActivity extends AppCompatActivity {
     });
 
     puzzles.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, PuzzleActivity.class)));
+    findViewById(R.id.recordButton).setOnClickListener(v -> startActivity(new Intent(MainActivity.this, RecordGameActivity.class)));
+    findViewById(R.id.analyzeButton).setOnClickListener(v -> {
+      Intent intent = new Intent(MainActivity.this, GameAnalysis.class);
+      intent.putExtra(GameAnalysis.EXTRA_FREE_BOARD, true);
+      startActivity(intent);
+    });
+    findViewById(R.id.savedGamesButton).setOnClickListener(v -> startActivity(new Intent(MainActivity.this, SavedGamesActivity.class)));
     makeAgent.setOnClickListener(v -> openBuilder(null));
     tournament.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, TournamentActivity.class)));
   }
@@ -160,7 +184,10 @@ public class MainActivity extends AppCompatActivity {
 
   /** "Level 3  ·  Agro" or "Custom  ·  My Agent", with a tick once beaten. */
   private String label(AgentSpec s) {
-    String level = s.kind == AgentSpec.Kind.CUSTOM ? "Custom" : String.format(Locale.US, "Level %d", s.level());
+    String level = s.kind == AgentSpec.Kind.CUSTOM ? "Custom"
+        // Aleph_0 gets a level once it has proved where it belongs (see ENGINE_NOTES.md).
+        : s.kind == AgentSpec.Kind.ALEPH0 ? "Level ?"
+        : String.format(Locale.US, "Level %d", s.level());
     String beaten = store != null && store.hasBeaten(s.name) ? "  ✓" : "";
     return level + "  ·  " + s.name + beaten;
   }
@@ -197,12 +224,20 @@ public class MainActivity extends AppCompatActivity {
   private void openBuilder(String editAgentName) {
     Intent intent = new Intent(MainActivity.this, AgentBuilderActivity.class);
     intent.putExtra(GameManager.EXTRA_IS_WHITE, isWhite);
-    intent.putExtra(GameManager.EXTRA_HARD_MODE, isHardMode);
+    intent.putExtra(GameManager.EXTRA_UNDOS, undosEnabled);
     if (editAgentName != null) intent.putExtra(AgentBuilderActivity.EXTRA_EDIT_AGENT, editAgentName);
     startActivity(intent);
   }
 
   private void play(AgentSpec opponent) {
-    startActivity(GameManager.newGameIntent(this, opponent, isWhite, isHardMode));
+    startActivity(GameManager.newGameIntent(this, opponent, isWhite, undosEnabled, odds));
+  }
+
+  /** "ODDS" or "ODDS ✓", and a line saying what the agent starts without. */
+  private void showOdds() {
+    String what = Odds.describe(odds, !isWhite);
+    oddsButton.setText(what.isEmpty() ? "ODDS" : "ODDS ✓");
+    oddsDescription.setText(what.isEmpty() ? "" : "Agent starts without its " + what);
+    oddsDescription.setVisibility(what.isEmpty() ? View.GONE : View.VISIBLE);
   }
 }

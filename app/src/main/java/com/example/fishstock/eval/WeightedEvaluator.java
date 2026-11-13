@@ -12,6 +12,7 @@ import com.example.fishstock.engine.Square;
  * The same class serves every agent; only the {@link EvalWeights} differ.
  */
 public final class WeightedEvaluator implements Evaluator {
+  private static final int TERM_COUNT = Term.values().length;
   private static final int KNIGHT_MOBILITY_BASELINE = 4;
   private static final int BISHOP_MOBILITY_BASELINE = 6;
   private static final int ROOK_MOBILITY_BASELINE = 7;
@@ -59,12 +60,12 @@ public final class WeightedEvaluator implements Evaluator {
 
   @Override
   public double evaluate(Position pos) {
-    return compute(pos, new double[Term.values().length]);
+    return compute(pos, new double[TERM_COUNT]);
   }
 
   @Override
   public EvalBreakdown explain(Position pos) {
-    double[] c = new double[Term.values().length];
+    double[] c = new double[TERM_COUNT];
     double total = compute(pos, c);
     return new EvalBreakdown(c, total);
   }

@@ -14,7 +14,7 @@ import java.util.Map;
  * training run. {@link AgentFactory} turns a spec into a playing {@link Agent}.
  */
 public final class AgentSpec implements Serializable {
-  public enum Kind { HUMAN, BLUNDER, RANDY, SIMPLE, LAZY, MINMAX, LAZY_PLUS, MINMAX_PLUS, AGRO, TIMID, FISHSTOCK, CUSTOM }
+  public enum Kind { HUMAN, BLUNDER, RANDY, SIMPLE, LAZY, MINMAX, LAZY_PLUS, MINMAX_PLUS, AGRO, TIMID, FISHSTOCK, ALEPH0, CUSTOM }
 
   public final Kind kind;
   public final String name;
@@ -39,6 +39,7 @@ public final class AgentSpec implements Serializable {
     if (kind == Kind.FISHSTOCK) name = "FishStock";
     if (kind == Kind.LAZY_PLUS) name = "Lazy+";
     if (kind == Kind.MINMAX_PLUS) name = "MinMax+";
+    if (kind == Kind.ALEPH0) name = "Aleph_0";
     Map<Category, Double> sliders = new EnumMap<>(Category.class);
     sliders.putAll(EvalWeights.neutralFactors());
     double aggression = 0;
@@ -72,7 +73,7 @@ public final class AgentSpec implements Serializable {
    * (improved evaluation) -> FishStock (improved evaluation with self-play-tuned weights).
    */
   public static final Kind[] OPPONENTS = {
-      Kind.BLUNDER, Kind.RANDY, Kind.SIMPLE, Kind.LAZY, Kind.MINMAX, Kind.AGRO, Kind.TIMID, Kind.FISHSTOCK};
+      Kind.BLUNDER, Kind.RANDY, Kind.SIMPLE, Kind.LAZY, Kind.MINMAX, Kind.AGRO, Kind.TIMID, Kind.FISHSTOCK, Kind.ALEPH0};
 
   /**
    * The Tournament screen also has Lazy+ and MinMax+: Lazy and MinMax with the improved evaluation,
@@ -80,7 +81,7 @@ public final class AgentSpec implements Serializable {
    */
   public static final Kind[] TOURNAMENT_AGENTS = {
       Kind.BLUNDER, Kind.RANDY, Kind.SIMPLE, Kind.LAZY, Kind.LAZY_PLUS, Kind.MINMAX, Kind.MINMAX_PLUS,
-      Kind.AGRO, Kind.TIMID, Kind.FISHSTOCK};
+      Kind.AGRO, Kind.TIMID, Kind.FISHSTOCK, Kind.ALEPH0};
 
   /** Level shown on the home screen (-1 = Blunder ... 5 = FishStock); custom agents have none. */
   public int level() {
@@ -101,6 +102,8 @@ public final class AgentSpec implements Serializable {
       case AGRO: return "Thinks fast (about 2 s a move). Grabs pieces, gives checks, hunts for mates. Plays gambits.";
       case MINMAX: return "Searches several moves ahead (about 5 s a move) with the original evaluation.";
       case FISHSTOCK: return "The final boss: improved evaluation tuned by thousands of self-play games, 7 s a move.";
+      case ALEPH0: return "A neural network that taught itself chess by playing itself, with no chess knowledge given. "
+          + "Still in training: it may be weak. 3 s a move.";
       case CUSTOM: return String.format(Locale.US, "Your agent. %s, aggression %+d%%. Opens: %s.",
           thinkTimeMs <= 0 ? "Looks one move ahead" : String.format(Locale.US, "Thinks %.1f s a move", thinkTimeMs / 1000.0),
           Math.round(aggression * 100), OpeningBook.repertoireFor(aggression).label);

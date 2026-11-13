@@ -43,6 +43,10 @@ public final class Position {
   }
 
   private final int[] board = new int[64];
+  /** Bitboards (see {@link Bitboards}): bb[piece + 6] = squares holding that piece; plus occupancy. */
+  private final long[] bb = new long[13];
+  private long whiteOcc;
+  private long blackOcc;
   private boolean whiteToMove;
   private int castling;
   private int epSquare = Square.NONE;
@@ -69,6 +73,11 @@ public final class Position {
 
   public int pieceAt(int sq) {
     return board[sq];
+  }
+
+  /** The mailbox board (read-only use by the move generator). */
+  int[] boardArray() {
+    return board;
   }
 
   public boolean isEmpty(int sq) {
@@ -114,21 +123,70 @@ public final class Position {
 
   /** Count of pieces of the given signed code on the board. */
   public int count(int piece) {
-    int n = 0;
-    for (int p : board) if (p == piece) n++;
-    return n;
+    return Long.bitCount(bb[piece + 6]);
   }
 
   /** Total number of pieces on the board, kings included. */
   public int pieceCount() {
-    int n = 0;
-    for (int p : board) if (p != Piece.EMPTY) n++;
-    return n;
+    return Long.bitCount(whiteOcc | blackOcc);
+  }
+
+  /** Squares holding the given signed piece (e.g. Piece.make(Piece.KNIGHT, true)), as a bitboard. */
+  public long pieces(int piece) {
+    return bb[piece + 6];
+  }
+
+  public long pieces(int type, boolean white) {
+    return bb[(white ? type : -type) + 6];
+  }
+
+  /** Squares holding the given side's pieces. */
+  public long occupancy(boolean white) {
+    return white ? whiteOcc : blackOcc;
+  }
+
+  /** Squares holding any piece. */
+  public long occupied() {
+    return whiteOcc | blackOcc;
+  }
+
+  /** Pieces of the given side that attack sq, with the board occupancy given (for x-rays). */
+  public long attackersTo(int sq, boolean bySide, long occupied) {
+    long b = Bitboards.PAWN[bySide ? 1 : 0][sq] & pieces(Piece.PAWN, bySide);
+    b |= Bitboards.KNIGHT[sq] & pieces(Piece.KNIGHT, bySide);
+    b |= Bitboards.KING[sq] & pieces(Piece.KING, bySide);
+    long queens = pieces(Piece.QUEEN, bySide);
+    long diag = pieces(Piece.BISHOP, bySide) | queens;
+    long straight = pieces(Piece.ROOK, bySide) | queens;
+    if (diag != 0) b |= Bitboards.bishopAttacks(sq, occupied) & diag;
+    if (straight != 0) b |= Bitboards.rookAttacks(sq, occupied) & straight;
+    return b & occupied;
+  }
+
+  private void put(int piece, int sq) {
+    board[sq] = piece;
+    long m = 1L << sq;
+    bb[piece + 6] |= m;
+    if (piece > 0) whiteOcc |= m;
+    else blackOcc |= m;
+  }
+
+  private void remove(int sq) {
+    int piece = board[sq];
+    if (piece == Piece.EMPTY) return;
+    board[sq] = Piece.EMPTY;
+    long m = ~(1L << sq);
+    bb[piece + 6] &= m;
+    if (piece > 0) whiteOcc &= m;
+    else blackOcc &= m;
   }
 
   public Position copy() {
     Position p = new Position();
     System.arraycopy(board, 0, p.board, 0, 64);
+    System.arraycopy(bb, 0, p.bb, 0, 13);
+    p.whiteOcc = whiteOcc;
+    p.blackOcc = blackOcc;
     p.whiteToMove = whiteToMove;
     p.castling = castling;
     p.epSquare = epSquare;
@@ -144,7 +202,15 @@ public final class Position {
 
   /** Is square sq attacked by any piece of the given side? */
   public boolean isAttacked(int sq, boolean byWhite) {
-    return isAttacked(board, sq, byWhite);
+    if ((Bitboards.PAWN[byWhite ? 1 : 0][sq] & pieces(Piece.PAWN, byWhite)) != 0) return true;
+    if ((Bitboards.KNIGHT[sq] & pieces(Piece.KNIGHT, byWhite)) != 0) return true;
+    if ((Bitboards.KING[sq] & pieces(Piece.KING, byWhite)) != 0) return true;
+    long occ = whiteOcc | blackOcc;
+    long queens = pieces(Piece.QUEEN, byWhite);
+    long diag = pieces(Piece.BISHOP, byWhite) | queens;
+    if (diag != 0 && (Bitboards.bishopAttacks(sq, occ) & diag) != 0) return true;
+    long straight = pieces(Piece.ROOK, byWhite) | queens;
+    return straight != 0 && (Bitboards.rookAttacks(sq, occ) & straight) != 0;
   }
 
   /** Same as {@link #isAttacked(int, boolean)} but on an arbitrary board array. */
@@ -185,22 +251,12 @@ public final class Position {
 
   /** Number of enemy pieces giving check to the side to move (2 = double check). */
   public int checkerCount() {
-    boolean white = whiteToMove;
-    int ksq = kingSquare(white);
-    int n = 0;
-    int pawn = Piece.make(Piece.PAWN, !white);
-    for (int from : Attacks.PAWN_ATTACKS[white ? 0 : 1][ksq]) if (board[from] == pawn) n++;
-    int knight = Piece.make(Piece.KNIGHT, !white);
-    for (int from : Attacks.KNIGHT[ksq]) if (board[from] == knight) n++;
-    for (int d = 0; d < 8; d++) {
-      for (int s : Attacks.RAYS[ksq][d]) {
-        int p = board[s];
-        if (p == Piece.EMPTY) continue;
-        if (Piece.isColor(p, !white) && Attacks.slidesAlong(Piece.type(p), d)) n++;
-        break;
-      }
-    }
-    return n;
+    return Long.bitCount(checkers());
+  }
+
+  /** The enemy pieces giving check to the side to move, as a bitboard. */
+  public long checkers() {
+    return attackersTo(kingSquare(whiteToMove), !whiteToMove, whiteOcc | blackOcc);
   }
 
   // ---------------------------------------------------------------- make / unmake
@@ -222,16 +278,17 @@ public final class Position {
     if (m.isEnPassant()) {
       int capSq = m.to + (white ? -8 : 8);
       h ^= key(board[capSq], capSq);
-      board[capSq] = Piece.EMPTY;
+      remove(capSq);
     } else if (m.captured != Piece.EMPTY) {
       h ^= key(board[m.to], m.to);
+      remove(m.to);
     }
 
     // Move the piece (promoting if needed).
     h ^= key(m.piece, m.from);
-    board[m.from] = Piece.EMPTY;
+    remove(m.from);
     int placed = m.promotion != 0 ? Piece.make(m.promotion, white) : m.piece;
-    board[m.to] = placed;
+    put(placed, m.to);
     h ^= key(placed, m.to);
 
     if (m.isCastle()) {
@@ -245,8 +302,8 @@ public final class Position {
         rookTo = m.to + 1;
       }
       int rook = board[rookFrom];
-      board[rookFrom] = Piece.EMPTY;
-      board[rookTo] = rook;
+      remove(rookFrom);
+      put(rook, rookTo);
       h ^= key(rook, rookFrom) ^ key(rook, rookTo);
     }
 
@@ -286,12 +343,12 @@ public final class Position {
     boolean white = m.piece > 0;
     if (!white) fullmoveNumber--;
 
-    board[m.from] = m.piece;
+    remove(m.to);
+    put(m.piece, m.from);
     if (m.isEnPassant()) {
-      board[m.to] = Piece.EMPTY;
-      board[m.to + (white ? -8 : 8)] = m.captured;
-    } else {
-      board[m.to] = m.captured;
+      put(m.captured, m.to + (white ? -8 : 8));
+    } else if (m.captured != Piece.EMPTY) {
+      put(m.captured, m.to);
     }
 
     if (m.isCastle()) {
@@ -304,8 +361,9 @@ public final class Position {
         rookFrom = m.to - 2;
         rookTo = m.to + 1;
       }
-      board[rookFrom] = board[rookTo];
-      board[rookTo] = Piece.EMPTY;
+      int rook = board[rookTo];
+      remove(rookTo);
+      put(rook, rookFrom);
     }
 
     if (Piece.type(m.piece) == Piece.KING) {
@@ -315,9 +373,9 @@ public final class Position {
   }
 
   private boolean enemyPawnCanTake(int to, boolean moverWhite) {
-    int enemyPawn = Piece.make(Piece.PAWN, !moverWhite);
-    int f = Square.file(to);
-    return (f > 0 && board[to - 1] == enemyPawn) || (f < 7 && board[to + 1] == enemyPawn);
+    // Enemy pawns beside the pawn that just made a double step.
+    long beside = ((1L << to) << 1 & ~Bitboards.FILE_A) | ((1L << to) >>> 1 & ~(Bitboards.FILE_A << 7));
+    return (beside & pieces(Piece.PAWN, !moverWhite)) != 0;
   }
 
   private void growUndo() {
@@ -357,7 +415,7 @@ public final class Position {
       } else {
         int piece = Piece.fromFenChar(c);
         int sq = Square.of(file, rank);
-        p.board[sq] = piece;
+        p.put(piece, sq);
         if (piece == Piece.KING) p.whiteKing = sq;
         if (piece == -Piece.KING) p.blackKing = sq;
         file++;

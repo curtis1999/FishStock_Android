@@ -56,6 +56,8 @@ public final class AgentFactory {
       }
       case FISHSTOCK:
         return new FishStock(oracle, SearchLimits.forTime(thinkTimeMs > 0 ? thinkTimeMs : FishStock.THINK_MS));
+      case ALEPH0:
+        return new Aleph0(thinkTimeMs > 0 ? thinkTimeMs : Aleph0.THINK_MS);
       case CUSTOM:
         long t = thinkTimeMs > 0 && spec.thinkTimeMs > 0 ? thinkTimeMs : spec.thinkTimeMs;
         if (t <= 0) return new Simple(spec.name, spec.weights(), oracle, spec.style());

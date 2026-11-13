@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * and point the chess program at fishstock-uci.bat. Pure Java, no Android.
  *
  * Options:
- *  - Agent: Simple, Lazy, Lazy+, MinMax, MinMax+, Agro, Timid, FishStock, Blunder or Randy (default FishStock).
+ *  - Agent: Simple, Lazy, Lazy+, MinMax, MinMax+, Agro, Timid, FishStock, Aleph_0, Blunder or Randy (default FishStock).
  *  - CustomAgent: a saved agent's line (AgentSpec.serialize()); overrides Agent when set.
  *  - OwnBook: use the agent's opening book (default true).
  *  - MoveOverheadMs: time kept back for network lag (default 100).
@@ -63,7 +63,7 @@ public final class UciEngine {
       case "uci":
         send("id name " + NAME);
         send("id author FishStock");
-        send("option name Agent type combo default FishStock var Simple var Lazy var Lazy+ var MinMax var MinMax+ var Agro var Timid var FishStock var Blunder var Randy");
+        send("option name Agent type combo default FishStock var Simple var Lazy var Lazy+ var MinMax var MinMax+ var Agro var Timid var FishStock var Aleph_0 var Blunder var Randy");
         send("option name CustomAgent type string default <empty>");
         send("option name OwnBook type check default true");
         send("option name MoveOverheadMs type spin default 100 min 0 max 5000");
@@ -201,6 +201,14 @@ public final class UciEngine {
           StringBuilder pv = new StringBuilder();
           for (Move m : r.principalVariation) pv.append(' ').append(m.toUci());
           send("info depth " + r.depth + " score " + score + " nodes " + r.nodes + " time " + r.timeMs + " pv" + pv);
+        }
+      }
+      if (agent instanceof com.example.fishstock.agents.Aleph0) {
+        com.example.fishstock.nn.Mcts.Result r = ((com.example.fishstock.agents.Aleph0) agent).lastResult();
+        if (r != null && r.best() != null) {
+          // Win chance -1..+1 shown as centipawns the usual way (Lc0's formula).
+          long cp = Math.round(111.714640912 * Math.tan(1.5620688421 * Math.max(-0.999, Math.min(0.999, r.value))));
+          send("info nodes " + r.simulations + " score cp " + cp + " pv " + r.best().toUci());
         }
       }
       if (best == null && !snapshot.legalMoves().isEmpty()) best = snapshot.legalMoves().get(0);

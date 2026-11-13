@@ -6,22 +6,28 @@ setlocal
 cd /d "%~dp0"
 
 rem ---------------------------------------------------------------- settings
-set "CUTECHESS=C:\Chess\cutechess\cutechess-cli.exe"
-set "STOCKFISH=C:\Chess\stockfish\stockfish.exe"
-rem Agent to test: Simple, Lazy, MinMax, Agro, Timid, FishStock (or Lazy+ / MinMax+)
+set "CUTECHESS=C:\Program Files (x86)\Cute Chess\cutechess-cli.exe"
+rem Stockfish must be unzipped first (right-click the zip > Extract All); this is where Extract All puts it.
+set "STOCKFISH=C:\Users\Admin\Downloads\stockfish-windows-x86-64-universal\stockfish\stockfish-windows-x86-64-universal.exe"
+rem Agent to test: Simple, Lazy, MinMax, Agro, Timid, FishStock, Aleph_0 (or Lazy+ / MinMax+)
 set "AGENT=FishStock"
 rem Stockfish's strength (1320 to 3190, CCRL Blitz scale)
-set "ELO=1500"
+set "ELO=2000"
 rem Games (pairs are played with colours reversed) and time control: 60 s + 0.6 s per move
-set "GAMES=100"
+set "GAMES=20"
 set "TC=60+0.6"
 rem ----------------------------------------------------------------
 
 set "JAVA=java"
 if exist "C:\Program Files\Android\Android Studio\jbr\bin\java.exe" set "JAVA=C:\Program Files\Android\Android Studio\jbr\bin\java.exe"
-if not exist "%CUTECHESS%" (echo cutechess-cli not found at %CUTECHESS% - edit this file & pause & exit /b 1)
-if not exist "%STOCKFISH%" (echo Stockfish not found at %STOCKFISH% - edit this file & pause & exit /b 1)
-if not exist fishstock-uci.jar (echo fishstock-uci.jar not found - run build_uci_engine.bat first & pause & exit /b 1)
+rem (No brackets around these checks: a path like "Program Files (x86)" would break them.)
+set "PROBLEM="
+if not exist "%CUTECHESS%" set "PROBLEM=cutechess-cli.exe not found at: %CUTECHESS%"
+if not exist "%CUTECHESS%" goto problem
+if not exist "%STOCKFISH%" set "PROBLEM=Stockfish not found at: %STOCKFISH%  (unzip it first, then fix the path in this file)"
+if not exist "%STOCKFISH%" goto problem
+if not exist fishstock-uci.jar set "PROBLEM=fishstock-uci.jar not found - run build_uci_engine.bat first"
+if not exist fishstock-uci.jar goto problem
 set /a ROUNDS=%GAMES%/2
 
 "%CUTECHESS%" ^
@@ -34,3 +40,10 @@ echo.
 echo Your agent's Elo is roughly %ELO% plus the "Elo difference" printed above.
 echo If it won almost everything (or nothing), move ELO up (or down) and run again.
 pause
+exit /b 0
+
+:problem
+echo.
+echo %PROBLEM%
+pause
+exit /b 1

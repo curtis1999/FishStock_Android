@@ -109,8 +109,8 @@ public class AgentBuilderActivity extends AppCompatActivity {
         return;
       }
       boolean white = getIntent().getBooleanExtra(GameManager.EXTRA_IS_WHITE, true);
-      boolean hard = getIntent().getBooleanExtra(GameManager.EXTRA_HARD_MODE, false);
-      startActivity(GameManager.newGameIntent(this, spec, white, hard));
+      boolean undos = getIntent().getBooleanExtra(GameManager.EXTRA_UNDOS, true);
+      startActivity(GameManager.newGameIntent(this, spec, white, undos));
     });
     ((Button) findViewById(R.id.deleteAgent)).setOnClickListener(v -> {
       String name = nameField.getText().toString().trim();

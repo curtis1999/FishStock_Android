@@ -50,6 +50,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  * Opened with {@link #EXTRA_TRAINING} (TRAIN on the analysis screen), it plays that set instead:
  * the key moments of your game, then collection puzzles on the same themes.
+ *
+ * Visualisation training: READ ALOUD slowly says whose move it is, the goal, and where every piece
+ * stands ({@link SpokenMoves#describe}); press it again to stop. HIDE BOARD hides the pieces so the
+ * puzzle has to be solved in your head; while hidden, each new puzzle is read out as soon as it
+ * appears and the opponent's replies are spoken. SHOW BOARD brings it back to play the answer.
  */
 public class PuzzleActivity extends AppCompatActivity {
   private static final long REPLY_DELAY_MS = 600;
@@ -91,6 +96,13 @@ public class PuzzleActivity extends AppCompatActivity {
   private int trailIndex = -1;
   private Button backButton;
   private Button forwardButton;
+  /** A pause after each piece when reading the position out. */
+  private static final long READ_PAUSE_MS = 900;
+  private Speaker speaker;
+  private Button readAloudButton;
+  private Button hideBoardButton;
+  private View boardView;
+  private boolean boardHidden;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -106,6 +118,13 @@ public class PuzzleActivity extends AppCompatActivity {
     themeSpinner = findViewById(R.id.themeSpinner);
     backButton = findViewById(R.id.puzzleBack);
     forwardButton = findViewById(R.id.puzzleForward);
+    readAloudButton = findViewById(R.id.puzzleReadAloud);
+    hideBoardButton = findViewById(R.id.puzzleHideBoard);
+    boardView = findViewById(R.id.gridlayout);
+    speaker = new Speaker(this);
+    readAloudButton.setOnClickListener(v -> toggleReadAloud());
+    hideBoardButton.setOnClickListener(v -> setBoardHidden(!boardHidden));
+    setReadAloudEnabled(false);
     backButton.setOnClickListener(v -> stepTrail(-1));
     forwardButton.setOnClickListener(v -> stepTrail(+1));
     updateNav();
@@ -136,8 +155,15 @@ public class PuzzleActivity extends AppCompatActivity {
   }
 
   @Override
+  protected void onStop() {
+    super.onStop();
+    if (speaker != null) speaker.stop(); // don't keep talking from the background
+  }
+
+  @Override
   protected void onDestroy() {
     destroyed = true;
+    speaker.shutdown();
     currentStop.set(true);
     worker.shutdownNow();
     main.removeCallbacksAndMessages(null);
@@ -151,6 +177,9 @@ public class PuzzleActivity extends AppCompatActivity {
     themeChoices.add(NEW_ANY);
     themeChoices.add(NEW_ENDGAME);
     List<String> labels = new ArrayList<>(themeChoices);
+    // Small positions (6 pieces or fewer) for practising visualisation: read aloud, hide the board.
+    themeChoices.add(EzPuzzles.GROUP);
+    labels.add(String.format(Locale.US, "%s (%d)", EzPuzzles.GROUP, EzPuzzles.all().size()));
     for (Map.Entry<String, List<Puzzle>> e : PuzzleBook.groups().entrySet()) {
       themeChoices.add(e.getKey());
       labels.add(String.format(Locale.US, "%s (%d)", e.getKey(), e.getValue().size()));
@@ -200,7 +229,7 @@ public class PuzzleActivity extends AppCompatActivity {
       generate();
       return;
     }
-    List<Puzzle> group = PuzzleBook.groups().get(theme);
+    List<Puzzle> group = groupFor(theme);
     if (group == null || group.isEmpty()) return;
     currentStop.set(true);
     main.removeCallbacksAndMessages(null);
@@ -209,6 +238,12 @@ public class PuzzleActivity extends AppCompatActivity {
     generateButton.setText(group.size() > 1 ? "Next Puzzle" : "Show Again");
     show(group.get(bookIndex));
     progressText.setText(String.format(Locale.US, "%s: puzzle %d of %d", theme, bookIndex + 1, group.size()));
+  }
+
+  /** The puzzles in a collection group of the menu: EZ to Visualize, or one of the book's groups. */
+  private static List<Puzzle> groupFor(String theme) {
+    if (theme.equals(EzPuzzles.GROUP)) return EzPuzzles.all();
+    return PuzzleBook.groups().get(theme);
   }
 
   /** Training sets go in order; after the last one, NEXT PUZZLE starts the set again. */
@@ -247,6 +282,8 @@ public class PuzzleActivity extends AppCompatActivity {
     selectedSquare = -1;
     generateButton.setEnabled(false);
     setPuzzleButtonsEnabled(false);
+    setReadAloudEnabled(false);
+    speaker.stop();
     final PuzzleGenerator.Mode mode = selectedTheme().equals(NEW_ENDGAME) ? PuzzleGenerator.Mode.ENDGAME : PuzzleGenerator.Mode.MIXED;
     goalText.setText(mode == PuzzleGenerator.Mode.ENDGAME ? "Looking for an endgame puzzle..." : "Looking for a puzzle...");
     feedbackText.setText("");
@@ -285,6 +322,9 @@ public class PuzzleActivity extends AppCompatActivity {
     progressText.setText("");
     generateButton.setEnabled(true);
     setPuzzleButtonsEnabled(true);
+    setReadAloudEnabled(true);
+    if (boardHidden) readAloud();
+    else speaker.stop();
   }
 
   /** "WHITE TO MOVE: Find the winning sequence (3 moves)" plus "move 2 of 3" once under way. */
@@ -354,6 +394,10 @@ public class PuzzleActivity extends AppCompatActivity {
       final Move reply = puzzle.replyTo(step);
       animate(start, m, () -> main.postDelayed(() -> {
         if (destroyed || puzzle == null || finished) return;
+        if (boardHidden) {
+          speaker.say(java.util.Collections.singletonList((shown.whiteToMove() ? "White" : "Black")
+              + " plays " + SpokenMoves.say(shown, reply) + "."), 0, null);
+        }
         animate(shown.copy(), reply, () -> {
           step++;
           busy = false;
@@ -459,6 +503,50 @@ public class PuzzleActivity extends AppCompatActivity {
       if (onDone != null) onDone.run();
       updateNav();
     });
+  }
+
+  // ================================================================ visualisation training
+
+  /** READ ALOUD / STOP. */
+  private void toggleReadAloud() {
+    if (speaker.isSpeaking()) {
+      speaker.stop();
+      return;
+    }
+    readAloud();
+  }
+
+  /** Whose move, the goal, then every piece, slowly. Reads the position on the board now. */
+  private void readAloud() {
+    if (puzzle == null || shown == null) return;
+    if (speaker.isUnavailable()) {
+      feedbackText.setText("This phone has no text-to-speech voice. Install one in Settings > General management > Text-to-speech.");
+      return;
+    }
+    if (!speaker.isReady()) {
+      feedbackText.setText("The voice is still starting up. Try again in a moment.");
+      return;
+    }
+    List<String> sentences = new ArrayList<>();
+    if (!puzzle.title.isEmpty()) sentences.add(puzzle.title + ".");
+    List<String> position = SpokenMoves.describe(shown);
+    sentences.add(position.get(0) + " " + puzzle.goal().trim().replaceAll("[.!]+$", "") + ".");
+    sentences.addAll(position.subList(1, position.size()));
+    readAloudButton.setText("Stop");
+    speaker.say(sentences, READ_PAUSE_MS, () -> readAloudButton.setText("Read Aloud"));
+  }
+
+  /** Hides the pieces (and the board) for solving in your head; the board can't be tapped meanwhile. */
+  private void setBoardHidden(boolean hidden) {
+    boardHidden = hidden;
+    boardView.setVisibility(hidden ? View.INVISIBLE : View.VISIBLE);
+    hideBoardButton.setText(hidden ? "Show Board" : "Hide Board");
+    if (hidden && puzzle != null && !finished && !speaker.isSpeaking()) readAloud();
+  }
+
+  private void setReadAloudEnabled(boolean enabled) {
+    readAloudButton.setEnabled(enabled);
+    readAloudButton.setAlpha(enabled ? 1f : 0.5f);
   }
 
   // ================================================================ looking back

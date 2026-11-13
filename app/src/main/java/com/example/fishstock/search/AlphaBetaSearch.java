@@ -27,6 +27,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *  - Check extension: positions in check are searched one ply deeper.
  *  - Repetitions and the 50-move rule score as a draw (0), so a winning side avoids them.
  *  - A small transposition table remembers positions reached by different move orders.
+ *  - An evaluation cache: the same position is often evaluated again (other move orders, the
+ *    next depth of iterative deepening), so recent evaluations are remembered by hash.
  *
  * Personality hooks (used by Agro and Timid, off by default):
  *  - {@link #setRootBonus}: a bonus (or penalty) added to some of OUR moves at the root, e.g.
@@ -57,6 +59,11 @@ public final class AlphaBetaSearch {
   private final TranspositionTable table = new TranspositionTable(1 << 16);
   private final Move[][] killers = new Move[MAX_PLY + 1][2];
   private final int[][] history = new int[64][64];
+  // Evaluation cache (side-to-move scores), cleared at the start of every search.
+  private static final int EVAL_CACHE_SIZE = 1 << 16;
+  private final long[] evalKeys = new long[EVAL_CACHE_SIZE];
+  private final double[] evalScores = new double[EVAL_CACHE_SIZE];
+  private final boolean[] evalUsed = new boolean[EVAL_CACHE_SIZE];
 
   // Per-search state
   private long[] pathHashes = new long[MAX_PLY + 1];
@@ -106,6 +113,7 @@ public final class AlphaBetaSearch {
   public SearchResult search(Position root, List<Long> previousPositions, SearchLimits limits,
                              AtomicBoolean stop, List<Move> excluded) {
     Position pos = root.copy();
+    clearEvalCache();
     startTime = System.currentTimeMillis();
     hardDeadline = startTime + limits.hardTimeMs;
     stopFlag = stop;
@@ -190,6 +198,7 @@ public final class AlphaBetaSearch {
   public List<ScoredMove> scoreAllMoves(Position root, List<Long> previousPositions, int depth,
                                         long timeLimitMs, AtomicBoolean stop) {
     Position pos = root.copy();
+    clearEvalCache();
     startTime = System.currentTimeMillis();
     hardDeadline = timeLimitMs <= 0 ? Long.MAX_VALUE : startTime + timeLimitMs;
     stopFlag = stop;
@@ -290,7 +299,7 @@ public final class AlphaBetaSearch {
     boolean inCheck = pos.inCheck();
     double standPat = -INF;
     if (!inCheck) {
-      standPat = evaluator.evaluateFor(pos, pos.whiteToMove());
+      standPat = evaluate(pos);
       if (standPat >= beta || qply >= MAX_QUIESCENCE_PLY) return standPat;
       if (standPat > alpha) alpha = standPat;
     }
@@ -307,7 +316,7 @@ public final class AlphaBetaSearch {
       moves = MoveGenerator.legalTacticalMoves(pos);
     }
     if (inCheck && moves.isEmpty()) return -(MATE - ply);
-    if (inCheck && qply >= MAX_QUIESCENCE_PLY) return evaluator.evaluateFor(pos, pos.whiteToMove());
+    if (inCheck && qply >= MAX_QUIESCENCE_PLY) return evaluate(pos);
     orderCaptures(moves);
 
     double best = standPat;
@@ -321,6 +330,22 @@ public final class AlphaBetaSearch {
       if (alpha >= beta) break;
     }
     return best;
+  }
+
+  /** The evaluation for the side to move, from the cache when this position was seen recently. */
+  private double evaluate(Position pos) {
+    long key = pos.hash();
+    int i = (int) (key & (EVAL_CACHE_SIZE - 1));
+    if (evalUsed[i] && evalKeys[i] == key) return evalScores[i];
+    double s = evaluator.evaluateFor(pos, pos.whiteToMove());
+    evalKeys[i] = key;
+    evalScores[i] = s;
+    evalUsed[i] = true;
+    return s;
+  }
+
+  private void clearEvalCache() {
+    java.util.Arrays.fill(evalUsed, false);
   }
 
   private boolean isDraw(Position pos, int ply) {
